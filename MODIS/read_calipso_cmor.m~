@@ -1,0 +1,31 @@
+function out=read_calipso_cmor(nc_dir,nc_inst_file,var_str,ilat,ilon,indices_str)
+
+nc_inst=netcdf([nc_dir nc_inst_file],'nowrite');
+
+%out = eval(['nc_inst{''' var_str '''}(:,ilat,ilon);']); %
+out = eval(['nc_inst{''' var_str '''}' indices_str ';']); %
+%double clhcalipso(time, lat, lon) ; _FillValue = 1.00000002004088e+20
+out(out>1e19)=NaN;
+
+
+out2(:,:,1:45)=out(:,:,46:90);
+out2(:,:,46:90)=out(:,:,1:45);
+
+%Matlab needs edge arrays to be equal sized
+%to data array for some reason! It ignores the last indices of the array
+%for plotting. So an option is to add a NaN to the end of each index:-
+
+switch length(size(out))
+    case 2
+        out(:,end+1)=NaN;
+        out(end+1,:)=NaN;        
+    case 3
+        out(:,:,end+1)=NaN;
+        out(:,end+1,:)=NaN;
+    case 4
+        out(:,:,:,end+1)=NaN;
+        out(:,:,end+1,:)=NaN;    
+    case 5
+        out(:,:,:,end+1)=NaN;
+        out(:,:,:,end+1,:)=NaN;
+end

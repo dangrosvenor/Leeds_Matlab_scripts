@@ -1,0 +1,21 @@
+function F = ode_test_multi(t,y)
+%y(1) = L, y(2) = T, y(3) = P, t = z (the stepping variable - known)
+
+%call using [t,y]=ode45(@ode_test_multi,[t0 t1],[y1_0 y2_0]);
+
+F(1,1) = adlwcgm2_just_robs(y(2),y(3));  %dL/dz  (i.e. dy1/dt)
+
+[ga1,ga2] = moist_ad_lapse_rate(y(2),y(3));
+F(2,1) = -ga2; %dT/dz ( = dy2/dt)
+
+rho = density(y(3),y(2));
+G=9.81;
+F(3,1) = -rho.*G; %dP/dz (=dy3/dt)
+
+%To solve do:
+% h = 500; %The height we want to run to in metres
+%  [z,y]=ode45(@ode_test_multi_dLdz,[0 h],[0 283 950e2]);
+% Here 0 = initial L = 0, 283 = T_cloudbase and 950e2 = P_cloudbase
+% z is a vector of the z values that correspond to the values returned in y
+% (size = [
+% y is an array of size [M 3]

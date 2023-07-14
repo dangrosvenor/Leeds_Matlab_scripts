@@ -1,0 +1,51 @@
+function [month,day,hours,mins,secs,lat,lon]=read_vocals_info_files_func(filedir,filename)
+
+fid=fopen([filedir filename],'rt');
+
+[line_header]=textscan(fid,'%s %s %s %s %s',1); %
+
+go=1;
+idat=0;
+while go==1
+    idat=idat+1;
+
+    [line_month{idat}]=textscan(fid,'%f',1); %time in secs from midnight
+    [line_day{idat}]=textscan(fid,'%f',1); %
+    [line_time{idat}]=textscan(fid,'%s',1'); %  
+    [line_lat{idat}]=textscan(fid,'%f',1'); %
+    [line_lon{idat}]=textscan(fid,'%f',1'); %
+    
+    
+    if size(line_month{idat}{1},1)==0 %when runs out of data to read it returns a zero length variable
+        go=0; %exit the loop
+    end
+    
+%    fprintf(1,'%f\n',line_time{idat}{3});
+    
+%     for i=1:27
+%         fgetl(fid);
+%     end
+
+
+end
+
+for j=1:idat-1
+    month(j)=line_month{j}{1}; %\    
+    day(j)=line_day{j}{1};    
+    
+    time_char = char(line_time{j}{1});    
+    icol=strfind(time_char,':');    
+    
+    hours(j) = str2num( time_char(1:icol(1)-1) );
+    mins(j)  = str2num( time_char(icol(1)+1:icol(2)-1) );
+    secs(j)  = str2num( time_char(icol(2)+1:length(time_char)) );
+    
+    lat(j)=line_lat{j}{1};
+    lon(j)=line_lon{j}{1};        
+end
+
+
+
+
+
+

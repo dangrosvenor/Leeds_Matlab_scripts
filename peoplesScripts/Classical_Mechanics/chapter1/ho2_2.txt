@@ -1,0 +1,25 @@
+ho2_2.txt
+
+>> ho2
+ Enter the title name TTL:Falling with v^2 air resistance
+ Enter the number calculation steps desired NPTS: 200
+ Enter the run time TMAX: 10
+ Enter value of gravity G: 9.8
+ Enter the object mass M: 1
+ Enter the drag coefficient C: 0.05
+ Enter the initial height y0: 0
+ Enter the initial velocity v0: 110
+ Enter 0 (v drag) or 1 (v^2 drag) FLAG: 1
+ FLAG=1, Time step dt=TMAX/NPTS= 0.05, vt=14.00
+    t       y       v       a
+ 0.0000  0.0000 110.0000 -614.8000
+ 1.0000 29.2487 11.2101 -16.0833
+ 2.0000 33.8108 -0.4720 -9.7889
+ 3.0000 28.6216 -8.8291 -5.9023
+ 4.0000 17.4853 -12.5740 -1.8948
+ 5.0000  4.2272 -13.6514 -0.4820
+ 6.0000 -9.5945 -13.9175 -0.1152
+ 7.0000 -23.5525 -13.9806 -0.0271
+ 8.0000 -37.5426 -13.9955 -0.0064
+ 9.0000 -51.5403 -13.9989 -0.0015
+10.0000 -65.5397 -13.9998 -0.0003

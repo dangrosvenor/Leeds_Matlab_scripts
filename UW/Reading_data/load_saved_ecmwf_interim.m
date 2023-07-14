@@ -1,0 +1,183 @@
+% Reads in .mat files created from read_process_save_ecmwf_interim
+% At the moment reads in temperature (inc. LTS) and qv
+
+%ecT_daily_Man;      %temperatures from 4 times of day averaged together  [365     6   121   240]
+%ecT_mon_Man         %temperatures averaged for each month, but the times are kept separate
+                     %[4    12     6   121   240]
+% Have monthly arrays for LTS, but don't have the daily ones as yet.                     
+%ecLTS_mon_Man        [4    12   121   240] (no level dimension here)
+%   -- but is the LTS here calculated from the daily LTS values? It is now
+%   (wasn't before)
+
+keyword_EC=''; %for the original file where the LTS values were calculated from the monthly mean temperatures
+%keyword_EC='daily_LTS_'; %for LTS calculated from the daily (instantaneous) temperatures
+
+Man_dir = '/home/disk/eos5/d.grosvenor/ERA_Interim/ManuelZ/';
+
+years = [2008];
+years = [2006:2010];
+gcm_years_loaded_str='';
+clear gcmgcm_years_loaded_num gcm_years_loaded
+for iyear=1:length(years)
+    gcm_years_loaded_num(iyear) = years(iyear);
+    gcm_years_loaded{iyear} = num2str(years(iyear));
+    gcm_years_loaded_str = [gcm_years_loaded_str ' ' gcm_years_loaded{iyear}];
+end
+if max(diff(gcm_years_loaded_num))==1
+    gcm_years_loaded_str = [gcm_years_loaded{1} '_to_' gcm_years_loaded{end}];
+end
+
+
+%monthy data is stored for each time
+%  size(ecT_mon_Man_ALL) = [hour month level lat lon year]
+%  size(ecLTS_mon_Man_ALL) = [4    12   121   240]   [hour month lat lon year]
+
+nyears=length(years);
+for iyear=1:nyears
+    iyear
+    year_str = num2str(years(iyear));
+    
+    
+    files = dir([Man_dir 't_press*' year_str '.nc' keyword_EC '.mat']);        
+    mat_file=[Man_dir files(1).name];
+
+        load(mat_file,'ecT_daily_Man','time_daily','ecT_mon_Man','ecLat_Man','ecLon_Man','levs_Man_L6','ecLTS_mon_Man');
+        if iyear==1
+            s = size(ecT_daily_Man);
+%            ecT_daily_Man_ALL = NaN*ones([s(1) s(2) s(3) s(4) nyears]);
+            ecT_daily_Man_ALL = ecT_daily_Man;      %temperatures from 4 times of day averaged together      
+            s2 = size(ecT_mon_Man);
+%            ecT_mon_Man_ALL = NaN*ones([s2(1) s2(2) s2(3) s2(4) s2(5) nyears]);
+
+          %ecT_mon_Man starts out as size [ 4    12     6   121   240]
+          %permute the array so that the level and month dimesion are at
+          %the end --> [6   121   240  4  12]
+             temp = permute(ecT_mon_Man,[3 4 5 1 2]);   
+          %Now when we squash trhe array using temp(:,:,:,:) those two
+          %dimensions will be combined. The re-arrange back to give an
+          %array of size [48  6   121   240]
+             ecT_mon_Man_ALL = permute(temp(:,:,:,:),[4 1 2 3]);
+             s3 = size(time_daily);
+%            time_daily_ALL = NaN*ones([s3(1) nyears]);
+            time_daily_ALL = time_daily;
+            s4 = size(ecLTS_mon_Man);
+%            ecLTS_mon_Man_ALL = NaN*ones([s4(1) s4(2) s4(3) s4(4) nyears]);
+             temp = permute(ecLTS_mon_Man,[3 4 1 2]);             
+             ecLTS_mon_Man_ALL = permute(temp(:,:,:),[3 1 2]);
+%            ecLTS_mon_Man_ALL = ecLTS_mon_Man;
+            daynum_timeseries3_ERAInt = NaN*ones([s2(1)*12*nyears 1]);
+            gcm_time_UTC_ERAInt = NaN*ones([s2(1)*12*nyears 1]);
+        else
+        
+%        ecT_daily_Man_ALL(:,:,:,:,iyear) = ecT_daily_Man;
+          
+        ecT_daily_Man_ALL = cat(1,ecT_daily_Man_ALL,ecT_daily_Man);
+%        ecT_mon_Man_ALL(:,:,:,:,:,iyear) = ecT_mon_Man;
+ temp = permute(ecT_mon_Man,[3 4 5 1 2]);                     
+        ecT_mon_Man_ALL = cat(1,ecT_mon_Man_ALL,permute(temp(:,:,:,:),[4 1 2 3]));
+        
+%        time_daily_ALL(:,iyear) = time_daily;
+        
+%        ecLTS_mon_Man_ALL(:,:,:,:,iyear) = ecLTS_mon_Man;
+  temp = permute(ecLTS_mon_Man,[3 4 1 2]);             
+        ecLTS_mon_Man_ALL = cat(1,ecLTS_mon_Man_ALL,permute(temp(:,:,:),[3 1 2]));
+        
+        end
+        
+        %days to be consistent with time_inds_modisL3_timeseries3 
+        days_for_month = [1 32 61 92 122 153 183 214 245 275 306 336];
+        
+        for im=1:12
+            ind = sub2ind([s2(1) 12 nyears],1,im,iyear);
+%            daynum_timeseries3_ERAInt(ind:ind+s2(1)-1) = datenum(years(iyear),im,1) - datenum(years(iyear),1,1) + 1;
+            daynum_timeseries3_ERAInt(ind:ind+s2(1)-1) = days_for_month(im);            
+            gcm_time_UTC_ERAInt(ind:ind+s2(1)-1) = [0 6 12 18]; 
+        end
+        
+        
+files = dir([Man_dir 'q_press*' year_str '.nc' keyword_EC '.mat']);        
+         mat_file=[Man_dir files(1).name];
+
+        load(mat_file,'ecqv_daily_Man','time_daily','ecqv_mon_Man','ecLat_Man','ecLon_Man','levs_Man_L6');
+        if iyear==1
+            s = size(ecqv_daily_Man);
+%            ecqv_daily_Man_ALL = NaN*ones([s(1) s(2) s(3) s(4) nyears]);
+            ecqv_daily_Man_ALL = ecqv_daily_Man;
+            s2 = size(ecqv_mon_Man);
+%            ecqv_mon_Man_ALL = NaN*ones([s2(1) s2(2) s2(3) s2(4) s2(5) nyears]);
+
+             temp = permute(ecqv_mon_Man,[3 4 5 1 2]);             
+             ecqv_mon_Man_ALL = permute(temp(:,:,:,:),[4 1 2 3]);
+%            ecqv_mon_Man_ALL = ecqv_mon_Man;
+            s3 = size(time_daily);
+            time_daily_ALL = NaN*ones([s3(1) nyears]);
+           
+            
+         
+        else
+        
+%        ecqv_daily_Man_ALL(:,:,:,:,iyear) = ecqv_daily_Man;
+        ecqv_daily_Man_ALL = cat(1,ecqv_daily_Man_ALL,ecqv_daily_Man);
+%        ecqv_mon_Man_ALL(:,:,:,:,:,iyear) = ecqv_mon_Man;
+             temp = permute(ecqv_mon_Man,[3 4 5 1 2]);             
+        ecqv_mon_Man_ALL = cat(1,ecqv_mon_Man_ALL,permute(temp(:,:,:,:),[4 1 2 3]));        
+%        time_daily_ALL(:,iyear) = time_daily;
+       
+        end        
+
+        
+        
+        
+end
+
+
+
+% 
+% temp = permute(ecT_daily_Man_ALL,[2 3 4 1 5]);
+% ecT_daily_Man_ALL = permute(temp(:,:,:),[]); %reduce the time dimension to one with hours first then days
+% 
+% ecT_mon_Man_ALL(:,:,:,:,:,iyear) = ecT_mon_Man;
+% time_daily_ALL(:,iyear) = time_daily;
+% 
+% temp=permute(ecT_mon_Man_ALL,[3 4 5 1 2]);
+% ecT_mon_Man_ALL = permute(temp(:,:,:,:),[4 1 2 3]);
+% 
+% ecLTS_mon_Man_ALL(:,:,:,:,:,iyear) = ecLTS_mon_Man;
+% ecqv_daily_Man_ALL(:,:,:,:,iyear) = ecqv_daily_Man;
+% ecqv_mon_Man_ALL(:,:,:,:,:,iyear) = ecqv_mon_Man;
+% time_daily_ALL(:,iyear) = time_daily;
+
+
+
+
+gcm_str = 'ERAInt';
+gcm_str_select = 'ERAInt';
+
+
+%data is [121 240] ([lat lon])
+Plat=ecLat_Man; %lat runs from 90 to -90, length = 121
+%data has 121 points, but so does lat - must be grid centres, but with the
+%points at the poles running over to 90.75 and -90.75 ??
+Plon=[ecLon_Man]; %length = 240 -- same as data
+%lon data already -180 to +178.5 for ECWMF 
+
+
+%i180=find(Plon>180);
+%Plon(i180)=Plon(i180)-360;
+[gcm_Plon2D_ERAInt,gcm_Plat2D_ERAInt]=meshgrid(Plon,Plat);
+
+dlat = abs(mean(diff(Plat)));
+dlon = abs(mean(diff(Plon)));
+Plat_edges=[Plat(1:end) + dlat/2; Plat(end) - dlat/2]; %
+Plon_edges=[Plon(1) - dlon/2; Plon(1:end) + dlon/2];
+[gcm_Plon2D_edges_ERAInt,gcm_Plat2D_edges_ERAInt]=meshgrid(Plon_edges,Plat_edges);
+
+hours_ec = [0 6 12 18];
+
+
+%daynum_timeseries3_ERAInt = repmat(daynum_timeseries3_ERAInt,[1 s(3) s(4)]);
+
+
+
+
+

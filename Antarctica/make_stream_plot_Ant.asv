@@ -1,0 +1,24 @@
+% time=10;
+% ih_wrf=32;
+% plotTimeheightVap3
+% %streamlines_wrf
+% multisaveplot
+
+ih_wrf=10;
+plotTimeheightVap3
+%close
+%streamlines_wrf
+multisaveplot
+
+% time=18;
+% ih_wrf=32;
+% plotTimeheightVap3
+% %streamlines_wrf
+% multisaveplot
+
+ih_wrf=10;
+time
+plotTimeheightVap3
+%close
+%streamlines_wrf
+multisaveplot

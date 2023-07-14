@@ -1,0 +1,88 @@
+iprofile=1;
+nprof=0;
+clear profile_set
+profile_set{iprofile} = 'Ascent and 2nd over Oliktok'; iprofile=iprofile+1;
+profile_set{iprofile} = 'Subsequent profiles over Oliktok'; iprofile=iprofile+1;
+profile_set{iprofile} = 'Porpoise profile on transit to Barrow (1)'; iprofile=iprofile+1;
+profile_set{iprofile} = 'Porpoise profiles on transit to Barrow (2)'; iprofile=iprofile+1;
+profile_set{iprofile} = 'Porpoise profiles on transit to Barrow (3)';iprofile=iprofile+1;
+profile_set{iprofile} = 'Porpoise profiles on transit to Barrow (4)'; iprofile=iprofile+1;
+profile_set{iprofile} = 'Porpoise profiles on transit to Barrow (5)';iprofile=iprofile+1;
+profile_set{iprofile} = 'Porpoise profiles on transit to Barrow (6)'; iprofile=iprofile+1;
+
+
+for iprofile=1:length(profile_set)
+
+    switch profile_set{iprofile}
+        case 'Ascent and 2nd over Oliktok'
+
+            time_profiles=[20.3 20.42;20.53 20.63];
+            %                time_profiles=[20.53 20.63];
+            CB_height = [292.75; 1000];
+            CB_height = [350; 9.9e9];
+
+        case 'Subsequent profiles over Oliktok'
+            %about 3 or 4 profiles here
+            time_profiles=[20.86 21.135];
+            CB_height = [430;];
+
+        case 'Porpoise profile on transit to Barrow (1)'
+
+            time_profiles=[21.135 21.33;21.33 21.435];
+            CB_height = [430; 580];
+
+        case 'Porpoise profiles on transit to Barrow (2)'
+
+            time_profiles=[21.435 21.4865;21.4865 21.545];
+            CB_height = [575;650];
+
+        case 'Porpoise profiles on transit to Barrow (3)'
+            time_profiles=[21.545 21.6;21.6 21.67];
+            CB_height = [550;700];
+
+        case 'Porpoise profiles on transit to Barrow (4)'
+            time_profiles=[21.718 21.77;21.77 21.85];
+            CB_height = [450;600];
+
+        case 'Porpoise profiles on transit to Barrow (5)'
+            time_profiles=[21.85 21.98;21.98 22.045];
+            CB_height = [700; 850];
+
+        case 'Porpoise profiles on transit to Barrow (6)'
+            time_profiles=[22.045 22.12;];
+            CB_height = [575];
+
+        case 'ALL'
+            time_profiles=[mpace_time(1) mpace_time(end);];
+            CB_height = [575];
+            lwidth=0.1;
+
+    end
+
+
+    for itime=1:size(time_profiles,1);
+        nprof=nprof+1; %total number of profiles
+        ii = find(mpace_time>=time_profiles(itime,1) & mpace_time<=time_profiles(itime,2));
+        inds(itime,1:length(ii)) = ii;
+
+        mean_lon(itime) = mean(mpace_lon(ii));
+        lon_range(itime,:) = [min(mpace_lon(ii)) max(mpace_lon(ii))];
+
+        m_plot([mpace_lon_mapped(ii(1))],[mpace_lat_mapped(ii(1))],'ko','markersize',16,'markerfacecolor','r');
+%        m_text([mpace_lon_mapped(ii(1))],[mpace_lat_mapped(ii(1))],[num2str(nprof) 's'],'color','w','horizontalAlignment','center','verticalAlignment','Cap');     
+            
+        m_plot([mpace_lon_mapped(ii(end))],[mpace_lat_mapped(ii(end))],'ko','markersize',16,'markerfacecolor','r');
+        m_text([mpace_lon_mapped(ii(end))],[mpace_lat_mapped(ii(end))],[num2str(nprof) 'e'],'color','w','horizontalAlignment','center','verticalAlignment','Cap');
+
+        
+
+    end
+
+
+
+
+
+
+end
+
+

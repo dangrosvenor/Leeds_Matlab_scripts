@@ -1,0 +1,154 @@
+%read in the PACS output from the Manchester probe when files are in the form below
+
+file_choose='29th July BAS chamber comparisons, 60 um bead cal';
+file_choose='29th July BAS chamber comparisons, experiment 1';
+%file_choose='Karl Flight 553';
+%file_choose=1;
+
+switch file_choose
+    case 1 %10:24
+        filedir='Y:\BAS_flights\29thJune2010_CAS_comparisons\Manchester_CAS_29Jun2010\20100629\20100629102411\';
+        fileName=[filedir '01CAS_POL_PBP20100629102411.csv'];
+
+    case 2 %10:28
+
+        filedir='Y:\BAS_flights\29thJune2010_CAS_comparisons\Manchester_CAS_29Jun2010\20100629\20100629102755\';
+        fileName=[filedir '01CAS_POL_PBP20100629102755.csv'];
+
+    case 3 %NO DATA
+
+        filedir='Y:\BAS_flights\29thJune2010_CAS_comparisons\Manchester_CAS_29Jun2010\20100629\20100629110524\';
+        fileName=[filedir '01CAS_POL_PBP20100629110524.csv'];
+
+    case 4 %11:07
+
+        filedir='Y:\BAS_flights\29thJune2010_CAS_comparisons\Manchester_CAS_29Jun2010\20100629\BAS_CAS_COMP_R2\';
+        fileName=[filedir '01CAS_POL_PBP20100629110533.csv'];
+
+    case 5 %11:17:30
+
+        filedir='Y:\BAS_flights\29thJune2010_CAS_comparisons\Manchester_CAS_29Jun2010\20100629\BAS_CAS_COMP_R3\';
+        fileName=[filedir '01CAS_POL_PBP20100629111738.csv'];
+
+    case 6
+
+        filedir='Y:\BAS_flights\29thJune2010_CAS_comparisons\Manchester_CAS_29Jun2010\20100629\BAS_CAS_COMP_R4\';
+        fileName=[filedir '01CAS_POL_PBP20100629122057.csv'];
+   
+    case 7 %15 um calibration with beads (file 6 for BAS)
+
+        filedir='Y:\BAS_flights\29thJune2010_CAS_comparisons\Manchester_CAS_29Jun2010\20100629\15um_BAS_COMP\';
+        fileName=[filedir '01CAS_POL_PBP20100629125311.csv'];    
+
+    case 8 %20 um calibration with beads (file 7 for BAS)
+
+        filedir='Y:\BAS_flights\29thJune2010_CAS_comparisons\Manchester_CAS_29Jun2010\20100629\20um_BAS_COMP\';
+        fileName=[filedir '01CAS_POL_PBP20100629130236.csv'];  
+        
+    case 9 %30 um calibration with beads (file 8 for BAS)
+
+        filedir='Y:\BAS_flights\29thJune2010_CAS_comparisons\Manchester_CAS_29Jun2010\20100629\30um_BAS_COMP\';
+        fileName=[filedir '01CAS_POL_PBP20100629130435.csv'];    
+        
+    case 10 %40 um calibration with beads (file 9 for BAS)
+
+        filedir='Y:\BAS_flights\29thJune2010_CAS_comparisons\Manchester_CAS_29Jun2010\20100629\40um_BAS_COMP\';
+        fileName=[filedir '01CAS_POL_PBP20100629130552.csv'];    
+        
+    case 11
+        filedir='Y:\BAS_flights\29thJuly2010_BAS_chamber_comparisons\MAN CAS\20100729\Run1_50pc\';
+        fileName=[filedir '01CAS_POL_PBP20100729124236.csv'];
+        
+    case 12
+        filedir='Y:\BAS_flights\29thJuly2010_BAS_chamber_comparisons\MAN CAS\20100729\Run2_60pc\';
+        fileName=[filedir '01CAS_POL_PBP20100729132328.csv'];        
+        
+% 29th July, 2010 comparison files    
+    case '29th July BAS chamber comparisons, 50 um bead cal'
+        filedir='Y:\BAS_flights\29thJuly2010_BAS_chamber_comparisons\100729_cas_intercomparison_data\cas_probes\man_cas\100729_50um_beads\';
+        fileName=[filedir '01CAS_POL_PBP20100729155343.csv'];
+        
+    case '29th July BAS chamber comparisons, 60 um bead cal'
+        filedir='Y:\BAS_flights\29thJuly2010_BAS_chamber_comparisons\100729_cas_intercomparison_data\cas_probes\man_cas\100729_60um_beads\';
+        fileName=[filedir '01CAS_POL_PBP20100729160108.csv'];
+    
+    case '29th July BAS chamber comparisons, experiment 1'
+        filedir='Y:\BAS_flights\29thJuly2010_BAS_chamber_comparisons\100729_cas_intercomparison_data\cas_probes\man_cas\100729_expt_1\';
+        fileName=[filedir '01CAS_POL_PBP20100729124236.csv'];
+    
+    case '29th July BAS chamber comparisons, experiment 2'
+        filedir='Y:\BAS_flights\29thJuly2010_BAS_chamber_comparisons\100729_cas_intercomparison_data\cas_probes\man_cas\100729_expt_2\';
+        fileName=[filedir '01CAS_POL_PBP20100729132328.csv'];    
+    case '29th July BAS chamber comparisons, experiment 3'
+        filedir='Y:\BAS_flights\29thJuly2010_BAS_chamber_comparisons\100729_cas_intercomparison_data\cas_probes\man_cas\100729_expt_3\';
+        fileName=[filedir '01CAS_POL_PBP20100729135319.csv'];  
+    case '29th July BAS chamber comparisons, experiment 4'
+        filedir='Y:\BAS_flights\29thJuly2010_BAS_chamber_comparisons\100729_cas_intercomparison_data\cas_probes\man_cas\100729_expt_4\';
+        fileName=[filedir '01CAS_POL_PBP20100729141924.csv'];    
+    case '29th July BAS chamber comparisons, experiment 5'
+        filedir='Y:\BAS_flights\29thJuly2010_BAS_chamber_comparisons\100729_cas_intercomparison_data\cas_probes\man_cas\100729_expt_5\';
+        fileName=[filedir '01CAS_POL_PBP20100729151638.csv'];      
+     case 'Karl Flight 553';    
+        filedir='Z:\B553\CAS\'; 
+        fileName=[filedir '01CAS_POL_PBP20100914092406.csv'];              
+        
+
+end
+
+fid=fopen(fileName,'rt');
+
+%skip 12 lines to the beam area info
+for i=1:38
+    textline=fgetl(fid);
+end
+
+for i=1:30
+    bin_1=textscan(fid,'%s',1,'delimiter',',');
+    if i<=10 %sizes are listed as 'Fwd Sizes 0=0.610000' etc. so 0 through to 9 are one digit,then is 2 digits for the bin number
+        bins_PACS(i) = str2num(bin_1{1}{1}(13:end));
+    else
+        bins_PACS(i) = str2num(bin_1{1}{1}(14:end));
+    end
+end
+
+for i=1:231
+    textline=fgetl(fid);
+end
+
+% textline=fgetl(fid);
+% textline=fgetl(fid);
+% 
+% bin_back_1=textscan(fid,'%s',1,'delimiter',',');
+% bin_back_rest=textscan(fid,'%f',29,'delimiter',',');
+% bin_1_val = str2num(bin_back_1{1}{1}(9:end));
+% bins_back_PACS = [bin_1_val; bin_back_rest{1}];
+% 
+% 
+% for i=1:8
+%     textline=fgetl(fid);
+% end
+
+clear data_CAS_PACS data_CAS
+
+idat=0;
+go=1;
+while go==1
+    idat=idat+1;
+    %data = textscan(fid,'%f %f %f',1,'delimiter',',');
+    data_CAS(idat)=textscan(fid,'%f',114,'delimiter',',');
+
+    L = length(data_CAS{idat});
+    
+    if L==0
+        go=0;
+        break
+    end
+    
+    data_CAS_PACS(1:L,idat)=double(data_CAS{idat}(:));
+
+end
+
+fclose(fid);
+
+disp('read_PACS_CAS.m finished');
+

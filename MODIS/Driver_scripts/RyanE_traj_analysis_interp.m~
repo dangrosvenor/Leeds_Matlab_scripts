@@ -1,0 +1,55 @@
+load_file='/home/disk/eos10/d.grosvenor/UM/RyanE_traj_analysis/UKMET_trajectories_matlab_dates.mat';
+traj=load(load_file);
+
+
+%Can use interpn because the grids are regular in lat, lon and time
+
+%Example using all lat and lons offset by 0.2
+x = gcm_Plat2D_UM(:,1);
+y = gcm_Plon2D_UM(1,:)';
+y(y<0)=y(y<0)+360; %ensures that it is monotonic (runs from 0 to 360).
+[x3,y3,t3]=meshgrid(x,y,time_out); %Think can used ndgrid to avoid the need to permute
+x3=permute(x3,[2 1 3]);
+y3=permute(y3,[2 1 3]);
+t3=permute(t3,[2 1 3]);
+
+%dat=inpaint_nans(Nd_PD_ALL(:,:,1:3)); %only works with 2d arrays...
+%dat = Nd_PD_ALL(:,:,1:3);
+dat = Nd_PD_ALL(:,:,:);
+
+traj_interp_temp = interpn(x3,y3,t3,dat,lats_traj(:),lons_traj(:),time_traj(:),'nearest');
+traj_interp_interpn = reshape(traj_interp_temp ,size(lats_traj));
+%traj_interp = griddata(x3,y3,t3,Nd_PD_ALL(:,:,1:3),20,100,time_out(1)+1.1250);
+
+%Test using own find nearest code since then get the difference between the
+%nearest value and that requested.
+
+%Match lat,lon and time separately
+clear dlat_match ilat_match dlon_match ilon_match dtime_match itime_match
+for i=1:length(lats_traj(:))
+    dlat = abs(lats_traj(i)-x);
+    [dlat_match(i),ilat_match(i)]=min(dlat);
+    
+    dlon = abs(lons_traj(i)-y);
+    [dlon_match(i),ilon_match(i)]=min(dlon);
+    
+    dtim = abs(time_traj(i)-time_out);
+    [dtime_match(i),itime_match(i)]=min(dtim);
+end
+
+time_tol_traj = 30/24; %in days
+lat_tol_match
+
+%Now use the indices to get the required data at those points.
+inds_match = sub2ind([length(x) length(y) length(time_out)],ilat_match,ilon_match,itime_match);
+traj_interp = reshape(Nd_PD_ALL(inds_match),size(lats_traj));
+
+inan=find(dtime_match>time_tol_traj);
+traj_interp2=traj_interp;
+traj_interp2(inan)=NaN;
+
+
+
+
+
+

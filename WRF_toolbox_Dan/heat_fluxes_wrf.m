@@ -1,0 +1,153 @@
+times=2:25;
+
+extra_x = [540 510];
+extra_y = [80 38];
+
+
+ nlat = size(lat2d.var,1);
+ nlon = size(lat2d.var,2);
+ dx_grid = distlatlon(lat2d.var(1,1),lon2d.var(1,1),lat2d.var(1,2),lon2d.var(1,2));     
+ dy_grid = distlatlon(lat2d.var(1,1),lon2d.var(1,1),lat2d.var(2,1),lon2d.var(2,1));
+ 
+ i_grid = dx_grid * [1:nlon];
+ j_grid = dy_grid * [1:nlat];
+ 
+ clear LAT LON
+ 
+ for iflt=1:length(extra_x)
+     i_extra = findheight(i_grid,extra_x(iflt));
+     j_extra = findheight(j_grid,extra_y(iflt));
+     LAT(iflt) = lat2d.var(j_extra,i_extra);
+     LON(iflt) = lon2d.var(j_extra,i_extra);
+ end
+ 
+ 
+
+ [ilat,ilon] = getind_latlon_quick(lat2d.var,lon2d.var,LAT,LON,0.1);
+
+iloc=2;
+
+LW=[0; get_wrf_point_surface(nc,'GLW',times,ilat(iloc),ilon(iloc))];
+SW=[0; get_wrf_point_surface(nc,'SWDOWN',times,ilat(iloc),ilon(iloc))]; %downwelling SW
+SH=[0; -get_wrf_point_surface(nc,'HFX',times,ilat(iloc),ilon(iloc))];
+LH=[0; -get_wrf_point_surface(nc,'LH',times,ilat(iloc),ilon(iloc))]; %negative as WRF convention is that these are fluxes into air
+ALBEDO=[0; get_wrf_point_surface(nc,'ALBEDO',times,ilat(iloc),ilon(iloc))];
+TSK=[0; get_wrf_point_surface(nc,'TSK',times,ilat(iloc),ilon(iloc))];
+EMISS=[0; get_wrf_point_surface(nc,'EMISS',times,ilat(iloc),ilon(iloc))];
+T2=[0; get_wrf_point_surface(nc,'T2',times,ilat(iloc),ilon(iloc))];
+GRDFLX=[0; get_wrf_point_surface(nc,'GRDFLX',times,ilat(iloc),ilon(iloc))]; %sign convention is that this is flux into the surface layer
+SNOPCX=[0; get_wrf_point_surface(nc,'SNOPCX',times,ilat(iloc),ilon(iloc))];
+TSLB=nc{'TSLB'}(times,:,ilat(iloc),ilon(iloc));
+SNOW=[0; get_wrf_point_surface(nc,'SNOW',times,ilat(iloc),ilon(iloc))]; %snow water equivalent kg/m2
+SNOWH=[0; get_wrf_point_surface(nc,'SNOWH',times,ilat(iloc),ilon(iloc))]; %snow depth m - varies by a massive amount - something wrong?
+
+SNODEN=SNOW./SNOWH; %snow density in kg/m3 - varies quite a lot as time goes on
+SNODEN(SNODEN>400)=400; %limited to 400 kg/m3 in the code
+SNCOND = 0.11631*2*0.328*10.^(2.25*SNODEN/1000); %snow conductivity a function of density
+GRDFLX_CALC = SNCOND(2:end) .* (TSLB(:,1)-TSK(2:end))/0.05; %lines up very closely with the GRDFLX values
+%BUT is the ground flux of this thin layer actually important for snow melting considerations
+%is this 10 cm layer likely to dissappear during melting?
+
+clear GRD_CALC
+ZS=nc{'ZS'}(1,:);
+d=ZS(1)*2;
+for itslb=1:3
+    depth=(ZS(itslb+1)-d) *2 ;
+    GRD_CALC(:,itslb)= SNCOND(2:end) .* (TSLB(:,itslb+1)-TSLB(:,itslb)) / (depth/2);
+    d=d+depth;
+end
+
+
+%ALBEDO=0.7; %in King paper albedo was 0.78
+%ALBEDO=0.78;
+
+%sign convention is postive means energy going into ground
+SW_UP=ALBEDO.*SW; %think albedo means this for WRF
+SW_NET=SW-SW_UP;
+
+%EMISS=0.98;
+LW_UP=5.67e-8.*TSK.^4; %Boltzmann W/m2 using skin temperature (need emissivity?)
+LW_NET=EMISS.*(LW-LW_UP);
+
+
+i_condensate=1;
+        recalc=1;
+        if i_condensate==1
+            if recalc==1
+                P = WRFUserARW(nc,'p',times,ilat(iloc),ilon(iloc)); P=P*100;
+                
+                ih_inds=1:length(P)-1; %keep one below the top level for dz calc
+
+                M = 28.97*1.67E-27;
+                k = 1.38E-23;
+                
+                T = WRFUserARW(nc,'tc',times,ilat(iloc),ilon(iloc)); T=T+273.15;
+                rho=P(:,ih_inds).*M./k./T(:,ih_inds);
+                Z=(nc{'PH'}(times,:,ilat(iloc),ilon(iloc)) + nc{'PHB'}(times,:,ilat(iloc),ilon(iloc)) )./9.81;
+                Z = (Z(:,1:end-1)+Z(:,2:end)) /2;
+                dz_grid = Z(:,2:ih_inds(end)+1)-Z(:,1:ih_inds(end));
+
+%                cond_dat = squeeze (sum( (nc{'QCLOUD'}(time,ih_inds,:,:) + nc{'QRAIN'}(time,ih_inds,:,:)...
+%                    + nc{'QICE'}(time,ih_inds,:,:) + nc{'QSNOW'}(time,ih_inds,:,:)...
+%                    + nc{'QGRAUP'}(time,ih_inds,:,:)) .* rho*1000*dx_grid*1000*dy_grid.*dz_grid ,1) );
+
+
+                
+%not multiplying by dx and dy to keep as kg/m2 so that is normalised by area - otherwise will need to know the grid
+%cell size for the value to mean anything.
+                COND = squeeze (sum( (nc{'QCLOUD'}(times,ih_inds,ilat(iloc),ilon(iloc)) + nc{'QRAIN'}(times,ih_inds,ilat(iloc),ilon(iloc))...
+                    + nc{'QICE'}(times,ih_inds,ilat(iloc),ilon(iloc)) + nc{'QSNOW'}(times,ih_inds,ilat(iloc),ilon(iloc))...
+                    + nc{'QGRAUP'}(times,ih_inds,ilat(iloc),ilon(iloc))) .* rho.*dz_grid ,2) );
+                
+            else
+                fprintf(1,'\n****** WARNING - not recalculating melt energy values *******');
+            end                                    
+
+        end
+
+
+
+
+MNET=LW_NET + SW_NET + LH+SH + GRDFLX;
+%this leftover energy must be going to changing the surface temperature or melting ice/freezing water. 
+%asuming that the sensible heat flux includes fluxes to/from the ground below
+%for example if MNET is negative and the temperature is below zero then the energy being lost by the surface
+%must be going towards cooling it. If temp is at zero whilst MNET<0 then it must be freezing water
+%and hence if at zero and MNET>0 then have melting of surface ice.
+
+i0=find(abs(TSK-273.15)<0.001); %find all times where skin temp was zero deg C
+melt=sum(MNET(i0)*3)/72; %this gives the daily average meltrate in W/m2 based on all those times. 3 is there because
+                    %the output is at 3 hour intervals and is for 3 days (72 hours) From King paper 52 W/m2 gives 13 mm water equivalent
+                    %per day melting rate
+meltrate = melt*24*3600 / 3.34e5; % melt rate in mm/day (divide W/m2 by latent heat of fusion and mulitply by seconds in day).                    
+clear Mav Mav2
+for st=2:times(end-7)
+    Mav(st)=mean(MNET(st:st+7)); %moving average over 1 day at different starting points during the day
+end 
+for st=2:times(end-15)
+    Mav2(st)=mean(MNET(st:st+15)); %moving average over 2 days at different starting points during the day
+end
+for st=2:times(end-7)
+    Mav3(st)=mean(MNET(st:st+7)-GRDFLX(st:st+7)); %moving average over 1 day at different starting points during the day
+end 
+
+mean24=mean([Mav(2) Mav(9) Mav(17)]); %mean of the 1-day averages for all three days. First day average
+    %uses data from 3 to 24 UTC since don't have data for time 0 on first day. Others use 0-21 UTC data.
+mean24_GRD=mean([Mav3(2) Mav3(9) Mav3(17)]);
+
+itime=16;
+dat=[SW(itime) -SW_UP(itime) SW_NET(itime) LW(itime) -LW_UP(itime) LW_NET(itime) LW_NET(itime)+SW_NET(itime) ...
+    SH(itime) LH(itime) SH(itime)+LH(itime) GRDFLX(itime) MNET(itime) mean24 MNET(itime)-GRDFLX(itime) mean24_GRD melt meltrate];
+for idat=1:length(dat)
+    fprintf(1,'\n%f',dat(idat));
+end
+
+fprintf(1,'\nDone heat_fluxes');
+
+  
+
+
+
+
+%figure;
+%plot(MNET)

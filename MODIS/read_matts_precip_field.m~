@@ -1,0 +1,17 @@
+function out=read_matts_precip_field(nc,field_name)
+
+
+
+out = eval(['nc{''' field_name '''}(:,:,:);']);
+
+%remove fill data (e.g. land, bad data)
+out(out<-9998)=NaN;
+
+out2(:,1:
+
+
+%pad the data array with NaNs at the ends of the lat,lon dimensions so that
+%Matlab has equal lat,lon to data, but no data is thrown away (for pcolor
+%plotting)
+out(:,end+1,:)=NaN;
+out(:,:,end+1)=NaN;

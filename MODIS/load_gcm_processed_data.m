@@ -1,0 +1,206 @@
+% load processed GCM data from multiple years
+% ***********************************************************
+% gcm_list_of_saved_variables sets the variables required
+% ***********************************************************
+% load_gcm_dataset function is called to retrieve individual variables from the save files.
+% ***********************************************************
+% gcm_filename_for_year
+%      is called from there - this gives the filename
+%      paths for the .mat files with the saved data - change here when change
+%      the save filenames (e.g. when adding extra variables etc)
+%      ***EXCEPT for time chunked data they are stored in load_catfiles_timechunks - see next entry ***
+%      
+% ***********************************************************************************
+%  load_catfiles_timechunks  - this is where the model run files to be loaded for
+%                              the chunked data are specified
+% ***********************************************************************************
+%  multi_run_gcm_time_chunk is used to produce the chunked data
+%
+
+%Tell it which file to use to determine the required variables
+%Original file was gcm_list_of_saved_variables
+gcm_list_of_saved_variables_select = 'gcm_list_of_saved_variables'; %inc. RWP for TLWP (only have for CLUBBv2 and CAM5 pre-post runs
+gcm_list_of_saved_variables_select = 'gcm_list_of_saved_variables_all_models'; %More basic variables that should have for all requried runs for CPT paper
+
+
+if ~exist('ioverride_load_gcm') | ioverride_load_gcm==0
+
+load_gcm_process_vars_flag=4;
+load_gcm_process_vars_flag=2;
+load_gcm_process_vars_flag=5;
+%=0 doesn't load in any of them. =1 loads in the 3D files. =2 loads all
+%except 3D files to save memory. =3 is like 2, but doesn't have the height
+%fields and the cloud layer thicknesses to available to load.
+save_gcm_process_vars_flag=0; %also set the save flag
+
+cosp_flag=0; %default of 0 - overwritten in load_catfiles_timechunks
+ilwcAPBP=0;  %default of 0 - overwritten in load_catfiles_timechunks
+cosp_flag4D=0;
+
+
+% ***   select the files (years and GCM type) to load ***
+
+imod=1;
+%selects files for load_saved_modis_vars.m & modis_make_monthly_averages_multi_year.m
+% 
+
+clear gcm_year_cases gcm_model_cases
+
+filedir_gcm_load = '/home/disk/eos8/d.grosvenor/CPT/saved_processed_gcm_data/';
+
+%new style of chunkded data (data in time chunks)
+% ************************************************
+load_catfiles_timechunks
+% ************************************************
+
+
+end
+      %path to a mat file with these stored for a particular half-year  
+      %needs to concatenate gcm_year_cases etc.
+      %these also produce a structure (am3_chunk_filepaths.chunk_name)
+      %where chunk_name is the time identification string produced in gcm_filename_for_year
+
+       %unique list of the different models
+    [gcm_unique_models] = unique(gcm_model_cases);
+    
+    
+    if ~exist('am3_filepaths_chunk')
+        am3_filepaths_chunk='no_var';
+    end
+    
+% script that lists the names of all the variables to load in in variable
+% gcm_var{i}
+
+%gcm_list_of_saved_variables
+eval(gcm_list_of_saved_variables_select);
+
+
+for ivar=1:length(gcm_var)
+    fprintf(1,['\nLoading variable ' num2str(ivar) ' of ' num2str(length(gcm_var))]);
+
+    for igcm_model=1:length(gcm_unique_models)
+       
+        gcm_model_case = gcm_unique_models{igcm_model};
+        
+        %indices where we have that model (for selecting the correct year)
+        igcm_model_cases = find(strcmp(gcm_model_cases,gcm_unique_models{igcm_model}) == 1);
+          
+         for igcm_type=1:length(igcm_model_cases)
+             gcm_year_case = gcm_year_cases{igcm_model_cases(igcm_type)};
+             gcm_month_case = gcm_month_cases{igcm_model_cases(igcm_type)};
+            
+
+             eval_str = ['dat = load_gcm_dataset(gcm_var{ivar},gcm_year_case,gcm_model_case,gcm_month_case,am3_filepaths_chunk,igcm_type);'];
+             eval(eval_str);
+                          
+             var_str = [gcm_var{ivar} '_' gcm_model_case];
+             %concatentate multiple years & months
+             if igcm_type==1
+                 eval_str2 = [var_str '=[dat];'];
+             else
+                 %set time_dim{ivar}=1 in gcm_list_of_saved_variables for variables that have the
+                 %time dimension and so need concatenating
+                 if time_dim{ivar}==1
+                     %trying this work around for arrays where had the
+                     %single time dimension, but did not have shiftdim applied
+                     %earlier
+                     svar = eval(['size(' var_str ');']);
+                     if length(svar)==length(size(dat))+1
+                         dat = shiftdim(dat,-1);
+                     end
+                     eval_str2 = [var_str '=cat(1,' var_str ',dat);'];
+                 end
+             end
+             eval(eval_str2);
+                       
+             
+         end
+    end
+
+end
+
+clear gcm_years_loaded_num
+gcm_years_loaded = unique(gcm_year_cases);
+gcm_years_loaded_str='';
+for iyear=1:length(gcm_years_loaded)
+    gcm_years_loaded_num(iyear) = str2num(remove_character(gcm_years_loaded{iyear},'y',''));    
+    gcm_years_loaded_str = [gcm_years_loaded_str ' ' gcm_years_loaded{iyear}];
+end
+
+if max(diff(gcm_years_loaded_num))==1
+    gcm_years_loaded_str = [gcm_years_loaded{1} '_to_' gcm_years_loaded{end}];
+end
+
+gcm_str_select = [gcm_model_case];
+gcm_str = [gcm_model_case];
+gcm_str_last_loaded = [gcm_model_case];
+
+[Y,M,D]=eval(['datevec(gcm_time_matlab_' gcm_str ');']);
+eval(['modisyear_timeseries3_' gcm_str ' = Y;']);
+
+
+if exist(['liqRe_modis_' gcm_str])
+    a = eval(['liqRe_modis_' gcm_str]);
+    b = eval(['liqCF_modis_' gcm_str])/100;
+
+%    CF_gcm_thresh=0.01;
+    CF_gcm_thresh=0.8;
+
+%    thresh_str=['liqCF.GTE.' num2str(CF_gcm_thresh) ' '];
+    iremove = find(b<CF_gcm_thresh);
+    b(iremove)=NaN;
+
+    eval(['liqReCF80_modis_' gcm_str '= a./b;']);
+    
+    a = eval(['liqRe_modis_' gcm_str]);
+    b = eval(['liqCF_modis_' gcm_str])/100;
+
+%    CF_gcm_thresh=0.01;
+    CF_gcm_thresh=-0.01; %no need to CF screen - COSP seems to have already taken care of it
+   
+
+%    thresh_str=['liqCF.GTE.' num2str(CF_gcm_thresh) ' '];
+    iremove = find(b<CF_gcm_thresh);
+    b(iremove)=NaN;
+
+    eval(['liqRe_allCF_modis_' gcm_str '= a./b;']);
+            
+end
+
+if exist(['liqTau_modis_' gcm_str])
+    a = eval(['liqTau_modis_' gcm_str]);
+    b = eval(['liqCF_modis_' gcm_str])/100;
+
+%    CF_gcm_thresh=0.01;
+    CF_gcm_thresh=0.8;
+
+%    thresh_str=['liqCF.GTE.' num2str(CF_gcm_thresh) ' '];
+
+    iremove = find(b<CF_gcm_thresh);
+    b(iremove)=NaN;
+
+    eval(['liqTauCF80_modis_' gcm_str '= a./b;']);
+            
+end
+
+if exist(['liqTau_modis_' gcm_str]) & exist(['liqRe_modis_' gcm_str])
+    t_top2 = 282; %hardwire this for the moment
+    Wflag='calc';
+    eval(['[Nd_COSP_CF80_' gcm_str ',H,W,k,Q,cw]=MODIS_N_H_func(liqTauCF80_modis_' gcm_str ',liqReCF80_modis_' gcm_str ',Wflag,NaN,t_top2);']);
+end
+
+if exist(['gcm_REFFL_max_noCF_' gcm_str])
+    eval(['gcm_REFFL_max_noCF_' gcm_str ' = squeeze(gcm_REFFL_max_noCF_' gcm_str ');']);
+    
+end
+
+if exist(['gcm_lwp_' gcm_str]) & exist(['rwp_' gcm_str]) & length(eval(['rwp_' gcm_str '(:)']))>0
+    eval(['gcm_TLWP_' gcm_str ' = gcm_lwp_' gcm_str '+ rwp_' gcm_str ';']);    
+end
+if exist(['gcm_lwp_' gcm_str]) & exist(['rwp_' gcm_str]) & exist(['gcm_iwp_' gcm_str]) & length(eval(['rwp_' gcm_str '(:)']))>0
+    eval(['gcm_TWP_' gcm_str ' = gcm_lwp_' gcm_str '+ rwp_' gcm_str '+ gcm_iwp_' gcm_str ';']);    
+end
+
+
+fprintf(1,'\nDone loading.\n');
+

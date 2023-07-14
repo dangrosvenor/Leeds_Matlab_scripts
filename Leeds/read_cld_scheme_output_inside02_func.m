@@ -1,0 +1,51 @@
+function [qL_init,qL_new,CF,T,TL,T_minus_TL] = read_cld_scheme_output_inside02_func(read_file,format_str,iremove)
+
+
+fid=fopen(read_file,'rt'); %is quicker to use fscanf that dlmread
+dat = textscan(fid,format_str);
+fclose(fid);
+
+%chop off the last line as can be incomplete
+nrec = -1;
+for i=1:length(dat)
+    nrec = max(nrec,length(dat{i}) );
+end
+
+dat_col01 = 11;
+
+for i=1:length(dat)
+    dat{i} = dat{i}(1:nrec-1);  
+    dat{i}(iremove) = ''; %remove if difference is 1 (i.e. are incrementing n). Only want to keep when n drops from >1 to 1 (i.e. negative dn)    
+end
+
+%also chop out ones that are not at the end of the n iteration in the cloud
+%scheme
+%Based on iremove calculated from the read of n from inside01 function.
+
+%for i=1:length(dat)  
+%     dat{i}(iremove) = ''; %remove if difference is 1 (i.e. are incrementing n). Only want to keep when n drops from >1 to 1 (i.e. negative dn)
+%end
+
+
+
+
+%print *, 'Cloud scheme (2): cloud_init, new, frac, T, T_l, T-T_l = ', cloud_mass, cloud_mass_new, LiqCloudFrac1D(k), T, T_l, T-T_l 
+
+
+icol=0;
+qL_init = dat{dat_col01 + icol}(:); icol=icol+1; 
+qL_new = dat{dat_col01 + icol}(:); icol=icol+1; 
+CF = dat{dat_col01 + icol}(:); icol=icol+1; 
+T = dat{dat_col01 + icol}(:); icol=icol+1; 
+TL = dat{dat_col01 + icol}(:); icol=icol+1; 
+T_minus_TL = dat{dat_col01 + icol}(:); icol=icol+1; 
+
+
+
+      
+
+
+
+
+
+'';

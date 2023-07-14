@@ -1,0 +1,794 @@
+%loads the longitude transect lines for different variables
+%can also be used to save data from individual variables (although best to
+%use saveload_plot_MULTI_lon_transect for this).
+
+try
+   
+                    
+    
+    %saves the longitude transects calculated by waterVap
+    filedir_gcm_load = '/home/disk/eos8/d.grosvenor/CPT/saved_processed_gcm_data/saved_lon_transects/';
+    filename_lon_save2 = ['saved_lon_transects_01_Jul_2012.mat'];
+    filename_lon_save = [filedir_gcm_load filename_lon_save2];
+
+    if ~exist('ioverride_saveload_transect') |ioverride_saveload_transect==0
+        saveorload='load';
+        %saveorload='save';
+    end
+
+    switch saveorload      
+        case 'load'            
+%%          load for  switch saveorload   
+
+ %select the models to load
+    model_set ='all';
+    model_set ='no models';    
+%    model_set ='reduced';
+%    model_set ='reduced2';   %select this one for COSP Reff since COSP was not switched on for AM3_0.5 degree 
+%    model_set ='CAMCLUBBv2 only';
+%    model_set ='reduced_LTS';   %
+%    model_set ='post_diurnal_CLUBBv2 - CAM models only';
+%    model_set ='post_diurnal_CLUBBv2 - AM3 models only';    
+%    model_set ='post_diurnal_CLUBBv2 - ALL models';
+    
+    switch model_set
+        case 'all'
+            %all the models
+            gcm_load_multi_models={'CAM5','CAM5_CLUBB','CAM5','AM3','AM3','AM3_CLUBB'};
+            am3_dataset_str_models={...
+                '_CAM5_1deg',...
+                '_CAMCLUBB',...
+                '_CAM5_2deg',...
+                '_2deg',...
+                '_0pt5deg',...
+                '_AM3CLUBB',...
+                };
+
+            years_load_models={...
+                '_y2007',...
+                '_y2007',...
+                '_y0001',...
+                'y2007_to_y2010',...
+                'y2007_to_y2008',...
+                '_y2007',...
+                };
+
+        case 'reduced'
+            % a select few
+            gcm_load_multi_models={'CAM5','CAM5_CLUBB','AM3','AM3_CLUBB'};
+
+            years_load_models={...
+                '_y2007',...
+                '_y2007',...
+                'y2007_to_y2008',...
+                '_y2007',...
+                };
+
+
+            %reduced number of models for clarity
+            am3_dataset_str_models={...
+                '_CAM5_1deg',...
+                '_CAMCLUBB',...
+                '_0pt5deg',...
+                '_AM3CLUBB',...
+                };
+            
+         case 'reduced2'
+            % a select few
+%            gcm_load_multi_models={'CAM5','CAM5_CLUBB','AM3','AM3_CLUBB'};
+%            gcm_load_multi_models={'AM3'};
+%            gcm_load_multi_models={'CAM5_COSP'}; 
+            gcm_load_multi_models={'CAM5_CLUBB_COSP'};             
+            gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','AM3'};    
+            gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','CAM5_CLUBBv2_COSP','AM3'};                
+
+             years_load_models={...
+                  '_y2008',...
+                  '_y2008',...
+                  '_y2008',...
+                  '_y2008',...                  
+%                 'y2007_to_y2008',...
+%                 '_y2007',...
+                 };
+
+
+            %reduced number of models for clarity
+            am3_dataset_str_models={...
+                  '_CAM5_1deg',...
+                  '_',...
+                  '_',...                  
+                  '_2deg',...
+%                 '_AM3CLUBB',...
+                };
+            
+        case 'reduced_LTS'
+            % a select few
+                           
+%            gcm_load_multi_models={'CAM5','CAM5_CLUBB','AM3','AM3_CLUBB'};
+%            gcm_load_multi_models={'AM3'};
+%            gcm_load_multi_models={'CAM5_COSP'}; 
+            gcm_load_multi_models={'CAM5_CLUBB_COSP'};             
+            gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','AM3'};    
+            
+            gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','CAM5_CLUBBv2_COSP','AM3','AM3','AM3_CLUBBv2_'};              
+            gcm_load_multi_models={'AM3'};
+
+
+reduced_LTS_switch = 'AM3 models only';
+%reduced_LTS_switch = 'CAM models only';
+reduced_LTS_switch = 'other';
+
+switch reduced_LTS_switch
+
+    case 'CAM models only'
+        gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','CAM5_CLUBBv2_COSP'};
+
+        years_load_models={...
+            '_y2008',...
+            '_y2008',...
+            '_y2008',...
+            };
+
+        am3_dataset_str_models={...
+            '_CAM5_1deg',...
+            '_',...
+            '_',...
+            %                 '',...
+            };
+
+    case 'AM3 models only'
+        gcm_load_multi_models={'AM3','AM3','AM3_CLUBB','AM3_CLUBBv2'};
+
+ years_load_models={...
+            '_y2008',...
+            '_y2008',...
+            '_y2007',...
+            '_y2008',...            
+            };
+
+
+        %reduced number of models for clarity
+        am3_dataset_str_models={...
+            '_2deg',...
+            '_0pt5deg',...
+            '_AM3CLUBB',...            
+            '_',...
+            };
+        
+    case 'other'
+        gcm_load_multi_models={'AM3','AM3'};
+
+        years_load_models={...
+            '_y2008',...
+            '_y2008',...
+            };
+
+        am3_dataset_str_models={...
+            '_2deg',...
+            '_0pt5deg',...
+            };
+        
+        
+
+end
+            
+            
+        case 'CAMCLUBBv2 only'
+            % a select few
+%            gcm_load_multi_models={'CAM5','CAM5_CLUBB','AM3','AM3_CLUBB'};
+%            gcm_load_multi_models={'AM3'};
+%            gcm_load_multi_models={'CAM5_COSP'}; 
+            gcm_load_multi_models={'CAM5_CLUBBv2_COSP'};             
+%            gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','AM3'};    
+%            gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','CAM5_CLUBBv2_COSP','AM3'};                
+
+             years_load_models={...
+%                  '_y2008',...
+%                  '_y2008',...
+%                  '_y2008',...
+                  '_y2008',...                  
+%                 'y2007_to_y2008',...
+%                 '_y2007',...
+                 };
+
+
+            %reduced number of models for clarity
+            am3_dataset_str_models={...
+%                  '_CAM5_1deg',...
+%                  '_',...
+                  '_',...                  
+%                  '_2deg',...
+%                 '_AM3CLUBB',...
+                };
+            
+            
+case 'post_diurnal_CLUBBv2 - CAM models only'
+            % a select few
+%            gcm_load_multi_models={'CAM5','CAM5_CLUBB','AM3','AM3_CLUBB'};
+%            gcm_load_multi_models={'AM3'};
+%            gcm_load_multi_models={'CAM5_COSP'}; 
+%            gcm_load_multi_models={'CAM5_CLUBB_COSP'};             
+%            gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','AM3'};    
+            gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','CAM5_CLUBBv2_COSP'};  
+         
+
+             years_load_models={...
+                  '_y2008',...
+                  '_y2008',...
+                  '_y2008',...
+%                  '_y2008',...                  
+%                 'y2007_to_y2008',...
+%                 '_y2007',...
+                 };
+
+
+            %reduced number of models for clarity
+            am3_dataset_str_models={...
+                  '_CAM5_1deg',...
+                  '_',...
+                  '_',...                  
+%                  '_2deg',...
+%                 '_AM3CLUBB',...
+                };            
+            
+case 'post_diurnal_CLUBBv2 - AM3 models only'
+            % a select few
+            gcm_load_multi_models={'AM3','AM3_CLUBB','AM3_CLUBBv2'};
+%            gcm_load_multi_models={'AM3'};
+%            gcm_load_multi_models={'CAM5_COSP'}; 
+%            gcm_load_multi_models={'CAM5_CLUBB_COSP'};             
+%            gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','AM3'};    
+%            gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','CAM5_CLUBBv2_COSP'};                
+
+%              years_load_models={...
+% %                  '_y2008',...
+%                   'y2007_to_y2008',...
+%                   '_y2007',...
+%                   '_y2008',...                  
+% %                 'y2007_to_y2008',...
+% %                 '_y2007',...
+%                  };
+             
+              years_load_models={...
+%                  '_y2008',...
+                  '_y2008',...
+                  '_y2007',...
+                  '_y2008',...                  
+%                 'y2007_to_y2008',...
+%                 '_y2007',...
+                 };
+
+
+            %reduced number of models for clarity
+            am3_dataset_str_models={...
+%                  '_CAM5_1deg',...
+%                  '_',...
+%                  '_',...                  
+%                  '_0pt5deg',...
+                  '_2deg',...
+                 '_AM3CLUBB',...
+                 '_',...                 
+                };            
+            
+
+case 'post_diurnal_CLUBBv2 - ALL models'
+            % a select few
+%            gcm_load_multi_models={'CAM5','CAM5_CLUBB','AM3','AM3_CLUBB'};
+%            gcm_load_multi_models={'AM3'};
+%            gcm_load_multi_models={'CAM5_COSP'}; 
+%            gcm_load_multi_models={'CAM5_CLUBB_COSP'};             
+%            gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','AM3'};    
+            gcm_load_multi_models={'CAM5_COSP','CAM5_CLUBB_COSP','CAM5_CLUBBv2_COSP','AM3','AM3_CLUBB','AM3_CLUBBv2'};                
+
+             years_load_models={...
+                  '_y2008',...
+                  '_y2008',...
+                  '_y2008',...
+                  '_y2008',...
+                  '_y2007',...
+                  '_y2008',...
+                 };
+
+
+            %reduced number of models for clarity
+            am3_dataset_str_models={...
+                  '_CAM5_1deg',...
+                  '_',...
+                  '_',...                  
+                  '_2deg',...
+                 '_AM3CLUBB',...
+                 '_',...   
+                };            
+            
+        case 'no models' %no models, just data
+            gcm_load_multi_models={};
+
+             years_load_models={...
+                 };
+
+
+            %reduced number of models for clarity
+            am3_dataset_str_models={...
+                };   
+            
+    end
+
+%%  This is only executing if we are not overriding from outside (usually
+%  we are)
+            if ~exist('imulti_lonplot_override') | imulti_lonplot_override==0
+
+                lon_load='10S';
+                %        lon_load='20S';
+                %        lon_load='30S';
+
+                var_load ='Nd';
+                var_load ='LWP';
+                %        var_load ='LWP2';
+                %        var_load ='Precip_rate';
+                var_load ='low_CF';
+                
+                time_of_day = 'average';
+                time_of_day = 'daytime';                
+%                time_of_day = 'nighttime';
+
+               season_str='ALL'; %or could be 'ALL' or 'DJF', etc.
+
+            end
+
+%% This next part concatenates the strings for the obs to the model strings
+% that were set up above. And also adds the names for the different times
+% as requested in time_of_day
+            switch var_load
+                case '??'
+
+
+                    gcm_load_multi={'MODIS','AM3','AM3','CAM5'};
+                    years_load={'y_2000_to_2010',...
+                        '_y2007_y2008_y2009_y2010',...
+                        '_y2007_y2008',...
+                        '_y2001',...
+                        };
+                    time_load = {'','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_'};
+                    am3_dataset_str={'','','_new_0pt5deg','_CAM5_2deg'};
+
+                    %        gcm_load_multi={'MODIS','AM3'};
+
+                case 'Precip_rate'
+                      switch time_of_day
+                        case 'average'
+                            gcm_load_multi = ['_CLOUDSAT_PRECIP_' gcm_load_multi_models];
+                            time_load = {'','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_'};                            
+                        case 'daytime'
+                            gcm_load_multi = ['ascending_CLOUDSAT_PRECIP_' gcm_load_multi_models];
+                            %Aqua ascending times
+                            time_load = {'','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_'};                            
+                        case 'nighttime'
+                            gcm_load_multi = ['descending_CLOUDSAT_PRECIP_' gcm_load_multi_models];
+                            %Aqua descending times
+                            time_load = {'','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_'};
+
+                      end
+                      am3_dataset_str = [{''} am3_dataset_str_models];
+                      years_load = ['y_2007_to_2010' years_load_models];
+                      years_load = ['y2007_to_201' years_load_models];                    
+                    
+
+                    %          gcm_load_multi={'_CLOUDSAT_PRECIP_','ascending_CLOUDSAT_PRECIP_','descending_CLOUDSAT_PRECIP_','CAM5_CLUBB','CAM5'};
+                    %          years_load={...
+                    %              'y_2007_to_2010',...
+                    %              'y_2007_to_2010',...
+                    %              'y_2007_to_2010',...
+                    %             '_y2007',...
+                    %             '_y2007',...
+                    %             };
+                    %          time_load = {'','','','',''};
+                    %          am3_dataset_str={'','','','_CAM5_CLUBB_new_1deg','_CAM5_new_1deg'};
+
+                    %Precip_rate_ascending_CLOUDSAT_PRECIP___10S_y_2007_to_2010
+
+%                     gcm_load_multi={'_CLOUDSAT_PRECIP_','CAM5','CAM5_CLUBB','CAM5','AM3','AM3'};
+%                     %         gcm_load_multi={'ascending_CLOUDSAT_PRECIP_','CAM5','CAM5_CLUBB','CAM5','AM3','AM3'};
+%                     %         gcm_load_multi={'descending_CLOUDSAT_PRECIP_','CAM5','CAM5_CLUBB','CAM5','AM3','AM3'};
+%                     years_load={...
+%                         'y_2007_to_2010',...
+%                         '_y2007',...
+%                         '_y2007',...
+%                         '_y0001',...
+%                         'y2007_to_y2010',...
+%                         'y2007_to_y2008',...
+%                         };
+% 
+%                     %      time_load
+%                     %      ={'','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_'};
+%                     %Daily average - Aqua times for both asc and desc (0:3 and 12:15)
+% %                    time_load = {'','_0_15_LT_','_0_15_LT_','_0_15_LT_','_0_15_LT_','_0_15_LT_'};
+%                     %Daytime - Aqua ascending times
+%                     %      time_load = {'','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_'};
+%                     %Nightitme - Aqua descending times
+%                     %      time_load = {'','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_'};
+%                     am3_dataset_str={...
+%                         '',...
+%                         '_CAM5_1deg',...
+%                         '_CAMCLUBB',...
+%                         '_CAM5_2deg',...
+%                         '_2deg',...
+%                         '_0pt5deg',...
+%                         };
+
+
+%For MODIS based LWP, etc.
+                case {'LWP_MOD35CF','LWP_COSP','LWP_COSPCF','Nd','LWP_orig','LWP22','Reff_COSP_allCF','REFFL_maxlayer','REFFL_max_noCF','REFFL_maxliq'} %LWP2 is LWP with no CF screening (so CF will play a role in
+                    %determining the LWP) - no MODIS for this
+%,'Reff_COSP' took this out to plot POLDER instead                    
+                      switch time_of_day
+                        case 'average'
+                            gcm_load_multi = ['MODIS_','AMSRE_daytime' gcm_load_multi_models];
+                            time_load = {'','','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_'};
+                        case 'daytime'
+                            gcm_load_multi = ['MODIS_','AMSRE_daytime' gcm_load_multi_models];
+                            %Aqua ascending times
+                            time_load = {'','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_'};                            
+                            %Aqua and Terra timespan
+                            time_load = {'','','_9_15_LT_','_9_15_LT_','_9_15_LT_','_9_15_LT_','_9_15_LT_','_9_15_LT_'};                                                        
+                        case 'nighttime'
+                            gcm_load_multi = ['MODIS_' gcm_load_multi_models];
+                            %Aqua descending times
+                            time_load = {'','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_'};
+                            %Aqua-Terra timespan descending times
+                            time_load = {'','_21_3_LT_','_21_3_LT_','_21_3_LT_','_21_3_LT_','_21_3_LT_','_21_3_LT_'};                            
+
+                      end
+                        am3_dataset_str = [{''} {''} am3_dataset_str_models];
+                        years_load = ['y_2007_to_2010' years_load_models];
+%                        years_load = ['2007' years_load_models];
+                        years_load = {'_2008','2007_to_2009',years_load_models};                        
+
+%                     %Nd, LWP
+%                     gcm_load_multi={'MODIS_','CAM5','CAM5_CLUBB','CAM5','AM3','AM3'};
+%                     years_load={...
+%                         'y_2007_to_2010',...
+%                         '_y2007',...
+%                         '_y2007',...
+%                         '_y0001',...
+%                         'y2007_to_y2010',...
+%                         'y2007_to_y2008',...
+%                         };
+%                     
+%                     
+%                     time_load = {'','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_'};
+%                     %         time_load = {'','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_'};
+%                     %Aqua ascending times
+%                     time_load = {'','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_'};
+%                     %Aqua descending times
+%                     %      time_load = {'','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_'};
+% 
+%                     am3_dataset_str={...
+%                         '',...
+%                         '_CAM5_1deg',...
+%                         '_CAMCLUBB',...
+%                         '_CAM5_2deg',...
+%                         '_2deg',...
+%                         '_0pt5deg',...
+%                         };
+
+
+                case {'Reff_COSP'} %POLDER Reff
+                    
+                      switch time_of_day
+                        case 'average'
+                            gcm_load_multi = ['POLDER_' gcm_load_multi_models];
+                            time_load = {'','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_'};
+                        case 'daytime'
+                            gcm_load_multi = ['POLDER_' gcm_load_multi_models];
+                            %Aqua ascending times
+                            time_load = {'','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_'};                            
+                            %Aqua and Terra timespan
+                            time_load = {'','_9_15_LT_','_9_15_LT_','_9_15_LT_','_9_15_LT_','_9_15_LT_','_9_15_LT_'};                                                        
+                        case 'nighttime'
+                            gcm_load_multi = ['POLDER_' gcm_load_multi_models];
+                            %Aqua descending times
+                            time_load = {'','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_'};
+                            %Aqua-Terra timespan descending times
+                            time_load = {'','_21_3_LT_','_21_3_LT_','_21_3_LT_','_21_3_LT_','_21_3_LT_','_21_3_LT_'};                            
+
+                      end
+                        am3_dataset_str = [{''} am3_dataset_str_models];
+                        years_load = ['2006_to_2010' years_load_models];
+%                        years_load = ['2007' years_load_models];
+%                        years_load = ['_2008' years_load_models];                        
+
+%                     %Nd, LWP
+%                     gcm_load_multi={'MODIS_','CAM5','CAM5_CLUBB','CAM5','AM3','AM3'};
+%                     years_load={...
+%                         'y_2007_to_2010',...
+%                         '_y2007',...
+%                         '_y2007',...
+%                         '_y0001',...
+%                         'y2007_to_y2010',...
+%                         'y2007_to_y2008',...
+%                         };
+%                     
+%                     
+%                     time_load = {'','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_'};
+%                     %         time_load = {'','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_'};
+%                     %Aqua ascending times
+%                     time_load = {'','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_'};
+%                     %Aqua descending times
+%                     %      time_load = {'','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_'};
+% 
+%                     am3_dataset_str={...
+%                         '',...
+%                         '_CAM5_1deg',...
+%                         '_CAMCLUBB',...
+%                         '_CAM5_2deg',...
+%                         '_2deg',...
+%                         '_0pt5deg',...
+%                         };
+
+
+                case {'TLWP','LWP','LWP2'} %LWP2 is LWP with no CF screening (so CF will play a role in
+                    %determining the LWP) - use AMSRE for this
+                    
+                    switch time_of_day
+                        case 'average'
+                            gcm_load_multi = ['AMSRE' gcm_load_multi_models];
+                            time_load = {'','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_'};                                                        
+                        case 'daytime'
+                            gcm_load_multi = ['AMSRE_daytime' gcm_load_multi_models];
+%                            %Aqua ascending times
+                            time_load = {'','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_'};                            
+                            %(AMSRE is on Aqua)
+                        case 'nighttime'
+                            gcm_load_multi = ['AMSRE_nighttime' gcm_load_multi_models];
+                            %Aqua descending times
+                            time_load = {'','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_'};
+                            %(AMSRE is on Aqua)
+
+                    end
+
+                    years_load = ['2007_to_2010' years_load_models];   
+                    years_load = ['2007_to_2009' years_load_models];                       
+                    am3_dataset_str = [{''} am3_dataset_str_models];
+                    
+
+                    %Nd, LWP
+%                     gcm_load_multi={'CAM5','CAM5_CLUBB','CAM5','AM3','AM3'};
+%                     years_load={...
+%                         '_y2007',...
+%                         '_y2007',...
+%                         '_y0001',...
+%                         'y2007_to_y2010',...
+%                         'y2007_to_y2008',...
+%                         };
+%                     time_load = {'_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_'};
+%                     %         time_load = {'_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_'};
+%                     %Aqua ascending times
+%                     time_load = {'_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_'};
+%                     %Aqua descending times
+%                     time_load = {'_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_'};
+% 
+%                     am3_dataset_str={...
+%                         '_CAM5_1deg',...
+%                         '_CAMCLUBB',...
+%                         '_CAM5_2deg',...
+%                         '_2deg',...
+%                         '_0pt5deg',...
+%                         };
+
+
+
+
+
+                case 'low_CF'
+                    
+                    switch time_of_day
+                        case 'average'
+                            %gcm_load_multi={'CALIPSO_monthly_average','CAM5','CAM5_CLUBB','CAM5','AM3','AM3'};
+                            gcm_load_multi = ['CALIPSO_monthly_average' gcm_load_multi_models];
+                            time_load = {'','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_'};                                                        
+                        case 'daytime'
+                            %gcm_load_multi={'CALIPSO_monthly_DAYTIME','CAM5','CAM5_CLUBB','CAM5','AM3','AM3','AM3_CLUBB'};
+                            gcm_load_multi = ['CALIPSO_monthly_DAYTIME' gcm_load_multi_models];
+                            %Aqua ascending times
+                            time_load = {'','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_'};                            
+                        case 'nighttime'
+                            %gcm_load_multi={'CALIPSO_monthly_nighttime','CAM5','CAM5_CLUBB','CAM5','AM3','AM3'};
+                            gcm_load_multi = ['CALIPSO_monthly_nighttime' gcm_load_multi_models];
+                            gcm_load_multi = ['CALIPSO_monthly_NIGHTTIME' gcm_load_multi_models];                            
+                            %Aqua descending times
+                            time_load = {'','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_'};
+
+                    end
+                    am3_dataset_str = [{''} am3_dataset_str_models];
+                    years_load = ['2007_to_2010' years_load_models];
+%                     years_load={...
+%                         '2007_to_2010',...
+%                         '_y2007',...
+%                         '_y2007',...
+%                         '_y0001',...
+%                         'y2007_to_y2010',...
+%                         'y2007_to_y2008',...
+%                         '_y2007',...
+%                         };
+                    %         time_load = {'','','','','',''};
+%                    time_load = {'','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_','_9_15_LOCAL_TIME_'};
+%                    time_load = {'','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_','_0_24_LOCAL_TIME_'};
+
+ 
+
+% 
+%                     am3_dataset_str={...
+%                         '',...
+%                         '_CAM5_1deg',...
+%                         '_CAMCLUBB',...
+%                         '_CAM5_2deg',...
+%                         '_2deg',...
+%                         '_0pt5deg',...
+%                         '_AM3CLUBB',...
+%                         };
+
+
+           case {'LTS','LTS1000'} %Compare to ECMWF (ERA-Interim)
+                    
+                    switch time_of_day
+                        case 'average'
+                            gcm_load_multi = ['ERAInt_' gcm_load_multi_models];
+                            time_load = {'_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_'};                                                        
+                        case 'daytime'
+                            gcm_load_multi = ['ERAInt_' gcm_load_multi_models];
+                            time_load = {'_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_'};                            
+                        case 'nighttime'
+                            gcm_load_multi = ['ERAInt_' gcm_load_multi_models];
+                            time_load = {'_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_'};
+
+                    end
+
+                    years_load = ['2006_to_2010' years_load_models];   
+%                    years_load = ['_2008' years_load_models];                       
+                    am3_dataset_str = [{''} am3_dataset_str_models];
+                    
+                    
+                case {'qv700'} %Compare to ECMWF obs
+                    
+                    switch time_of_day
+                        case 'average'
+                            gcm_load_multi = ['ERAInt_' gcm_load_multi_models];
+                            time_load = {'_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_','_0_24_LT_'};                                                        
+                        case 'daytime'
+                            gcm_load_multi = ['ERAInt_' gcm_load_multi_models];
+                            time_load = {'_12_15_LT_''_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_','_12_15_LT_'};                            
+                        case 'nighttime'
+                            gcm_load_multi = [gcm_load_multi_models];
+                            time_load = {'_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_','_0_3_LT_'};
+
+                    end
+
+                    years_load = ['_2008' years_load_models];                    
+                    am3_dataset_str = [{''} am3_dataset_str_models];                    
+                    
+
+
+
+
+
+            end %switch var_load
+
+
+
+            %        years_load='y_2000_to_2010';  %MODIS multi-year PDF data
+
+
+
+            %need to give MODIS and GCMs different time names
+
+
+
+%% Now go through and load all the data
+
+            clear time_str_115 lon_lon dat_lon description_lon
+
+            for iload=1:length(gcm_load_multi)
+                gcm_load = gcm_load_multi{iload};
+                var_load_orig = var_load;
+
+                %add the season to the start of the time string
+                time_load{iload} = [season_str time_load{iload}];
+                
+% Here we change the names of some variables for the obs since the model
+% names may be different (e.g. AMSRE data was processed as LWP, but then
+% realised needed to add RWP to make TWP - so re-processed the models, but
+% didn't bother with AMRSRE)
+                switch gcm_load
+                    case 'MODIS_'
+                        switch var_load
+                            case 'LWP2'
+                                var_load = 'LWP';
+                            case {'Reff_COSP_allCF','REFFL_maxlayer','REFFL_max_noCF','REFFL_maxliq'}
+                                var_load = 'Reff_COSP';
+                            case 'LWP_COSP'
+                                var_load = 'LWP_COSPCF';
+                        end
+                        
+                     case {'AMSRE_','AMSRE_daytime','AMSRE_nighttime'}
+                        switch var_load
+                            case 'TLWP' %since AMSRE gives the TWP already (except ice)
+                                var_load = 'LWP2';  
+                            case 'LWP_MOD35CF'
+                                var_load = 'LWP2';
+                        end   
+                        
+                    case {'ERAInt_'}
+                        switch var_load
+                            case {'LTS1000','LTS'}
+%                                var_load = 'LTS'; %old LTS that was calculated using the monthly mean temps
+                                var_load = 'LTS_daily'; %updated 23rd April, 2013 - now using daily LTS values
+                                %in order to make monthly averages
+                        end
+                end
+
+                dataset_name = [var_load '_' gcm_load am3_dataset_str{iload} '_' time_load{iload} '_' lon_load '_' years_load{iload}];
+
+                eval(['load(filename_lon_save,''' dataset_name ''');']);
+
+                %now put in a standard array
+                eval(['lon_lon(iload).x = ' dataset_name '.lon_saved.x;']);
+                eval(['dat_lon(iload).y = ' dataset_name '.lon_transect_saved.y;']);
+                eval(['description_lon = ' dataset_name '.description_saved;']);
+
+
+                time_str_116{iload} = [time_load{iload} '_' years_load{iload}];
+
+                var_load = var_load_orig;
+            end
+
+
+%% save from case saveorload
+
+        case 'save'
+
+            %gcm_case is set in waterVap and is the name for the variable
+            %(e.g. Nd)
+            var_save = remove_character(gcm_case,' ','_');
+            gcm_save = remove_character(gcm_strs{1},' ','_');
+            time_save  = remove_character(time_mean_str,' ','_');
+            time_save  = remove_character(time_save,'-','_');
+            time_save  = remove_character(time_save,'LOCAL_TIME','LT');
+            years_save = remove_character(gcm_years_loaded_str,' ','_');
+            am3_dataset_str = remove_character(am3_dataset,'.','pt');
+
+            if abs(LAT_val(2)--8)<1 & abs(LAT_val(1)--32.74)<1 %for the case where do 10-30S
+%                lon_val_save = round(mean(LAT_val)); %should be the same for each model/satellite
+                %as is based on the selected values
+                lon_save = ['10to30S'];
+            else
+                lon_val_save = round(mean(LAT_val)); %should be the same for each model/satellite
+                %as is based on the selected values
+                lon_save = num2str(abs(lon_val_save));
+                if lon_val_save<0
+                    lon_save = [lon_save 'S'];
+                else
+                    lon_save = [lon_save 'N'];
+                end
+            end
+            
+            
+
+
+            dataset_name = [var_save '_' gcm_save '_' am3_dataset_str '_' time_save '_' lon_save '_' years_save];
+
+            eval([dataset_name '.lon_saved = xdat;']);
+            eval([dataset_name '.lon_transect_saved = ydat;']);
+            eval([dataset_name '.description_saved = [titlenam labs(1).l];']);
+
+            eval(['save(filename_lon_save,''' dataset_name ''',''-APPEND'',''-V7.3'');']);
+    end
+
+    fprintf(1,'\n Done save/load transect data\n');
+
+
+
+    clear ioverride_saveload_transect imulti_lonplot_override
+catch saveload_error
+    clear ioverride_saveload_transect imulti_lonplot_override
+    rethrow(saveload_error);
+end

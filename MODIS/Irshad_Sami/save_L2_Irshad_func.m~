@@ -1,0 +1,5 @@
+function save_L2_Irshad_func(dat,savevarname,MODIS_varname,app_str,icell)
+
+eval_str = [MODIS_varname '=dat;']; eval(eval_str);
+
+eval_str = ['save(''' savevarname ''',''' MODIS_varname '''' app_str]; eval(eval_str);

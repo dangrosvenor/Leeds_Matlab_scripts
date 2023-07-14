@@ -1,0 +1,203 @@
+switch   case134_set
+    case 'low/high SZA and CF';                        
+
+%-------------- 1st pdf ----------------------------
+            thresh_SZA = [50 55];   
+            thresh_CF = [0.8 1.0];
+
+            man_choose_plotTimeHeight_graph=1;
+            logflag=0;
+            dlogflag=0;
+            noplot=1; %flag to say to just do the calculations and not to plot
+            nXpdf=10;
+            nYpdf=50;
+            ndims_hist=2;
+            ioverride_time_selection=1;            
+            ioverride_pdf_varchoose=1; %override the defaults
+            ioverride_pdf=1; %override the defaults  
+            plotTimeHeightVap3
+                            
+            ierror_bars='none';
+
+            istyle = 1;
+            Npdf_pts = 50;
+
+            idat2=0;
+            idat2=idat2+1;
+            %dat=homog_time3_W;
+            dat=Y;
+            dat(dat>1000)=1000;
+            dat=dat(:);
+            %        Xbins=make_PDF_bins(dat,Npdf_pts);
+            %Xbins = [0:0.1:20];
+            ydat(idat2).y = ndHistc_run([dat],Ybins);
+            ydat(idat2).y = ydat(idat2).y / sum(ydat(idat2).y);
+            xdat(idat2).x = 0.5 * ( Ybins(1:end-1) + Ybins(2:end) );
+            labs(idat2).l = 'SZA = 50-55, CF 0.8-1.0';
+            
+            
+% --------------- pdf 2--------------------------            
+            thresh_SZA = [75 85];
+
+            man_choose_plotTimeHeight_graph=1;
+            ioverride_time_selection=1;            
+            ioverride_pdf_varchoose=1; %override the defaults
+            ioverride_pdf=1; %override the defaults             
+            plotTimeHeightVap3
+          
+            idat2=idat2+1;           
+            dat=Y;
+            dat(dat>1000)=1000;
+            dat=dat(:);
+            %Xbins=make_PDF_bins(dat,Npdf_pts);
+            ydat(idat2).y = ndHistc_run([dat],Ybins);
+            ydat(idat2).y = ydat(idat2).y / sum(ydat(idat2).y);
+            xdat(idat2).x = 0.5 * ( Ybins(1:end-1) + Ybins(2:end) );
+            labs(idat2).l = 'SZA = 75-85, CF 0.8-1.0';
+                
+% --------------- pdf 3--------------------------            
+                thresh_CF = [0.1 0.8];
+                thresh_SZA = [50 55];
+
+            man_choose_plotTimeHeight_graph=1;
+            ioverride_time_selection=1;            
+            ioverride_pdf_varchoose=1; %override the defaults
+            ioverride_pdf=1; %override the defaults             
+            plotTimeHeightVap3
+          
+            idat2=idat2+1;           
+            dat=Y;
+            dat(dat>1000)=1000;
+            dat=dat(:);
+            %Xbins=make_PDF_bins(dat,Npdf_pts);
+            ydat(idat2).y = ndHistc_run([dat],Ybins);
+            ydat(idat2).y = ydat(idat2).y / sum(ydat(idat2).y);
+            xdat(idat2).x = 0.5 * ( Ybins(1:end-1) + Ybins(2:end) );
+            labs(idat2).l = 'SZA = 50-55, CF 0.1-0.8';
+                
+                
+            
+% --------------- pdf 4--------------------------            
+            thresh_SZA = [75 85];
+
+            man_choose_plotTimeHeight_graph=1;
+            ioverride_time_selection=1;            
+            ioverride_pdf_varchoose=1; %override the defaults
+            ioverride_pdf=1; %override the defaults             
+            plotTimeHeightVap3
+          
+            idat2=idat2+1;           
+            dat=Y;
+            dat(dat>1000)=1000;
+            dat=dat(:);
+            %Xbins=make_PDF_bins(dat,Npdf_pts);
+            ydat(idat2).y = ndHistc_run([dat],Ybins);
+            ydat(idat2).y = ydat(idat2).y / sum(ydat(idat2).y);
+            xdat(idat2).x = 0.5 * ( Ybins(1:end-1) + Ybins(2:end) );
+            labs(idat2).l = 'SZA = 75-85, CF 0.1-0.8';
+            
+            
+    case 'allCF low/high SZA';
+            thresh_CF = [0.1 1.0]; 
+            thresh_CTT = [273-5 373];
+%-------------- 1st pdf ----------------------------
+            man_choose_plotTimeHeight_graph=1;
+            logflag=0;
+            dlogflag=0;
+            noplot=0; %flag to say to just do the calculations and not to plot
+            nXpdf=10;
+            nYpdf=50;
+            ndims_hist=2;
+            ioverride_time_selection=1;            
+            ioverride_pdf_varchoose=1; %override the defaults
+            ioverride_pdf=1; %override the defaults  
+            plotTimeHeightVap3
+                            
+            ierror_bars='none';
+
+            istyle = 1;
+            Npdf_pts = 50;
+
+            idat2=0;
+            idat2=idat2+1;
+            %dat=homog_time3_W;
+            dat=Y;
+            dat(dat>1000)=1000;
+            dat=dat(:);
+            %        Xbins=make_PDF_bins(dat,Npdf_pts);
+            %Xbins = [0:0.1:20];
+            ydat(idat2).y = ndHistc_run([dat],Ybins);
+            ydat(idat2).y = ydat(idat2).y / sum(ydat(idat2).y);
+            xdat(idat2).x = 0.5 * ( Ybins(1:end-1) + Ybins(2:end) );
+            labs(idat2).l = 'SZA = 50-55, WARM';
+            
+            
+% --------------- pdf 2--------------------------            
+            thresh_SZA = [75 85];
+
+            man_choose_plotTimeHeight_graph=1;
+            ioverride_time_selection=1;            
+            ioverride_pdf_varchoose=1; %override the defaults
+            ioverride_pdf=1; %override the defaults             
+            plotTimeHeightVap3
+          
+            idat2=idat2+1;           
+            dat=Y;
+            dat(dat>1000)=1000;
+            dat=dat(:);
+            %Xbins=make_PDF_bins(dat,Npdf_pts);
+            ydat(idat2).y = ndHistc_run([dat],Ybins);
+            ydat(idat2).y = ydat(idat2).y / sum(ydat(idat2).y);
+            xdat(idat2).x = 0.5 * ( Ybins(1:end-1) + Ybins(2:end) );
+            labs(idat2).l = 'SZA = 75-85, WARM';
+                
+
+% --------------- pdf 3--------------------------            
+                thresh_SZA = [50 55];
+                thresh_CTT = [273-100 273-5];
+
+            man_choose_plotTimeHeight_graph=1;
+            ioverride_time_selection=1;            
+            ioverride_pdf_varchoose=1; %override the defaults
+            ioverride_pdf=1; %override the defaults             
+            plotTimeHeightVap3
+          
+            idat2=idat2+1;           
+            dat=Y;
+            dat(dat>1000)=1000;
+            dat=dat(:);
+            %Xbins=make_PDF_bins(dat,Npdf_pts);
+            ydat(idat2).y = ndHistc_run([dat],Ybins);
+            ydat(idat2).y = ydat(idat2).y / sum(ydat(idat2).y);
+            xdat(idat2).x = 0.5 * ( Ybins(1:end-1) + Ybins(2:end) );
+            labs(idat2).l = 'SZA = 50-55, COLD';
+                
+                
+            
+% --------------- pdf 4--------------------------            
+            thresh_SZA = [75 85];
+
+            man_choose_plotTimeHeight_graph=1;
+            ioverride_time_selection=1;            
+            ioverride_pdf_varchoose=1; %override the defaults
+            ioverride_pdf=1; %override the defaults             
+            plotTimeHeightVap3
+          
+            idat2=idat2+1;           
+            dat=Y;
+            dat(dat>1000)=1000;
+            dat=dat(:);
+            %Xbins=make_PDF_bins(dat,Npdf_pts);
+            ydat(idat2).y = ndHistc_run([dat],Ybins);
+            ydat(idat2).y = ydat(idat2).y / sum(ydat(idat2).y);
+            xdat(idat2).x = 0.5 * ( Ybins(1:end-1) + Ybins(2:end) );
+            labs(idat2).l = 'SZA = 75-85, COLD';
+                
+                
+ 
+             
+                    
+                    
+                    
+                    
+end

@@ -1,0 +1,122 @@
+iload_UM=0;
+
+%Load UM files with mass and number in (for single time)
+file_mass = '/home/disk/eos10/d.grosvenor/UM/Iceland/saved_data_UM_maps_generic_time_loop_RUN_v1_accum_mass_z3000_31Aug0900_Iceland_16Nov2016.mat';
+file_num = '/home/disk/eos10/d.grosvenor/UM/Iceland/saved_data_UM_maps_generic_time_loop_RUN_v1_accum_num_z3000_31Aug0900_Iceland_16Nov2016.mat';
+
+if iload_UM==1
+    aero_mass = load(file_mass);
+    aero_num = load(file_num);
+end
+
+% Order :-
+% Low aerosol, volcano OFF
+% High aerosol, volcano ON
+% Low aerosol, volcano ON
+% High aerosol, volcano OFF
+
+um_runs = [1 2 3 4]; %runs to look at
+
+%r_single_all = [50:100:450]*1e-9; %radius in m
+
+N_type = 'prescribed number';
+%N_type = 'prescribed single aerosol mass';
+
+w=0.4;
+w=0.1;
+r_single{1} = 117e-9;
+
+for ium=1:length(um_runs)
+    
+    ium2=um_runs(ium);
+    
+    N_aero0{1} = aero_num.UM_time_out{ium2}.datUM{1};
+    M_aero0{1} = aero_mass.UM_time_out{ium2}.datUM{1};
+    
+    N_um{ium} = N_aero0{1}; M_um{ium} = M_aero0{1};
+
+    for iab=1:length(w)
+        %    r_single = r_single_all(iab);
+        nccn{ium} = abdul_razzak_UM_func(N_aero0,M_aero0,w,r_single,N_type)
+    end
+
+
+end
+
+dHigh = nccn{2}{1} - nccn{4}{1};
+dLow = nccn{3}{1} - nccn{1}{1};
+
+qpcolor(dHigh); title(['N_d volcano change, high background aerosol, w=' num2str(w) ' m/s']);
+qpcolor(dLow); title(['N_d volcano change, low background aerosol, w=' num2str(w) ' m/s']);
+
+dHigh_mean = meanNoNan(dHigh(:),1)
+dLow_mean = meanNoNan(dLow(:),1)
+
+density = {1777,1777};
+sigma = {1.5 , 1.5};
+
+i=2; rd_High = (3.0.*M_um{i}.*exp(-4.5.*log(sigma{1}).^2.)./(4.0.*N_um{i}.*pi.*density{1})).^(1.0/3.0);
+i=3; rd_Low = (3.0.*M_um{i}.*exp(-4.5.*log(sigma{1}).^2.)./(4.0.*N_um{i}.*pi.*density{1})).^(1.0/3.0);
+
+%Volcano ON runs :-
+qpcolor(N_um{2}); title('Number, high background aerosol');
+qpcolor(N_um{3}); title('Number, low background aerosol');
+
+qpcolor(M_um{2}); title('Mass, high background aerosol');
+qpcolor(M_um{3}); title('Mass, low background aerosol');
+
+%qpcolor(rd_High*1e9); title('Rd (nm), high background aerosol');
+%qpcolor(rd_Low*1e9); title('Rd (nm), low background aerosol');
+
+num_bins = [0:0.1e9:10e9];
+pdf_num_high = ndhistc_run(N_um{2}(:),num_bins);
+pdf_num_low = ndhistc_run(N_um{3}(:),num_bins);
+pdf_num_high_off = ndhistc_run(N_um{4}(:),num_bins);
+pdf_num_low_off = ndhistc_run(N_um{1}(:),num_bins);
+
+mass_bins = [0:0.02e-7:2e-7];
+pdf_mass_high = ndhistc_run(M_um{2}(:),mass_bins);
+pdf_mass_low = ndhistc_run(M_um{3}(:),mass_bins);
+pdf_mass_high_off = ndhistc_run(M_um{4}(:),mass_bins);
+pdf_mass_low_off = ndhistc_run(M_um{1}(:),mass_bins);
+
+figure
+plot(mass_bins(2:end),pdf_mass_high,'bo-');
+title('Mass PDFs');
+set(gca,'yscale','log');
+hold on
+plot(mass_bins(2:end),pdf_mass_low,'rs-');
+%plot(mass_bins(2:end),pdf_mass_low_off,'rs-');
+%plot(mass_bins(2:end),pdf_mass_high_off,'ro-');
+legend({'ON, high background','ON, low background'}); %,'OFF, low background','OFF, high background'});
+
+
+
+figure
+plot(num_bins(2:end),pdf_num_high,'bo-');
+set(gca,'yscale','log');
+hold on
+plot(num_bins(2:end),pdf_num_low,'rs-');
+title('Number PDFs');
+legend({'ON, high background','ON, low background'}); 
+xlabel('Number conc. (kg^{-1})');
+ylabel('Bin counts');
+
+figure
+plot(N_um{2},nccn{2}{1},'bx');
+xlabel('Aerosol number conc. (kg^{-1})');
+ylabel('N_d (kg^{-1})');
+grid
+ylims=get(gca,'ylim');
+y=[ylims(1) ylims(2)];
+x=7e8*ones(size(y));
+hold on
+plot(x,y,'k--');
+title(['w = ' num2str(w) 'm s^{-1}']);
+
+
+Nd_high = load('/home/disk/eos10/d.grosvenor/UM/Iceland/u-af178/u-af178_Nd_Iceland_4p0_L70_ukv_.pp.nc.mat');
+datestr(Nd_high.gcm_time_matlab_UM(13)); %13=09:00 on 31st Aug
+maxALL(Nd_high.Nd(13,:,:))
+
+

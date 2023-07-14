@@ -1,0 +1,111 @@
+%estimate of moistenting tonnage from the Chemel paper
+%think before that I just used the total mass of air between 380 and 420K and
+%then multiplied this by the average moistenting over this height - however,
+%this will introduce weighting errors since the air density is greater at lower heights
+%so should estimate the density for each 5K bin from the Chemel paper.
+
+dx=1e3;
+dy=1e3;
+nx=341;
+ny=341;
+
+
+
+
+f=1e6*28.97/18; %conversion between MR and ppmv - use 18 for water vapour and 48 for ozone
+
+
+%Chemel's potemp bins:
+
+potemp_bins = [380:5:425];
+
+moistening = [0.02 0.06 0.025 0.02 0.125 0.13 0.15 0.08 0.075 0.01];
+mean_Chemel=mean(moistening(1:end-1)) %just 380-420 as quoted as 0.06 in paper
+
+fscale = 0.06/mean_Chemel;
+
+
+%%%%%
+time_Chemel=67; %LT = UTC+9.5 hours (according to the Chemel paper). time=60 is 05:30 UTC = 15UTC
+    %in Chemel's paper he computed the difference between 18:30 LT and 15:30
+    %so should use 18:30 LT really ; time = 67
+%%%%%    
+    
+for time_Chemel=50:75
+
+iload=1;
+if iload==1
+    imanual_select_load_case=1;
+    dire(1).dir = 'Y:\WRF\';
+    rundir(1).dir='30thNov_Min'; fileWRF(1).file=['d03'];
+    load_WRF_vars %note - load changes time
+    
+
+
+    P = WRFUserARW(nc,'p',time_Chemel)*100;    %Pa
+    T = WRFUserARW(nc,'tc',time_Chemel)+273.15;   %temperature K
+    Z = WRFUserARW(nc,'Z',time_Chemel);   %height (m)
+    potemp = nc{'T'}(time_Chemel,:,:,:) + 300;
+
+    Pmean = mean(mean(P,2),3);
+    Tmean = mean(mean(T,2),3);
+    Zmean = mean(mean(Z,2),3);
+    POTmean = mean(mean(potemp,2),3);
+    
+%    Pmean = P(:,101,101);
+%    Tmean = T(:,101,101);
+%    Zmean = Z(:,101,101);
+%    POTmean = potemp(:,101,101);
+    
+
+    rho=density(Pmean,Tmean);
+
+    %make fine resoltution density profile
+    dz=0.1;
+    zfine =[min(Zmean):dz:max(Zmean)];
+    rho_fine = interp1(Zmean,rho,zfine);
+    POT_fine = interp1(Zmean,POTmean,zfine);
+
+
+end
+
+
+
+
+for ipot=1:length(potemp_bins)-1
+    [i,i2]=findheight_nearest(POT_fine,potemp_bins(ipot),potemp_bins(ipot+1));
+
+    dz=diff(zfine(i:i2));
+    mass_layer(ipot) = ny*dy*nx*dx*sum( rho_fine(i+1:i2).*dz );
+
+end
+
+[i,i2]=findheight_nearest(POT_fine,potemp_bins(1),potemp_bins(end-1));
+mass_layer_mean = ny*dy*nx*dx*mean(rho_fine(i:i2))*(zfine(i2)-zfine(i));
+
+tonnes = fscale*moistening(1:end-1)/f .* mass_layer/1e3;
+tonnes_mean = mean(fscale*moistening(1:end-1)/f) * mass_layer_mean/1e3;
+
+
+Chemel_dat_all(time_Chemel).tonnes=tonnes;
+Chemel_dat_all(time_Chemel).tonnes_mean=tonnes_mean;
+Chemel_dat_all(time_Chemel).mass_layer=mass_layer;
+Chemel_dat_all(time_Chemel).mass_layer_mean=mass_layer_mean;
+
+
+end
+
+disp('done');
+
+
+
+
+
+
+
+
+
+
+
+
+

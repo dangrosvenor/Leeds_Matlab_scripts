@@ -1,0 +1,81 @@
+function [out,std_dev,freq,Nii,inds,quart_coeff] = calc_SW_forcing_cloud_fraction_combinations(dat,cf_low,cf_mid,cf_high,thresh)
+
+%Possible combinations of low, mid and high cloud; 0 means below threshold,
+%1 means above
+%[low mid high]
+% Perhaps Won't consider [0 0 0] since is no cloud forcing when have no cloud at
+% all
+
+
+% 1) [0 0 0]
+% 2) [1 0 0]
+% 3) [0 1 0]
+% 4) [1 1 0]
+% 5) [0 0 1]
+% 6) [1 0 1]
+% 7) [0 1 1]
+% 8) [1 1 1]
+
+%Use -1 to represent 0 and 1 to represent 1  
+  sigs = [ -1 -1 -1 ...
+       ; 1 -1 -1 ...
+       ; -1  1  -1 ...
+       ; 1  1  -1 ...
+       ; -1  -1  1 ...
+       ; 1  -1  1 ...
+       ; -1  1  1 ...
+       ; 1  1  1 ...       
+       ]; 
+   
+%test
+ii2 = find( cf_low >= thresh & cf_mid < thresh & cf_high < thresh);
+low_test = cf_low(ii2);
+mid_test = cf_mid(ii2);
+high_test = cf_high(ii2);
+
+tol = 1e-10;
+d = cf_low - thresh; ithresh = find( d < tol & d >= 0 ); cf_low(ithresh) = thresh + tol;
+d = cf_mid - thresh; ithresh = find( d < tol & d >= 0 ); cf_mid(ithresh) = thresh + tol;
+d = cf_high - thresh; ithresh = find( d < tol & d >= 0 ); cf_high(ithresh) = thresh + tol;
+   
+   
+for i=1:size(sigs,1)
+   sigsi= sigs(i,:);
+    
+   % e.g. x > 0.1 would give the opposite result to -x > -5 (i.e. latter
+   % would give x < 0.1).
+   ii = find( sigsi(1)*cf_low > sigsi(1)*thresh & sigsi(2)*cf_mid > sigsi(2)*thresh & sigsi(3)*cf_high > sigsi(3)*thresh);
+     
+   [out(i) ,Ni, std_dev(i)] = meanNoNan(dat(ii),1);
+   freq(i) = length(ii);
+   
+   
+   %Realtive std dev is no use here since the mean is near zero (lots of
+   %-ve and +ve values)
+   %From Wikipedia :- A more robust possibility (to the relative std dev) is the quartile coefficient of dispersion,
+   %i.e. half the interquartile range (Q_{3}-Q_{1})/2 divided by the
+   %average of the quartiles (the midhinge), (Q_{1}+Q_{3})/2
+   
+   % Q1 and Q3 :-
+   Qs = prctile(dat(ii),[5 95]);
+   % Quartile coefficient of dispersion
+   quart_coeff(i) = (Qs(2)-Qs(1)/2) / ( (Qs(1)+Qs(2))/2 );
+   
+   
+   low{i} = cf_low(ii);
+   mid{i} = cf_mid(ii);
+   high{i} = cf_high(ii);
+   
+   inds{i} = ii;
+        
+end
+
+%Check to see that all of the above categories add to the total non-Nan
+%values.
+Nii = length( find( cf_low > -0.01 & cf_low < 1.01 & cf_mid > -0.01 & cf_mid < 1.01 & cf_high > -0.01 & cf_high < 1.01) );
+
+
+'';
+       
+
+       

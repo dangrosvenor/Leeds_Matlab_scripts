@@ -1,0 +1,9 @@
+function [dat,LES_struct] = calc_mean_fields_Zhibo_FUNCS(dat_in,igood,LES_struct_in,var_str_in,var_str2_in)
+
+LES_struct = LES_struct_in;
+
+var_str = [var_str2_in '_' var_str_in];
+dat = NaN*ones( size(LES_struct.(var_str)) );
+dat(icloud) = LES_struct.(var_str)(icloud);
+LES_struct.(['mean_' re37_str]) = MeanNoNan(re(:,:),2);
+

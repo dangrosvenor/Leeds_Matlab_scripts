@@ -1,0 +1,232 @@
+%match the  POLDER retrievals to MODIS ones
+%size examples at start:-
+%size(Par2_CDR_ALL)   [366   180   360     4]  i.e. [day_of_year lat lon swath]
+%size(Date_Time_Swath_MODIS.timeseries3)  [3    51    20    72] i.e. [lat lon swath nyear*nday]
+% (except that MODIS can have different no. days for each year)
+%days_resized_MODIS;
+
+
+%Arctic box region 2007-2010
+savefile_MODIS = '/home/disk/eos5/d.grosvenor/PARASOL/modis_DateTime_for_co_location.mat';
+
+%VOCALS 0-40S, 140W to 68W, DJF 2006 + all of 2007
+savefile_MODIS = '/home/disk/eos5/d.grosvenor/PARASOL/modis_DateTime_for_co_location_VOCALS_2007.mat';
+
+
+%list of vars saved:-
+%save(savefile_MODIS,'daynum_resized_MODIS','Date_Time_Swath_MODIS','modisyear_timeseries3_MODIS','daynum_timeseries3_MODIS','ilat_loaded_MODIS','ilon_loaded_MODIS','-V7.3');
+load(savefile_MODIS);
+
+Date_Time_Swath.timeseries3 = Date_Time_Swath_MODIS.timeseries3;
+
+siz = size(Date_Time_Swath.timeseries3);
+
+sMod = size(Date_Time_Swath_MODIS.timeseries3);
+sPol = size(Par2_MatlabTime_ALL);
+nswath_Pol = sPol(4);
+
+sPol_cut = [sMod(1) sMod(2) nswath_Pol sMod(4)];
+
+%declare the arrays to start with
+for ivar=1:length(vars_PAR)
+    %Make one where we just take the days and the region we require
+    eval_str = [vars_PAR{ivar} '_cut = NaN*ones(sPol_cut);']; eval(eval_str);
+    %and one where we match the size of the MODIS array
+    eval_str = [vars_PAR{ivar} '_MODIS = NaN*ones([sMod(1) sMod(2) sMod(3) sMod(4)]);']; eval(eval_str);
+end
+
+                                
+%% cut out the desired region in terms of lat lon and make the day in the
+%POLDER array match that of the MODIS array
+%End up with POLDER arrays being of size e.g. [3    51    4    72]
+%I.e. the same as MODIS except with the 4 swaths instead of the 20
+%These will be called xxx_cut
+for it=1:sMod(4)
+    it2 = (it-1)*20+1; %assuming here that we have blocks of 20 in daynum
+    
+    i = find(modisyear_timeseries3_POLDER==modisyear_timeseries3_MODIS(it2) & daynum_timeseries3_POLDER==daynum_timeseries3_MODIS(it2));
+    if length(i)>0
+        if length(i)>1
+            error('Is more than one match per day - only include one satellite for MODIS data');
+        end
+        
+       for ivar=1:length(vars_PAR)
+          eval_str=[vars_PAR{ivar} '_cut(:,:,:,it) = ' vars_PAR{ivar} '_ALL(i,ilat_loaded_MODIS,ilon_loaded_MODIS,:);']; eval(eval_str);
+       end
+    end
+    
+end
+
+
+%loop through all the time indices and make a POLDER equivalent array
+
+
+
+
+%reshape 
+%Date_resize = NaN*ones([180 360 20 366]);
+
+%if siz(3)==7260
+%    Date_Time_Swath.timeseries3 = reshape(Date_Time_Swath.timeseries3,[siz(1) siz(2) 20 siz(3)/20]);
+%end
+
+%days = unique(daynum_timeseries3);    
+%Date_resize(:,:,:,days) = Date_Time_Swath.timeseries3(:,:,:,:);
+%Date_resize = permute(Date_resize,[4 1 2 3]);
+
+%siz_new = size(Date_resize);
+
+max_dt = 0.5/24; %max allowed difference in time (days)
+
+
+
+%siz2 = size(Par2_MatlabTime_ALL);
+%index_match = NaN*ones(siz2);
+
+%    imin = NaN*ones(siz_new(1) siz_new(2) size_new(3));
+%    imin = NaN*ones(siz_new);
+
+
+
+%% Now make the array to match MODIS based on actual co-location
+    %the best minval so far for the MODIS datapoint
+    minval_best = 9e9*ones([sMod(1) sMod(2) 20 sMod(4)]);
+    
+for ioverpass=1:nswath_Pol
+    minval = NaN*ones([sMod(1) sMod(2) sMod(3)+2 sMod(4)]);
+
+    for j=1:20
+        minval(:,:,j,:) = abs(Par2_MatlabTime_cut(:,:,ioverpass,:) - Date_Time_Swath_MODIS.timeseries3(:,:,j,:));
+    end
+    
+    %In case the MODIS overpass from the day before is the best match do
+    %the difference between the last overpass of the previous day
+    %First find the last swath no. position that has data in (i.e. is not
+    %NaN)
+    i=~isnan(Date_Time_Swath_MODIS.timeseries3); %will be one where we have data
+    j=sum(i,3); %will give the index of the last position with data
+    %But may be some zeros where have no data - set these to one
+    j(j==0)=1;
+    %Now cut out that data into a new array
+    %First get some sub indicies for all positions in the MODIS array
+    [i1,i2,i3,i4]=ind2sub(sMod,[1:prod(sMod)]);
+    %reshape each back into the array size
+    i1=reshape(i1,sMod); i2=reshape(i2,sMod); i3=reshape(i3,sMod); i4=reshape(i4,sMod); 
+    %We will use j instead of i3 to correspond to the last swath entry and
+    %Make the linear indices that refer to the MODIS array
+    ilin = sub2ind(sMod,i1(:,:,1,:),i2(:,:,1,:),j,i4(:,:,1,:));
+    %make arrays with length=1 in the i3 dimension    
+    Time_Matlab_last_swath = Date_Time_Swath_MODIS.timeseries3(ilin);
+%this is now the last swath time for each day
+    
+
+    minval(:,:,21,2:end) = abs( Par2_MatlabTime_cut(:,:,ioverpass,2:end) - Time_Matlab_last_swath(:,:,1,1:end-1) );
+%do the same for the first swath of the day - easier as always at index 1!
+%(and they are in time order)
+    minval(:,:,22,1:end-1) = abs(Par2_MatlabTime_cut(:,:,ioverpass,1:end-1) - Date_Time_Swath_MODIS.timeseries3(:,:,1,2:end));
+    
+    %Now find the minimum time difference for each location and the index
+    [minval2 imin2] = min(minval,[],3);
+    
+%replace the imin2 index for the points that matched the previous swath of
+%the last day best
+    i21 = find(imin2==21);
+    [i1,i2,i3,i4]=ind2sub(size(imin2),i21);
+    ilin=sub2ind(size(imin2),i1,i2,i3,i4-1); %i4-1 as we want the previous day
+    %find where this is a better match than on the value based on the same
+    %day match only
+    i_improve = find(minval(ilin)<minval(i21));
+    imin2(ilin(i_improve))=j(i21(i_improve));
+    minval2(ilin(i_improve)) = minval(i21(i_improve)); %also replace the minval
+%    imin2(ilin)=j(i21);
+%    minval2(ilin(i_improve)) = minval(i21(i_improve)); %also replace the minval    
+%And for those that matched the first one of the next day
+    i22 = find(imin2==22);
+    [i1,i2,i3,i4]=ind2sub(size(imin2),i22);
+    ilin=sub2ind(size(imin2),i1,i2,i3,i4+1); %i4+1 used here
+%    i_improve = find(minval(i22)<minval_best(i22));
+    i_improve = find(minval(ilin)<minval(i22));
+    imin2(ilin(i_improve))=1; %set to the first swath of the next day
+%    imin2(ilin)=1; %set to the first swath of the next day
+    minval2(ilin(i_improve)) = minval(i22(i_improve)); %also replace the minval
+%Now do for "normal" days when the match was within the same day
+%replace the imin2 index for the points that matched the previous swath of
+%the last day best
+
+%    inorm = find(imin2<=20);
+%    [i1,i2,i3,i4]=ind2sub(size(imin2),inorm);
+%    ilin=sub2ind(size(imin2),i1,i2,i3,i4); %i4 as we want the same day
+% This can be removed since it just gets back inorm
+    %find where this is a better match than on previous ioverpass loops
+%    i_improve = find(minval(inorm)<minval_best(inorm));
+%    imin2(ilin(i_improve))=j(inorm(i_improve));
+%    imin2(inorm)=imin2(inorm);    
+%    minval2(ilin(i_improve)) = minval(inorm(i_improve)); %also replace the minval
+    
+
+% Now put the values into the big array (corresponding to the MODIS array)
+% based on the index of the minimum time difference
+ [i1,i2,i3,i4]=ind2sub(sMod,[1:prod(sMod)]);
+ %reshape each back into the array size
+ i1=reshape(i1,sMod); i2=reshape(i2,sMod); i3=reshape(i3,sMod); i4=reshape(i4,sMod); 
+ i1 = i1(:,:,1,:); i2=i2(:,:,1,:); i4=i4(:,:,1,:); 
+
+ %the day before)
+ %We will use imin2 instead of i3 to correspond to the required swath entry and
+ %Make the linear indices that refer to the MODIS array
+ %I.e. are just picking one MODIS swath for each day
+ imin2_bk = imin2;
+ imin2(imin2>20)=1; %do this as otherwise the step below won't work
+ ilin = sub2ind(sMod,i1,i2,imin2,i4);
+ %only use the ones that represent an improvement over previous ioverpass
+ %loops in case two POLDER overpasses are matched to the same MODIS overpass
+ %also, only use if the time difference is within max_dt
+ improve = find( minval2<minval_best(ilin) & (minval2 < max_dt) & imin2_bk<=20 );
+ % imin2_bk<=20 so we don't use the points that had >20 (these were probably placed in
+ 
+ %make indices for the PODLER array
+ [i1,i2,i3,i4]=ind2sub(size(imin2),[1:prod(size(imin2))]);
+ %reshape each back into the array size
+ i1=reshape(i1,size(imin2)); i2=reshape(i2,size(imin2)); i3=reshape(i3,size(imin2)); i4=reshape(i4,size(imin2)); 
+
+ %We will use ioverpass instead of i3 to correspond to the required swath entry and
+ %Make the linear indices that refer to the POLDER array
+ i3(:)=ioverpass;
+ %Make linear indices for the _cut array for referring to the correct
+ %PODLER entry
+ ilin2 = sub2ind(sPol_cut,i1,i2,i3,i4);
+ 
+%put in the POLDER data
+for ivar=1:length(vars_PAR)
+    eval_str=[vars_PAR{ivar} '_MODIS(ilin(improve)) = ' vars_PAR{ivar} '_cut(ilin2(improve));']; eval(eval_str);
+end
+
+%re-calculate the record of the best matches so far for a given MODIS datapoint
+minval_best(ilin(improve))=min(minval2(improve),minval_best(ilin(improve)));
+    
+    
+   
+    
+    
+%    imin2(minval2>max_dt)=NaN;
+%    index_match(:,:,:,ioverpass) = imin2;
+end
+
+
+if calc_sza==1
+%Calculate the sza for the POLDER samples
+lats=gcm_Plat2D_POLDER(ilat_loaded_MODIS,ilon_loaded_MODIS);
+lons=gcm_Plon2D_POLDER(ilat_loaded_MODIS,ilon_loaded_MODIS);
+
+lats_rep = repmat(lats,[1 1 sMod(3) sMod(4)]);
+lons_rep = repmat(lats,[1 1 sMod(3) sMod(4)]);
+Par2_sza_MODIS = sun_pos(Par2_MatlabTime_MODIS,lats_rep,lons_rep);
+vars_PAR{end+1} = 'Par2_sza';
+
+lats_rep = repmat(lats,[1 1 sPol_cut(3) sMod(4)]);
+lons_rep = repmat(lats,[1 1 sPol_cut(3) sMod(4)]);
+Par2_sza_cut = sun_pos(Par2_MatlabTime_cut,lats_rep,lons_rep);
+
+
+
+

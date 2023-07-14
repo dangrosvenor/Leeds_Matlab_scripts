@@ -1,0 +1,204 @@
+% Hawaii_Nd_satellite_model_match.m
+% Calls :-
+% Hawaii_Nd_satellite_model_match_func01.m , (mostly a wrapper), which calls
+% Hawaii_Nd_satellite_model_match_func02.m  (main script)
+
+%% Nd MODIS matching
+var='Nd_37';
+var='Nd37_4x4_coarse_grain';
+%var='Nd37_4x4_coarse_grain_min_tau_3';
+%var='LWP';
+var='LWP_modis_4x4_coarse_grained_min_tau_3';
+%var='tau_cloud_zero_NaNs';
+%var='tau_cloud_keep_NaNs';
+%var='CF_tau0pt3';
+%var='CF_tau0pt3_model_and_modis';
+%var='CF_tau0pt3_model_and_modis_4x4_coarse_grained';
+%var='CF_tau1pt0_model_and_modis_4x4_coarse_grained';
+%var='CF_tau2pt0_model_and_modis_4x4_coarse_grained';
+%var='CF_LWP5_model_and_modis_4x4_coarse_grained';
+%var='CF_LWP10_model_and_modis_4x4_coarse_grained';
+%var='CF_LWP20_model_and_modis_4x4_coarse_grained';
+%var='CF_LWP5_model_cloud_mask_modis';
+%var='CF_LWP30_model_and_modis_4x4_coarse_grained';
+%var='CF_total_max_random_cloud_amount_model_cloud_mask_modis';
+%var='mid_CF_model_cloud_mask_modis';
+%var='low_CF_model_cloud_mask_modis';
+%var = 'SWTOA_model_dummy_modis';
+
+
+var_str_extras=''; %extra fields required for a calculation - set below for each variable
+
+iload_model = 1;
+iload_MODIS = 0;
+
+
+switch var
+    case 'SWTOA_model_dummy_modis'
+        var_str='SW_TOA';
+        modis_var_str = 'dummy variable';
+    case 'Nd_37'
+        var_str='Nd'; %model var
+        modis_var_str = 'N37_all_times'; %modis var
+    case 'Nd37_4x4_coarse_grain' %Keeps NaNs as for tau
+        var_str='Nd';
+        modis_var_str = 'N37_modis_4x4_coarse_grained_keep_NaNs';                
+    case 'Nd37_4x4_coarse_grain_min_tau_3' %Keeps NaNs as for tau
+        var_str='Nd';
+        modis_var_str = 'N37_modis_4x4_coarse_grained_keep_NaNs_min_tau_3';           
+    case 'CF_tau0pt3'
+        var_str='CF_tau0pt3';
+        modis_var_str = 'cf_all_times';
+    case 'CF_tau0pt3_model_and_modis'
+        var_str='CF_tau0pt3';
+        modis_var_str = 'cf_tau0pt3_modis';       
+    case 'CF_tau0pt3_model_and_modis_4x4_coarse_grained'
+        var_str='CF_tau0pt3';
+        modis_var_str = 'cf_tau0pt3_modis_4x4_coarse_grained';
+    case 'CF_tau1pt0_model_and_modis_4x4_coarse_grained'
+        var_str='CF_tau1'; %model
+        modis_var_str = 'cf_tau1pt0_modis_4x4_coarse_grained';   
+    case 'CF_tau2pt0_model_and_modis_4x4_coarse_grained'
+        var_str='CF_tau2'; %model
+        modis_var_str = 'cf_tau2pt0_modis_4x4_coarse_grained'; 
+        
+    case 'CF_total_max_random_cloud_amount_model_cloud_mask_modis'
+        var_str='total_max_random_cloud_amount'; %model
+        modis_var_str = 'cf_all_times'; %5x5km MDOIS cloud mask fraction (multiple channels used).
+        
+    case 'CF_LWP5_model_cloud_mask_modis'
+        var_str='CF_LWP5'; %model
+        modis_var_str = 'cf_all_times'; %5x5km MDOIS cloud mask fraction (multiple channels used).
+                
+    case 'low_CF_model_cloud_mask_modis'
+        var_str='low_CF'; %model
+        modis_var_str = 'cf_all_times'; %5x5km MDOIS cloud mask fraction (multiple channels used).      
+        
+    case 'mid_CF_model_cloud_mask_modis'
+        var_str='mid_CF'; %model
+        modis_var_str = 'cf_all_times'; %5x5km MDOIS cloud mask fraction (multiple channels used).         
+        
+    case 'CF_LWP5_model_and_modis_4x4_coarse_grained'
+        var_str='CF_LWP5';
+        modis_var_str = 'cf_LWP5_modis_4x4_coarse_grained';
+    case 'CF_LWP10_model_and_modis_4x4_coarse_grained'
+        var_str='CF_LWP10';
+        modis_var_str = 'cf_LWP10_modis_4x4_coarse_grained';
+    case 'CF_LWP20_model_and_modis_4x4_coarse_grained'
+        var_str='CF_LWP20';
+        modis_var_str = 'cf_LWP20_modis_4x4_coarse_grained';
+    case 'CF_LWP30_model_and_modis_4x4_coarse_grained'
+        var_str='CF_LWP30';
+        modis_var_str = 'cf_LWP30_modis_4x4_coarse_grained';
+    case 'LWP'
+        var_str='LWP';
+        modis_var_str = 'LWP_modis_4x4_coarse_grained';
+    case 'LWP_modis_4x4_coarse_grained_min_tau_3'
+        var_str='LWP';
+        modis_var_str = 'LWP_modis_4x4_coarse_grained_min_tau_3';  
+        var_str_extras = {'tau_cloud'}; %extra model fields.
+    case 'tau_cloud_zero_NaNs'
+        var_str='tau_cloud';
+        modis_var_str = 'tau_modis_4x4_coarse_grained_zero_NaNs';
+    case 'tau_cloud_keep_NaNs'
+        var_str='tau_cloud';
+        modis_var_str = 'tau_modis_4x4_coarse_grained_keep_NaNs';        
+        
+end
+
+    
+
+if iload_model==1        
+    model_dat_extras_PI=[];
+    model_dat_extras_PD=[];
+    % Load the model data from the .mat files for PI
+    UM_base_dir = '/home/disk/eos15/d.grosvenor/UM/Hawaii/';
+    %um_case_PI = 'u-cj086';  %volcano OFF
+    um_case_PI = 'u-ch765';  %volcano OFF, orog ON
+    %um_case_PI = 'u-cj086';  %volcano OFF, orog ON
+    % Load the model AOD data from the .mat file
+    aod_save_file = [UM_base_dir um_case_PI '/' var_str '.mat'];
+    model_aod_PI = load(aod_save_file);
+    for ivar=1:length(var_str_extras)
+        aod_save_file = [UM_base_dir um_case_PI '/' var_str_extras{ivar} '.mat'];
+        model_dat_extras_PI(ivar) = load(aod_save_file);
+    end
+    
+    
+    % Load the model data from the .mat files for PD
+    UM_base_dir = '/home/disk/eos15/d.grosvenor/UM/Hawaii/';
+    %um_case_PD = 'u-co295';  %volcano ON    |
+    um_case_PD = 'u-cr138';  %volcano ON, orog ON    |
+    %um_case_PD = 'u-cr139';  %volcano ON, orog OFF    
+    % Load the model AOD data from the .mat file
+    aod_save_file = [UM_base_dir um_case_PD '/' var_str '.mat'];
+    model_aod_PD = load(aod_save_file);  
+    for ivar=1:length(var_str_extras)
+        aod_save_file = [UM_base_dir um_case_PD '/' var_str_extras{ivar} '.mat'];
+        model_dat_extras_PD(ivar) = load(aod_save_file);
+    end
+end
+
+
+if iload_MODIS==1
+    % Load the modis AOD data from the .mat files
+    filedir='/home/disk/eos15/d.grosvenor/eos8/MOD_L2/Hawaii_Dec2020_ADVANCE/MOD06_L2/';
+    %file_name_h5='MYD04_L2.A2020356.0055.061.2020357191130.hdf';
+    save_name = 'Hawaii_all_L2_06_data.mat';
+    %modis_aod_file = [filedir save_name];
+    modis_aod = load([filedir save_name]);
+end
+
+% Match the PI data for different coarse grain values
+coarse_str = '1x1';
+[model_match,modis_match,it_model_match,time_modis_match,mask_match] = Hawaii_Nd_satellite_model_match_func01(var_str,modis_var_str,modis_aod,model_aod_PI,UM_base_dir,um_case_PI,coarse_str,model_dat_extras_PI);
+
+%coarse_str = '3x3';
+%[model_match,modis_match,it_model_match,time_modis_match] = Hawaii_Nd_satellite_model_match_func01(var_str,modis_aod,model_aod_PI,UM_base_dir,um_case_PI,coarse_str);
+%coarse_str = '2x2';
+%[model_match,modis_match,it_model_match,time_modis_match] = Hawaii_Nd_satellite_model_match_func01(var_str,modis_aod,model_aod_PI,UM_base_dir,um_case_PI,coarse_str);
+
+% Match the PD data for different coarse grain values
+coarse_str = '1x1';
+[model_match,modis_match,it_model_match,time_modis_match,mask_match] = Hawaii_Nd_satellite_model_match_func01(var_str,modis_var_str,modis_aod,model_aod_PD,UM_base_dir,um_case_PD,coarse_str,model_dat_extras_PD);
+%coarse_str = '3x3';
+%[model_match,modis_match,,it_model_match,time_modis_match] = Hawaii_Nd_satellite_model_match_func01(var_str,modis_aod,model_aod_PD,UM_base_dir,um_case_PD,coarse_str);
+%coarse_str = '2x2';
+%[model_match,modis_match,,it_model_match,time_modis_match] = Hawaii_Nd_satellite_model_match_func01(var_str,modis_aod,model_aod_PD,UM_base_dir,um_case_PD,coarse_str);
+
+iso2=0;
+if iso2==1
+
+%% SO2 MODIS matching
+% Load the model data from the .mat files for PI
+UM_base_dir = '/home/disk/eos15/d.grosvenor/UM/Hawaii/';
+%um_case_PI = 'u-cj086';  %volcano OFF  
+um_case_PI = 'u-ch765';  %volcano OFF, orog ON
+% Load the model AOD data from the .mat file
+so2_save_file = [UM_base_dir um_case_PI '/so2.mat'];
+model_so2_PI = load(so2_save_file);
+
+% Load the model data from the .mat files for PD
+UM_base_dir = '/home/disk/eos15/d.grosvenor/UM/Hawaii/';
+%um_case_PD = 'u-co295';  %volcano ON   
+um_case_PD = 'u-cr138';  %volcano ON, orog ON    
+% Load the model AOD data from the .mat file
+so2_save_file = [UM_base_dir um_case_PD '/so2.mat'];
+model_so2_PD = load(so2_save_file);
+
+var_str='so2';
+
+% Match the PI data for different coarse grain values
+coarse_str = '3x3';
+[model_match,modis_match,d_match] = Hawaii_Nd_satellite_model_match_func01(var_str,modis_aod,model_so2_PI,UM_base_dir,um_case_PI,coarse_str);
+coarse_str = '2x2';
+[model_match,modis_match,d_match] = Hawaii_Nd_satellite_model_match_func01(var_str,modis_aod,model_so2_PI,UM_base_dir,um_case_PI,coarse_str);
+
+% Match the PD data for different coarse grain values
+coarse_str = '3x3';
+[model_match,modis_match,d_match] = Hawaii_Nd_satellite_model_match_func01(var_str,modis_aod,model_so2_PD,UM_base_dir,um_case_PD,coarse_str);
+coarse_str = '2x2';
+[model_match,modis_match,d_match] = Hawaii_Nd_satellite_model_match_func01(var_str,modis_aod,model_so2_PD,UM_base_dir,um_case_PD,coarse_str);
+
+end
+

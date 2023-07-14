@@ -1,0 +1,10 @@
+function me=meanNoNan2(dat,ind)
+ndims=length(size(dat));
+
+x=permute(dat,[ind ndims-ind+1]); %reoder matrix so dim dimension is the first
+
+for i=1:size(x,1)
+    inan=~isnan(x(i,:));
+    me(i,:)=mean(x(i,inan),1); %multiplication by inan removes all NaN numbers from sum
+end
+

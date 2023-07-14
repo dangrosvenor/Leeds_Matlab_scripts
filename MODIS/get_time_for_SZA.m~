@@ -1,0 +1,31 @@
+function time = get_time_for_SZA(lat,lon,sza,day)
+
+x0=[day-2/24 day+2/24];
+
+sza2=sza;
+i=0;
+while (i<20)
+    
+    if sign(sun_pos_fzero(x0(1),lat,lon,sza)) == sign(sun_pos_fzero(x0(1),lat,lon,sza))
+        sza2 = sza2 - 0.2;
+        i=1+1;
+    else
+        root=1;
+        i=1e20;
+    end
+   
+end
+
+i=0;
+while (i>=0 & i<20 & root==0)
+    
+    if sign(sun_pos_fzero(x0(1),lat,lon,sza)) == sign(sun_pos_fzero(x0(1),lat,lon,sza))
+        sza2 = sza - 0.2;
+    end
+i=1+1;
+
+   
+end
+
+
+time = fzero(@sun_pos_fzero,x0,[],lat,lon,sza2);

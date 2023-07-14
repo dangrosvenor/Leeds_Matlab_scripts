@@ -1,0 +1,18 @@
+%declare the arrays to start with
+for ivar=1:length(vars_PAR)
+    eval_str = [vars_PAR{ivar} '_MODIS = NaN*ones(size(Date_Time_Swath.timeseries3));']; eval(eval_str);
+
+end
+
+                                
+%loop through all of the days
+for it=1:length(modisyear_timeseries3_MODIS)
+    
+    i = find(modisyear_timeseries3_POLDER==modisyear_timeseries3_block(it) & daynum_timeseries3_POLDER==daynum_timeseries3_MODISk(it));
+    if length(i)>0
+       for ivar=1:length(vars_PAR)
+          eval_str=[vars_PAR{ivar} '_MODIS(:,:,it) = ' vars_PAR{ivar} '(i,ilat,ilon,:);']; eval(eval_str);
+       end
+    end
+    
+end

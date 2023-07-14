@@ -1,0 +1,9 @@
+function y=mountain_Houghton_fun_uAhA(hA,Hc,H0,U0,gd)
+
+cl=U0 - sqrt(gd*hA/H0*(hA+H0)/2); %eqn (3.8 of Houghton)
+uA=(cl*(hA-H0)+H0*U0)/hA;
+
+F0=uA/sqt
+
+
+y=K4^2/2/gd/thi^2 + thi + hx - K3; %=0 for solution

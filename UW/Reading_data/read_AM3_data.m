@@ -1,0 +1,107 @@
+nc_dir = '/home/disk/eos8/d.grosvenor/CPT/AM3/';
+
+
+comp='UWchallenger';
+%all have same lat range +44.2 to -44.2
+%except two polar sterographic plots
+%1= 305.6-34.2 (centred on lon=0)
+%2= 35.8 - 124.2
+%3 = north pole spherical 90 to 36 in lat approx 
+%4 =  125.8-214.2 in lon
+%5 is the best for the CAPT region, 215.8-304.2 (or -144.2 to -55.8)
+%6 = South pole -36 to -90 in lat
+tile_no = '5';
+am3_idays=[1:324];
+
+nc_grid_file = ['19900101.grid_spec.tile' tile_no '.nc'];
+nc_inst_file = ['19900101.atmos_inst.tile' tile_no '.nc'];
+
+
+nc_grid=netcdf([nc_dir nc_grid_file],'nowrite');
+nc_inst=netcdf([nc_dir nc_inst_file],'nowrite');
+
+am3_phalf_ref=nc_grid{'phalf'}(:);
+am3_lat = nc_grid{'grid_latt'}(:);
+am3_lon = nc_grid{'grid_lont'}(:);
+
+%have output every 27 hours (324 in total).
+
+am3_time_read = nc_inst{'time'}(am3_idays); %days since 1st Jan 1980
+am3_time_matlab = am3_time_read + datenum('01-Jan-1980'); %convert to Matlab time
+[Y,MO,D,H,MI,S] = datevec(am3_time_matlab); %this outputs numbers for the date components
+
+am3_time_days = D;
+
+%will be consistent with the actual calendar day rather than nearest day
+
+%the hour of the day
+am3_time_UTC = H;
+%the month
+am3_month = MO;
+
+am3_decimal_days = am3_time_read - am3_time_read(1);
+%days of year since beginning of the year
+daynum_timeseries3 = floor(am3_time_matlab - datenum(Y(1),1,1) + 1);
+%zero difference means day 1
+
+
+% -----------------------------------
+%  now for the pressure & density
+% -----------------------------------
+%pfull(i,j,k) = (phalf(i,j,k+1)-phalf(i,j,k))) / ln(phalf(i,j,k+1)/phalf(i,j,k))  ;
+am3_pfull_ref = (am3_phalf_ref(2:end)-am3_phalf_ref(1:end-1)) ./ log(am3_phalf_ref(2:end)./am3_phalf_ref(1:end-1));
+
+am3_ps = nc_inst{'ps'}(am3_idays,:,:); %surface pressure (time,lat,lon)
+am3_bk = nc_inst{'bk'}(:); % bk and pk are constant with time and location
+am3_pk = nc_inst{'pk'}(:); % just vary vertically
+
+am3_phalf = am3_make_pressure(am3_ps,am3_pk,am3_bk);
+am3_pfull = (am3_phalf(:,2:end,:,:)-am3_phalf(:,1:end-1,:,:)) ./ log(am3_phalf(:,2:end,:,:)./am3_phalf(:,1:end-1,:,:));
+%this is the proper pressure in Pa
+
+am3_temp = nc_inst{'temp'}(am3_idays,:,:); %in K
+am3_rho = density(am3_pfull,am3_temp);
+
+% ---------------------------------------------
+%  Calculate the height, assuming hydrostatic
+% ---------------------------------------------
+%the calculation below takes a long time - have saved the resulting .mat
+%variables in the file below.
+%[h_full,h_half]=am3_calc_height(am3_pfull,am3_temp,am3_phalf);
+mat_file='AM3_height_grid_19900101.mat';
+load([nc_dir mat_file],'h_full','h_half');
+h_half(:,end,:,:)=0; %first level of hhalf is the surface
+
+% -----------------------------------
+%  droplet conc, LWP and cloud fraction
+% -----------------------------------
+am3_cf = nc_inst{'cld_amt'}(am3_idays,:,:,:); %cloud fraction between 0 and 1
+
+%divide by cloud fractions to get in-cloud averages - beware values when
+%have low CF, as will be inflated by zero cloud-fractions
+am3_drop=nc_inst{'liq_drp'}(am3_idays,:,:,:) ./ am3_cf .*am3_rho; %multiply by density to convert to per m3 (from per kg)
+%am3_drop = nc_inst{'strat_droplet_number'}(am3_idays,:,:,:) ./ am3_cf;
+am3_liq=nc_inst{'liq_wat'}(am3_idays,:,:,:) ./ am3_cf; 
+am3_liq_av=nc_inst{'liq_wat'}(am3_idays,:,:,:);
+am3_iwc_av=nc_inst{'ice_wat'}(am3_idays,:,:,:);
+
+am3_lwp_all_clouds=nc_inst{'LWP_all_clouds'}(am3_idays,:,:); %is this cloud averaged?
+am3_lwp=nc_inst{'LWP'}(am3_idays,:,:); %how to deal with CF?
+
+
+% -----------------------------------
+%  lat lon and time indices
+% -----------------------------------
+Plat=am3_lat;
+Plon=am3_lon;
+
+i180=find(Plon>180);
+Plon(i180)=Plon(i180)-360;
+
+
+
+
+
+
+
+

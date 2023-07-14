@@ -1,0 +1,32 @@
+function dat = expand_PDF_special(x,F,Ndat)
+%function dat = expand_PDF(x,F,N)
+%Instead of the normal function this puts something tailored into the array
+%In this case a vector 1:N where N is the no. counts
+%expands a 1D PDF into a linear array of elements representing all of the
+%individual data points
+%i.e. takes all of the x (mid-point) values and makes F_i occurences of x_i
+%for all i ( =1:length(x) )
+%If F is normalised (i.e. sums to one) then can specify the number of
+%elements required (=N)
+
+if nargin==2
+    Ndat=sum(F);
+else
+    F = round(F*Ndat); %turn into counts rather than normalised frequencies
+end
+
+if ~isnan(Ndat)
+    dat=NaN*ones([Ndat 1]);
+else
+    dat=NaN;
+    return
+end
+
+
+j=1;
+for i=1:length(x)    
+%    dat(j:j+F(i)-1)=x(i);
+    dat(j:j+F(i)-1)=[1:F(i)];
+    j=j+F(i);
+end
+    

@@ -1,0 +1,113 @@
+% Do a series of difference plots (volcano ON minus OFF) for the low background aerosol case
+clear UM_time_in UM_time_out_mvar UM_map_mvar
+
+%Choose the runs to plot/calculate for - see UM_case_select_runs
+% UM_time_in.UM_cases = '12th Nov case, as of May 2016';
+% UM_time_in.UM_cases = 'Iceland_9day_runs_Nov2016';
+% %UM_time_in.UM_cases = 'Iceland_9day_runs_Nov2016 - volcanoes ON only';
+UM_time_in.UM_cases = 'Iceland_9day_runs_Nov2016_low_background_volcano_ON_only';
+
+var = {'SW_TOA'};
+var_multi = {'LWP','accum_mass_ug_per_m3_mean_to_z3000'}; %'accum_mass_mean_up_to_z3000'};
+
+UM_time_range = [datenum('31-Aug-2014 00:01') : 3/24 : datenum('09-Sep-2014 21:01')];
+%UM_time_range = [datenum('03-Sep-2014 21:01') : 3/24 : datenum('04-Sep-2014 15:01')];
+
+%Whether to save the plots
+UM_time_in.isave_plot=0;
+%Options about what type to save as
+UM_time_in.optional_saveas.iplot_eps=0;
+UM_time_in.optional_saveas.isavefig=0;
+UM_time_in.optional_saveas.iplot_png=0;
+UM_time_in.optional_saveas.iplot_jpg=1; %just save a .jpg to make it easier for animations and ftp
+
+% --- settings for UM_maps_*_FUNC script ---
+UM_map.isave_plot=1;
+icoarsen=0; icoarsen_diff=1;  %Whether to coarse grain the data (done within this script)
+iplot_maps=1;
+
+% --- settings just for this script ---
+isubplot_multi_anim=1; %Whether to plot teh multiple variable plots on a subplot or separate figs.
+plot_diff=0; %a difference plot?
+iprc_diff=0; %percentage differnce instead of absolute?
+thresh_diff=0; %min value for which to show % diff
+iclear_sky_only=0;
+thresh_lwp_clearsky = 5; %g/m2
+plot_pdf_diff=1;
+LW_or_SW='SW';
+%LW_or_SW='LW';
+
+% Indices of the sets of model runs to take the difference between
+% Low aerosol cases for differences, 1st one minus second one
+idiff_cases{1}(1)=2; %Low aerosol, volcano ON
+idiff_cases{1}(2)=1; %Low aerosol, volcano OFF
+%idiff_cases{2}(1)=2; %High aerosol, volcano ON
+%idiff_cases{2}(2)=4; %High aerosol, volcano OFF
+
+%Nice strings for labels for the difference performed
+diff_str_DRIVER{1} = 'Low background aerosol';
+%diff_str_DRIVER{2} = 'High background aerosol';
+        
+        
+
+
+for it_UM=1:length(UM_time_range)
+
+    UM_time_in.time_specific =  UM_time_range(it_UM);
+    
+        
+        %% For pcolor plot
+
+
+        
+    
+    for iUM_var = 1:length(var_multi)
+        var = var_multi{iUM_var};
+        UM_time_in.varname = var;
+
+        switch var
+            case 'SW_TOA'
+                UM_maps_generic_single_time_RUN_v1_SWTOA_Iceland_31Oct2016
+            case 'LWP'
+                UM_maps_generic_single_time_RUN_v1_LWP_Iceland_31Oct2016
+            otherwise  %Use a generic plotter for all variables - just have cases for the colour ranges
+%            case 'accum_mass_mean_up_to_z3000'
+%                UM_maps_single_time_loop_RUN_v1_aerosol_Iceland_31Oct2016
+%            otherwise
+                UM_maps_single_time_loop_RUN_v1_aerosol_Iceland_31Oct2016
+        end
+        
+        UM_time_out_mvar{iUM_var} = UM_time_out{1};
+        UM_map_mvar(iUM_var) = UM_time_in; %set in the above single_time scripts 
+
+    end
+
+
+        %% Plot function
+        % if iplot_maps==1
+        %     UM_time_out = UM_maps_20141126T041216_FUNC(UM_map);
+        % end
+
+        gcm_Plat2D_edges_UM = UM_time_out{1}.gcm_Plat2D_edges_UM;
+        gcm_Plon2D_edges_UM = UM_time_out{1}.gcm_Plon2D_edges_UM;
+        gcm_Plat2D_UM = UM_time_out{1}.gcm_Plat2D_UM;
+        gcm_Plon2D_UM = UM_time_out{1}.gcm_Plon2D_UM;
+
+
+        %% Plot diff if requested
+
+        if plot_diff==1 %& length(UM_time_out.P_save)>1
+            % -- run script for this. See UM_plot_global_min_code for min code
+            % needed to make a plot
+            
+            %Run the code to produce difference plots
+            UM_multi_diff_plots_for_anims_diff_code
+        else
+            %Run the code to make normal plots
+            UM_multi_diff_plots_for_anims_normal_code
+        end
+
+
+
+
+end  %time loop end

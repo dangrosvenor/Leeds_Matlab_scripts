@@ -1,0 +1,107 @@
+%Download all the L2 images that were identified as having a match to the
+%CDP cloud events (based on L2-joint files)
+
+years = 2012:2012;
+aqua_terra_vals = {'aqua','terra'};
+
+L2_dir = '/home/disk/eos8/d.grosvenor/MOD_L2/Finland_Sami/';
+L2_dir = '/home/disk/eos8/d.grosvenor/MOD_L2/Finland_Sami/DMPS_matches/';
+unix_script_file = [L2_dir 'download_L2_Matlab_Puijo_Nacc_matches_2012-2012'];
+
+matfile_direc = '/home/disk/eos8/d.grosvenor/saved_data_L2/Puijo_Sami/Puijo/';
+matfile_direc = '/home/disk/eos8/d.grosvenor/saved_data_L2/Puijo_Sami_jointL2/';
+
+for iyear=1:length(years)
+    for iaqua_terra=1:length(aqua_terra_vals)
+
+        %load the file containing the matches
+        %load('/home/disk/eos8/d.grosvenor/saved_data_L2/Puijo_Sami/Puijo/terra/Puijo_terra_2006_L2_Puijo_matches_20130315T082055.mat');
+
+        direc = [matfile_direc aqua_terra_vals{iaqua_terra} '/'];
+        files  = dir([direc '*' aqua_terra_vals{iaqua_terra} '_' num2str(years(iyear)) '*']);
+        file_times = [files.datenum];
+        [times_sorted,isort] = sort(file_times);
+        %pick the last one (latest file)
+        load_file = files(isort(end)).name;
+
+        load([direc load_file]);
+
+        
+        year=num2str(years(iyear));
+        sat=aqua_terra_vals{iaqua_terra};
+
+        download_dir = [L2_dir sat '/' year '/'];
+        make_dir(download_dir);
+
+        if exist(unix_script_file)~=2
+            eval_str2=['!echo "#list of commands to download required L2 files\n" > ' unix_script_file];
+            eval(eval_str2);
+        end
+        
+        
+        idownload=find(isnan(Droplet_Number_Concentration.timeseries3)==0);
+
+%        for ifile=1:length(MODIS_swath_filename.timeseries3)
+        for ifile=1:length(idownload)            
+            
+
+%            file_name_h5 = MODIS_swath_filename.timeseries3{ifile};
+           
+            
+
+%            if length(file_name_h5)>0
+
+
+%                 iday=findstr(file_name_h5,'.A');
+%                 modis_year_str=file_name_h5(iday+2:iday+5);
+%                 modis_day_str=file_name_h5(iday+6:iday+8);
+%                 modis_time_str=file_name_h5(iday+10:iday+13);
+%                 aq_terr_str = file_name_h5(iday-8:iday-1);
+
+                
+                
+                 date_swath = Date_Time_Swath.timeseries3(idownload(ifile));
+                 date_str = datestr(date_swath);
+                 day = day_of_year_from_date_func(date_str); %day of year
+                 day=floor(day);
+
+                 modis_year_str = year; %done previously
+                 
+                 
+                 if day<10
+                     modis_day_str = ['00' num2str(day)];
+                 elseif day<100
+                     modis_day_str = ['0' num2str(day)];
+                 else
+                     modis_day_str = num2str(day);
+                 end
+                 
+                 
+                 modis_time_str = [date_str(13:14) date_str(16:17)];
+                 
+                if strcmp(aqua_terra_vals{iaqua_terra},'aqua')==1
+                    aq_terr_L2_str = 'MYD06_L2';
+                else
+                    aq_terr_L2_str = 'MOD06_L2';
+                end
+
+                eval_ftp = ['lftp -c "open ftp://ladsweb.nascom.nasa.gov; mget -O ' download_dir ' /allData/51/' aq_terr_L2_str '/' modis_year_str '/' modis_day_str '/*A' modis_year_str modis_day_str '.' modis_time_str '*.hdf"'];
+                %        eval_str = ['system(''' eval_ftp ''')'];
+                %eval(eval_str);
+                %        eval_str2 = ['!gnome-terminal -x ' eval_ftp];
+                %        eval_str2 = ['!xterm -e /home/disk/eos8/d.grosvenor/MOD_L2/Finland_Sami/terra/2006/test_script'];
+
+                eval_str2=['!echo ''' eval_ftp '\n'' >> ' unix_script_file];
+
+                eval(eval_str2);
+
+%            end
+
+
+
+        end
+
+
+    end
+
+end

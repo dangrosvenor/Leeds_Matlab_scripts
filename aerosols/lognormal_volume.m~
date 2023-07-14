@@ -1,0 +1,9 @@
+function dndlnD=lognormal_volume(D,N,sig,Dg)
+%function dVlnD=lognormal(D,N,sig,Dg)
+%returns dV/dlnD for lognormal distribution of total number N standard
+%deviation sig and the median diameter Dg (of the NUMBER distribution)
+% E.g. eqn. 8.51 of Seinfeld and Pandis textbook.
+% N.B. Dg is the MEDIAN diameter (rather than mode, mean, etc.)
+
+dndlnD= pi*D.^2.*N./(6*sqrt(2*pi).*log(sig)) * exp( - (log(D/Dg)).^2/2/(log(sig)^2) ); 
+

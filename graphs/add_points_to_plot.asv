@@ -1,0 +1,14 @@
+function add_points_to_plot(xpos,ypos,point_labs,marker,msize,tsize)
+
+ylims=get(gca,'ylim');
+yspan=diff(ylims);
+
+for i=1:length(xpos)
+%    plot(xpos(i).x,ypos(i).y,marker,'markersize',size);
+    plot(xpos(i).x,ypos(i).y,'rs','MarkerEdgeColor','k',...
+                'MarkerFaceColor','g',...
+                'MarkerSize',msize);
+    text(xpos(i).x,ypos(i).y-yspan/40,[point_labs(i).lab]);
+    
+end
+

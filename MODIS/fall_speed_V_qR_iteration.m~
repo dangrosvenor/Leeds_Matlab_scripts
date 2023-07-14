@@ -1,0 +1,20 @@
+function [V,qR,n]=fall_speed_V_qR_iteration(P,V)
+%P in mm/hr - this stays constant
+%V is the best guess for V
+%Iterates to solve for V and qR
+
+diff = 1e9;
+tol = 0.01e-3; %qR tolerance in kg/kg
+n=0;
+
+qR=P/3600 ./ V;
+ 
+while max(diff)>tol & n<20
+    qR_old = qR;
+    n=n+1;
+
+    qR=P/3600 ./ V;
+    V = fall_speed_mass_weighted(qR);
+
+    diff = abs(qR - qR_old);
+end

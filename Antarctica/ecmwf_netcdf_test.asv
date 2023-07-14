@@ -1,0 +1,18 @@
+figure
+%ecmwf_dat = nc{'al'}(:);
+%ecmwf_dat = nc{'iskl1'}(:);
+%ecmwf_dat = nc{'al'}(:);
+%ecmwf_dat = nc{'al'}(:);
+ecmwf_dat = nc{'skt'}(:)-274;
+
+pcolor(nc{'longitude'}(:)-360,nc{'latitude'}(:),squeeze(ecmwf_dat));shading flat;colorbar
+
+hold on
+
+hline=line([285-360;315-360],[-67;-67]); set(hline,'color','w');
+hline=line([285-360;315-360],[-68;-68]); set(hline,'color','w');
+hline=line([-60;-60],[-75;-60]); set(hline,'color','w');
+hline=line([-62.5;-62.5],[-75;-60]); set(hline,'color','w');
+
+%set(gca,'xlim',[-65 -58]);
+%set(gca,'ylim',[-70 -65]);

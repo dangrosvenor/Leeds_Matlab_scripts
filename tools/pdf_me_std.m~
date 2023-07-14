@@ -1,0 +1,10 @@
+function [me,std] = pdf_me_std(x,F)
+%function [me,std] = pdf_me_std(x,F)
+%calculates the mean and standard deviation of a given 1D PDF (can be
+%normalised or not) described by mid-points x and frequencies F
+
+N = sum(F);
+ me = sum(F.*x)./sum(F);
+ 
+ 
+ std = sqrt (   sum( F.*(x-me).^2 , 1 ) ./ (N-1)   );

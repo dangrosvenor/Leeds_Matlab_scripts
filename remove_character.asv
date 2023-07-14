@@ -1,0 +1,13 @@
+function str_out=remove_character(str_in,char_to_remove,char_replace)
+%function str_out=remove_character(str_in,char_to_remove,char_replace)
+
+str_out=str_in;
+itext=findstr(char_to_remove,str_in);
+if nargin>=3
+    for i=1:length(itext)        
+        str_out = [str_out(1:itext-1) char_replace str_out(itext];
+        str_out(itext)=char_replace;
+    end
+else
+    str_out(itext)=' ';
+end

@@ -1,0 +1,37 @@
+%simple plot saver
+comp='laptop';
+comp='pc';
+
+if ~exist('idir'); idir=1; end
+   
+
+switch comp
+case 'laptop'
+    mydocs = 'c:/documents and settings/g/my documents/';
+    mydocs = 'c:/documents and settings/g/my documents/';
+
+case 'pc'
+    mydocs = 'c:/documents and settings/login/my documents/';
+end
+
+picname=[mydocs 'arty_science_pics/threeD_cloud_grid.emf'];
+%picname=[mydocs 'Leeds_MMOCCA/EMM/lwc_EMM_c2000.emf'];
+%picname=[mydocs 'logbook/vapour_paper/pics/timeseries_150_300km' num2str(idir) '.emf'];
+%picname=[mydocs 'logbook/vapour_paper/pics/liq_sources_ccn_smoothing_below_10km_0-2.67hrs' num2str(idir) '.emf'];
+picname=[mydocs 'Leeds_MMOCCA/pics_lem_2008/texas_wmax_14_21km.emf'];
+picname=[mydocs 'Leeds_MMOCCA/pics_lem_2008/timser_maxQL_miles6deg.emf'];
+picname=[mydocs 'Leeds_MMOCCA/pics_lem_2008/Jan06_windprof_18UTC.emf'];
+picname=[mydocs 'Leeds_MMOCCA/pics_lem_2008/lem_liq_mphys_psacw0.35.emf'];
+picname=[mydocs 'Leeds_MMOCCA/pics_lem_2008/lem_liq_mphys_adLWC.emf'];
+picname=[mydocs 'WRF/Antarctica/6thJan06/2dSurfaceWind_sf2'];
+%picname=[mydocs 'WRF/Antarctica/6thJan06/Temp_profile_sf2'];
+picname=['/home/mbexddg5/work/Ant_Jan06/2dSurfaceWind_sf2_ecmwf_22UTC.eps'];
+
+%picname=[direcDan(idir).dir 'results/tephigram_all'];
+%picname=['c:/documents and settings/login/my documents/Leeds_MMOCCA/LWC_lem.emf'];
+set(gcf,'paperpositionmode','auto');
+%print(gcf,'-dmeta',picname);
+print(gcf,'-deps',picname);
+%print(gcf,'-dpng',picname);
+
+%saveas(gcf,[mydocs 'arty_science_pics/threeD_cloud_grid.fig'],'fig');       

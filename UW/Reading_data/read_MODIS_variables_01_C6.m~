@@ -1,0 +1,360 @@
+
+%best to use the names of the variables to retrieve in case they change the
+%numbering. hdfsd command is useful for retrieving various pieces of info
+
+
+
+%nvar=27; %mean optical depth ocean and land
+%nvar=147; %effective radius ocean mean
+%nvar=121; %Aerosol_Cloud_Mask_Cloud_Fraction_Land_Mean
+%nvar=131; %Effective optical depth average ocean mean (rank 3)
+%nvar=163; %Cloud condensation nuclei ocean mean
+%nvar=211; %Optical depth by models ocean minimum (rank 3)
+%nvar=218; %Aerosol cloud mask cloud fraction ocean mean
+%nvar=253; %Cloud top temperature mean
+%nvar=271; %Cloud top pressure mean
+%nvar=310; %Cloud fraction mean
+%MODIS_varname='Cloud_Retrieval_Fraction_Liquid'; nvar = hdfsd('nametoindex',SD_id,MODIS_varname)+1; %(nvar=434);
+%MODIS_varname='Cloud_Retrieval_Fraction_Ice'; nvar = hdfsd('nametoindex',SD_id,MODIS_varname)+1; %(nvar=434);
+%MODIS_varname='Cloud_Retrieval_Fraction_Undetermined'; nvar = hdfsd('nametoindex',SD_id,MODIS_varname)+1; %(nvar=434);
+%MODIS_varname='Cloud_Retrieval_Fraction_Combined'; nvar = hdfsd('nametoindex',SD_id,MODIS_varname)+1; %(nvar=434);
+%nvar=337; %Cloud optical thickness liquid mean
+%nvar=397; %Cloud effective radius liquid mean
+%nvar=442; %Cloud water path liquid mean
+
+%MODIS_varname = INFO.Vgroup(1).Vgroup(1).SDS(nvar).Name;
+%MODIS_varname_long = INFO.Vgroup(1).Vgroup(1).SDS(nvar).Attributes(3).Value
+
+clear plot_graph_case modis_var
+istring=1;
+
+%MOD35 Cloud Fractions
+%modis_var{istring}='Cloud_Fraction_Day_Mean'; istring=istring+1; %(nvar=316)
+
+
+%MOD06 Cloud Fractions
+modis_var{istring}='Cloud_Retrieval_Fraction_Liquid'; istring=istring+1; %(nvar=434);
+modis_var{istring}='Cloud_Retrieval_Fraction_Liquid_Pixel_Counts'; istring=istring+1; %(nvar=21)  %N.B. this is exactly the same as totN
+%from the joint histo
+modis_var{istring}='Cloud_Retrieval_Fraction_Ice_Pixel_Counts'; istring=istring+1; %(nvar=21)  %N.B. this is exactly the same as totN
+
+modis_var{istring}='Cloud_Retrieval_Fraction_Ice'; istring=istring+1; %(nvar=436)
+modis_var{istring}='Cloud_Retrieval_Fraction_Undetermined'; istring=istring+1; %(nvar=438)
+modis_var{istring}='Cloud_Retrieval_Fraction_Combined'; istring=istring+1; %(nvar=440)
+%Cloud effective radius and optical thickness are all MOD06 products
+
+%MOD35 cloud mask products
+modis_var{istring}='Cloud_Fraction_Mean'; istring=istring+1; %Day and night mean CF (MOD35)
+modis_var{istring}='Cloud_Fraction_Standard_Deviation'; istring=istring+1; %Day and night mean CF (MOD35)
+modis_var{istring}='Cloud_Fraction_Pixel_Counts'; istring=istring+1; %Day and night mean CF (MOD35)
+modis_var{istring}='Cloud_Fraction_Day_Mean'; istring=istring+1; %Day mean CF (MOD35)
+modis_var{istring}='Cloud_Fraction_Day_Standard_Deviation'; istring=istring+1; %Day mean CF (MOD35)
+modis_var{istring}='Cloud_Fraction_Day_Pixel_Counts'; istring=istring+1; %Day mean CF (MOD35)
+modis_var{istring}='Cloud_Fraction_Night_Mean'; istring=istring+1; %night mean CF (MOD35)
+modis_var{istring}='Cloud_Fraction_Night_Standard_Deviation'; istring=istring+1; %night mean CF (MOD35)
+modis_var{istring}='Cloud_Fraction_Night_Pixel_Counts'; istring=istring+1; %night mean CF (MOD35)
+
+modis_var{istring}='Cloud_Effective_Radius_Liquid_Mean'; istring=istring+1; %(nvar=397)
+modis_var{istring}='Cloud_Effective_Radius_Liquid_Standard_Deviation'; istring=istring+1; %(nvar=397)
+modis_var{istring}='Cloud_Effective_Radius_Liquid_Minimum'; istring=istring+1; %(nvar=397)
+modis_var{istring}='Cloud_Effective_Radius_Liquid_Maximum'; istring=istring+1; %(nvar=397)
+%modis_var{istring}='Cloud_Effective_Radius_Liquid_QA_Mean'; istring=istring+1; %(nvar=397)
+%modis_var{istring}='Cloud_Effective_Radius_Liquid_QA_Standard_Deviation'; istring=istring+1; %(nvar=397)
+modis_var{istring}='Cloud_Effective_Radius_Liquid_Mean_Uncertainty'; istring=istring+1; %(nvar=397)
+%modis_var{istring}='Cloud_Effective_Radius_Liquid_QA_Mean_Uncertainty'; istring=istring+1; %(nvar=397)
+
+modis_var{istring}='Cloud_Optical_Thickness_Liquid_Mean'; istring=istring+1; %(nvar=337)
+modis_var{istring}='Cloud_Optical_Thickness_Liquid_Standard_Deviation'; istring=istring+1; %(nvar=397)
+modis_var{istring}='Cloud_Optical_Thickness_Liquid_Minimum'; istring=istring+1; %(nvar=397)
+modis_var{istring}='Cloud_Optical_Thickness_Liquid_Maximum'; istring=istring+1; %(nvar=397)
+%modis_var{istring}='Cloud_Optical_Thickness_Liquid_QA_Mean'; istring=istring+1; %(nvar=397)
+%modis_var{istring}='Cloud_Optical_Thickness_Liquid_QA_Standard_Deviation'; istring=istring+1; %(nvar=397)
+modis_var{istring}='Cloud_Optical_Thickness_Liquid_Mean_Uncertainty'; istring=istring+1; %(nvar=397)
+%modis_var{istring}='Cloud_Optical_Thickness_Liquid_QA_Mean_Uncertainty'; istring=istring+1; %(nvar=397)
+
+modis_var{istring}='Cloud_Top_Temperature_Day_Mean'; istring=istring+1; 
+modis_var{istring}='Cloud_Top_Temperature_Day_Standard_Deviation'; istring=istring+1; 
+modis_var{istring}='Cloud_Top_Temperature_Day_Minimum'; istring=istring+1; 
+modis_var{istring}='Cloud_Top_Temperature_Day_Maximum'; istring=istring+1; 
+%is a joint histo of tau (&reff) vs Temperature (I think this is CTT)
+
+modis_var{istring}='Cloud_Top_Pressure_Day_Mean'; istring=istring+1; %
+modis_var{istring}='Cloud_Top_Pressure_Day_Minimum'; istring=istring+1; %
+modis_var{istring}='Cloud_Top_Pressure_Day_Maximum'; istring=istring+1; %
+modis_var{istring}='Cloud_Top_Pressure_Day_Standard_Deviation'; istring=istring+1; 
+
+
+
+%%modis_var{istring}='Cloud_Effective_Radius_1621_Liquid_Mean'; istring=istring+1; %(nvar=568)
+%%modis_var{istring}='Cloud_Optical_Thickness_1621_Liquid_Mean'; istring=istring+1; %(nvar=552)
+
+%modis_var{istring}='Cloud_Water_Path_Liquid_Mean'; istring=istring+1; %(nvar=442)
+%modis_var{istring}='Cloud_Water_Path_Liquid_QA_Mean'; istring=istring+1; %
+
+% modis_var{istring}='Cloud_Top_Temperature_Day_Mean'; istring=istring+1; 
+% modis_var{istring}='Cloud_Top_Temperature_Day_Standard_Deviation'; istring=istring+1; 
+% modis_var{istring}='Cloud_Top_Temperature_Day_Minimum'; istring=istring+1; 
+% modis_var{istring}='Cloud_Top_Temperature_Day_Maximum'; istring=istring+1; 
+%is a joint histo of tau (&reff) vs Temperature (I think this is CTT)
+
+
+
+
+%clear modis_var; istring=1;
+%modis_var{istring}='Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius'; istring=istring+1; %(nvar=352)
+%Called this in C6:-
+modis_var{istring}='Cloud_Optical_Thickness_Liquid_JHisto_vs_Eff_Radius'; istring=istring+1; 
+
+
+%modis_var{istring}='Cloud_Optical_Thickness_1L_Liquid_Joint_Hist_vs_Effect_Radius'; istring=istring+1; %(nvar=483)
+%modis_var{istring}='Cloud_Optical_Thickness_1621_Liquid_Joint_Hist_vs_Effect_Radius'; istring=istring+1; %(nvar=559)
+%modis_var{istring}='Cloud_Effective_Radius_Liquid_Joint_Histo_Intervals'; istring=istring+1; %(nvar=695)
+
+% modis_var{istring}='Cloud_Top_Pressure_Day_Mean'; istring=istring+1; %
+% modis_var{istring}='Cloud_Top_Pressure_Day_Minimum'; istring=istring+1; %
+% modis_var{istring}='Cloud_Top_Temperature_Day_Standard_Deviation'; istring=istring+1; 
+% modis_var{istring}='Cloud_Top_Temperature_Day_Maximum'; istring=istring+1; 
+% landmask?
+
+
+   
+%clear modis_var; istring=1;
+modis_var{istring}='Solar_Zenith_Mean'; istring=istring+1; 
+modis_var{istring}='Solar_Zenith_Standard_Deviation'; istring=istring+1; 
+modis_var{istring}='Solar_Zenith_Minimum'; istring=istring+1; 
+modis_var{istring}='Solar_Zenith_Maximum'; istring=istring+1; 
+modis_var{istring}='Solar_Azimuth_Mean'; istring=istring+1; 
+modis_var{istring}='Sensor_Zenith_Mean'; istring=istring+1; 
+modis_var{istring}='Sensor_Zenith_Minimum'; istring=istring+1; 
+modis_var{istring}='Sensor_Zenith_Maximum'; istring=istring+1; 
+modis_var{istring}='Sensor_Zenith_Standard_Deviation'; istring=istring+1; 
+modis_var{istring}='Sensor_Azimuth_Mean'; istring=istring+1;
+%  -- Don't seem to be present for C6
+%modis_var{istring}='Scattering_Angle_Mean'; istring=istring+1; 
+%modis_var{istring}='Scattering_Angle_Standard_Deviation'; istring=istring+1; 
+%modis_var{istring}='Scattering_Angle_Minimum'; istring=istring+1; 
+%modis_var{istring}='Scattering_Angle_Maximum'; istring=istring+1; 
+%modis_var{istring}='Scattering_Angle_Pixel_Counts'; istring=istring+1; 
+%modis_var{istring}='Scattering_Angle_Histogram_Counts'; istring=istring+1; 
+   %leaving this out for now, but may be useful - a histogram of the
+   %scattering angle (i.e. number of points with different angles in 10 bins)
+   
+%clear modis_var; istring=1;
+%modis_var{istring}='Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius'; istring=istring+1; %(nvar=352)
+%modis_var{istring}='Cloud_Optical_Thickness_Liquid_Mean'; istring=istring+1; %(nvar=337)
+
+
+
+
+
+% 
+% *** clearing here ***
+%clear modis_var; istring=1;
+% modis_var{istring}='Retrieved_Temperature_Profile_Mean'; istring=istring+1; %
+
+
+
+
+iunits=4;
+nvar = hdfsd('nametoindex',SD_id,'Cloud_Retrieval_Fraction_Liquid')+1;
+modis_data_read = double(hdfread(INFO.Vgroup(1).Vgroup(1).SDS(nvar))); %this retrieves the data
+
+nan_value=INFO.Vgroup(1).Vgroup(1).SDS(nvar).Attributes(2).Value;
+
+inan=find(modis_data_read==nan_value);
+modis_data_read(inan)=NaN;
+
+
+add_offset=INFO.Vgroup(1).Vgroup(1).SDS(nvar).Attributes(iunits+2).Value;
+modis_data_read=modis_data_read-add_offset; %%see modis-atmos.gsfc.nasa.gov/MOD08_D3/faq.html - offset needs to be
+    %SUBTRACTED and then the scale factor applied (multiply)
+scale_factor=INFO.Vgroup(1).Vgroup(1).SDS(nvar).Attributes(iunits+1).Value;
+modis_data_read=modis_data_read*scale_factor;
+
+cf=modis_data_read;
+
+
+for iread_modis=1:length(modis_var)
+
+    MODIS_varname = modis_var{iread_modis};
+
+    %get the index number from the name
+    nvar = hdfsd('nametoindex',SD_id,MODIS_varname)+1; %(nvar=316);
+    
+    %Now convert to the old C5 names for consisttency for certain C6 variables that have
+    %changed name
+    
+    switch MODIS_varname
+        case 'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius'
+            MODIS_varname =  'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius';
+        case 'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius'
+            MODIS_varname =  'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius';
+        case 'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius'
+            MODIS_varname =  'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius';
+        case 'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius'
+            MODIS_varname =  'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius';
+        case 'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius'
+            MODIS_varname =  'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius';
+        case 'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius'
+            MODIS_varname =  'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius';
+        case 'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius'
+            MODIS_varname =  'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius';
+        case 'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius'
+            MODIS_varname =  'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius';
+
+        case 'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius'
+            MODIS_varname =  'Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius';
+            
+    end
+    
+    %read the data
+    modis_data_read = double(hdfread(INFO.Vgroup(1).Vgroup(1).SDS(nvar))); %this retrieves the data
+    
+    if length(size(modis_data_read))==4   %position of the units, scalef_factor and offset change
+        iunits=6;                    %depending on the dimension of the array
+        Y_hbins = double(INFO.Vgroup(1).Vgroup(1).SDS(nvar).Attributes(3).Value);
+        X_hbins = double(INFO.Vgroup(1).Vgroup(1).SDS(nvar).Attributes(4).Value);     
+        eval([MODIS_varname '.Xbins=X_hbins;']);
+        eval([MODIS_varname '.Ybins=Y_hbins;']);
+        
+        ihisto=1;
+    else
+        iunits=4;
+        ihisto=0;
+    end
+
+    MODIS_varname2=remove_character(MODIS_varname,'_',' ');
+    
+
+    nan_value=INFO.Vgroup(1).Vgroup(1).SDS(nvar).Attributes(2).Value;
+
+    inan=find(modis_data_read==nan_value);
+    modis_data_read(inan)=NaN;
+        
+    add_offset=INFO.Vgroup(1).Vgroup(1).SDS(nvar).Attributes(iunits+2).Value;
+    modis_data_read=modis_data_read-add_offset; 
+    %see modis-atmos.gsfc.nasa.gov/MOD08_D3/faq.html - offset needs to be
+    %SUBTRACTED and then the scale factor applied (multiply)
+
+    scale_factor=INFO.Vgroup(1).Vgroup(1).SDS(nvar).Attributes(iunits+1).Value;
+    if strcmp(scale_factor,'none')==1
+        scale_factor=1;
+    end
+    modis_data_read=modis_data_read*scale_factor;
+
+    units_str=INFO.Vgroup(1).Vgroup(1).SDS(nvar).Attributes(iunits).Value;
+    
+%% *** Make timeseries for specific locations (keeping the NaNs) ***
+    if exist('itimeseries_MODIS') & itimeseries_MODIS==1
+        make_timeseries_MODIS
+    end
+    
+    if ihisto==1    
+        F = modis_data_read;
+        F(isnan(F))=0;  %the NaN values within the histogram for each location
+        %are kinda meaningless - think they should just mean they are zeros
+        %(i.e. no pixels with those values). So set to zero here.
+        totNpix = squeeze( sum(sum(F,1),2) ) ./ cf; %divide by cloud fraction to get the total sample pix (not just cloudy)
+        igood=~isnan(totNpix); %when no. pixels is not NaN - i.e. when there were some pixels sampled
+        inan=isnan(totNpix); %when no. pixels is not NaN
+    else
+        igood=~isnan(modis_data_read); %when no. pixels is not NaN
+        inan=isnan(modis_data_read); %when no. pixels is not NaN
+    end
+    
+    if exist('iaverage_modis') & iaverage_modis==1
+        if imr~=1  %if averaging and not on the first file
+                eval( ['Ndata = ' MODIS_varname '.Ndata + igood;'] ); %running total of no. days with some data
+                
+            if ihisto==1                
+                eval( ['modis_data = ' MODIS_varname '.data + F;'] ); %add F here as we've removed all NaNs
+                eval( ['modis_data_squared = ' MODIS_varname '.data_squared + F.^2;'] ); %add F here as we've removed all NaNs
+                totNpix(inan)=0;
+                eval( ['totNpix2 = ' MODIS_varname '.totNpix + totNpix;'] );
+            else
+                modis_data_read(inan)=0;  %inan only describes NaNs due to not being sampled that day 
+                %(but histos have NaNs when have no pixels that were within that
+                %range, which is why we use F).
+                eval( ['modis_data = ' MODIS_varname '.data + modis_data_read;'] ); 
+                eval( ['modis_data_squared = ' MODIS_varname '.data_squared + modis_data_read.^2;'] );                 
+            end
+        else
+            Ndata = igood;
+            modis_data_read(inan)=0;
+            
+            if ihisto==1                
+                modis_data = F;
+                modis_data_squared = F.^2;
+                Ndata=igood;
+                totNpix(inan)=0;
+                totNpix2 = totNpix;
+            else
+                modis_data = modis_data_read; %this will be a running cumulative sum of the data
+                modis_data_squared = modis_data_read.^2; %this will be a running total of data squared
+            end
+        end
+    else
+        modis_data = modis_data_read;
+        modis_data_squared = 0;
+        Ndata = 0;
+        if ihisto==1
+            totNpix2 = totNpix;
+        end
+    end
+
+%% now put the data into the specific structure of name MODIS_varname
+    eval([MODIS_varname '.data=modis_data;']);
+    eval([MODIS_varname '.data_squared=modis_data_squared;']);    
+    eval([MODIS_varname '.name2=MODIS_varname2;']);
+    eval([MODIS_varname '.units_str=units_str;']);
+    
+    if exist('iaverage_modis') & iaverage_modis==1 & imr==nMOD_av
+        eval([MODIS_varname '.modis_day_str=[num2str(nMOD_av) '' day TIME AVERAGE''];']);
+        eval([MODIS_varname '.modis_year_str=modis_year_str;']);
+    else
+        eval([MODIS_varname '.modis_day_str=modis_day_str;']);
+        eval([MODIS_varname '.modis_year_str=modis_year_str;']);
+    end
+    
+    eval([MODIS_varname '.Ndata=Ndata;']);
+
+    
+    if ihisto==1        
+        eval([MODIS_varname '.totNpix=totNpix2;']);
+      
+        if exist('iaverage_modis') & iaverage_modis==1 & imr==nMOD_av  %on the last loop of the time average divide by the number of datapoints used
+            eval([MODIS_varname '.totNpix=' MODIS_varname '.totNpix ./ ' MODIS_varname '.Ndata;'])
+            eval(['Ndata4D = repmat(' MODIS_varname '.Ndata,[1 1 size(modis_data,1) size(modis_data,2)]);']);
+            Ndata4D=permute(Ndata4D,[3 4 1 2]);                                        
+            
+        end
+    else
+        eval(['Ndata4D=' MODIS_varname '.Ndata;']);
+    end
+    
+    
+    
+    if exist('iaverage_modis') & iaverage_modis==1 & imr==nMOD_av  %on the last loop of the time average divide by the number of datapoints used
+        eval(['dat_tot=' MODIS_varname '.data;']);
+        eval(['dat_squared_tot=' MODIS_varname '.data_squared;']);   
+        mean_dat = dat_tot ./ Ndata4D;
+        std_dev = sqrt ( (dat_squared_tot -2*mean_dat.*dat_tot + Ndata4D.*mean_dat.^2) ./ (Ndata4D-1) );
+        eval([MODIS_varname '.time_stdev = std_dev;']);
+        eval([MODIS_varname '.data = mean_dat;']);                              
+    end
+    
+   
+end %for iread_modis
+
+
+if exist('iaverage_modis')
+        clear iaverage_modis
+end
+
+if exist('itimeseries_MODIS') & itimeseries_MODIS==1
+       clear itimeseries_MODIS
+end
+
+
+disp('Done read MODIS');
+

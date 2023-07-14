@@ -1,0 +1,7 @@
+function thi=mountain_Houghton_solve_thi_for_given_h(hx,uA,hA,gd)
+
+%choose a range for thi in which a solution lies
+range=[0 3600];
+
+thi=fzero(@mountain_Houghton_fun_thi_for_given_h(range,[],hx,uA,hA,gd);
+

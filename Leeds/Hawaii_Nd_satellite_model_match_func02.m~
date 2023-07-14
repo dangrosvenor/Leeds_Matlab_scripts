@@ -1,0 +1,438 @@
+function [model_match,modis_match,it_model_match,time_modis_match,mask_match] = Hawaii_Nd_satellite_model_match_func02(modis_aod,modis_var_str,model_lat2D,model_lon2D,model_dat,time_out_var,model_dat_extras)
+% Called from Hawaii_Nd_satellite_model_match_func01.m
+%, which is called from Hawaii_Nd_satellite_model_match.m
+
+mask_modis_nans_in_model = 0; %changed to =1 for some variables.
+
+%% Load the model and modis data from the .mat files
+%UM_base_dir = '/home/disk/eos15/d.grosvenor/UM/Hawaii/';
+%um_case_PD = 'u-co295';  %volcano ON    
+
+% Load the model AOD data from the .mat file
+%aod_save_file = [UM_base_dir um_case_PD '/aod550_total.mat'];
+%model_aod = load(aod_save_file);
+
+% Load the MODIS AOD data
+%filedir='/home/disk/eos15/d.grosvenor/eos8/MOD_L2/Hawaii_Dec2020_ADVANCE/'    
+%file_name_h5='MYD04_L2.A2020356.0055.061.2020357191130.hdf';
+%save_name = 'Hawaii_all_L2_04_data.mat';
+%modis_aod = load([filedir save_name]);
+%modis_aod = load([modis_aod_file]);
+
+%% Loop over the MODIS swaths (Aqua and Terra) and match to the nearest model time
+% Just do this for the region of interest (Bottom left corner = 11.9674,
+% -180, top right = 22.4980, -152.1999; these were the ones used for the
+% MODIS AOD request for swaths).
+
+%lons_roi = [-180 -152.1999];
+%lats_roi = [11.9674 22.4980];
+dt_tol = 31; %tolerance for time difference between MODIS and model in minutes.
+%dlat_init = 20/111; %smaller area to search for in model grid - will be the modis pixel +/- this number of degrees
+%dlon_init = 20/111; %smaller area to search for in model grid - will be the modis pixel +/- this number of degrees
+
+%nswaths = length(modis_aod.N37_all_times);
+%eval_str=['nswaths = length(modis_aod.' modis_var_str ')';]; eval(eval_str);
+nswaths = length(modis_aod.modis_date_time_all_times);
+%Make a regular array since are regridding the MODIS swath onto the model
+%grid.
+%modis_match = NaN*ones([size(model_lon2D) nswaths]); 
+%Actually will only store swaths that overlap with the model grid in time
+%and space.
+%loop over swaths
+isw2 = 0; %counter for the matching swaths
+for isw=1:nswaths %isw=4 is the first swath that is not all NaN.
+    fprintf(1,'\n Processing %d out of %d swaths',isw,nswaths);
+    modis_time = minALL(modis_aod.scantime_matlab_all_times{isw}); %scantime gives one value per pixel - just take the min since the swath only
+        %takes 5 minutes.
+    %Find the nearest model output (in UTC)
+    [min_val,it] = min(abs(modis_time - time_out_var)); %times are in days (since 1-Jan-0000)
+    if min_val*24*60 < dt_tol                    
+        %Will just take the whole swath and can cut out the regions
+        %required later
+        %         igood = find( modis_aod.lat_all_times{isw} >= lats_roi(1) & modis_aod.lat_all_times{isw} < lats_roi(2) ...
+        %             & modis_aod.lon_all_times{isw} >= lons_roi(1) & modis_aod.lon_all_times{isw} < lons_roi(2) ...
+        %             & modis_aod.AOD_550_Dark_Target_Deep_Blue_Combined_QA_Flag_all_times{isw}==3);
+                        
+        switch modis_var_str
+            case 'cf_all_times' %Is the CF over 5x5 pixel area
+                modis_lat = modis_aod.lat_all_times{isw};
+                modis_lon = modis_aod.lon_all_times{isw};
+            otherwise
+                modis_lat = modis_aod.Plat2_L2_all_times{isw};
+                modis_lon = modis_aod.Plon2_L2_all_times{isw};
+        end
+        i_dummy_modis = 0;
+        switch modis_var_str
+            case 'dummy variable'
+                %modis_dat = NaN*zeros(size(modis_aod.tau37_all_times{isw}));
+                i_dummy_modis = 1;
+                
+            case {'cf_tau0pt3_modis'}
+                tau_dat = modis_aod.tau37_all_times{isw};
+                modis_dat = zeros(size(tau_dat));
+                modis_dat(tau_dat>=0.3)=1;
+                modis_dat(isnan(tau_dat))=NaN;
+                
+            case{'cf_tau0pt3_modis_4x4_coarse_grained','cf_tau1pt0_modis_4x4_coarse_grained','cf_tau2pt0_modis_4x4_coarse_grained'} %Is the CF over 5x5 pixel area
+                tau_dat = modis_aod.tau37_all_times{isw};
+                tau_dat(isnan(tau_dat))=0; %assume that the non-retrieved cloud pixels are not cloudy.
+                icoarse_grain=1; M_coarse_grain=4; N_coarse_grain=4;
+                tau_dat = reduce_matrix_subsample_mean(tau_dat,M_coarse_grain,N_coarse_grain);
+                %Also deal with lat and long
+                %gcm_Plat2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plat2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plon2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plon2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);
+                modis_lat = reduce_matrix_subsample_mean(modis_lat,M_coarse_grain,N_coarse_grain);
+                modis_lon = reduce_matrix_subsample_mean(modis_lon,M_coarse_grain,N_coarse_grain);
+                %[gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);
+                
+                switch modis_var_str
+                    case 'cf_tau0pt3_modis_4x4_coarse_grained'
+                        modis_tau_thresh = 0.3;
+                    case 'cf_tau1pt0_modis_4x4_coarse_grained'
+                        modis_tau_thresh = 1.0;
+                    case 'cf_tau2pt0_modis_4x4_coarse_grained'
+                        modis_tau_thresh = 2.0;
+                end
+                
+                modis_dat = zeros(size(tau_dat));
+                modis_dat(tau_dat>=modis_tau_thresh)=1;
+                modis_dat(isnan(tau_dat))=NaN;
+                
+            case{'cf_LWP5_modis_4x4_coarse_grained','cf_LWP10_modis_4x4_coarse_grained','cf_LWP20_modis_4x4_coarse_grained','cf_LWP30_modis_4x4_coarse_grained'} %Is the CF over 5x5 pixel area
+                tau_dat = 1e3*modis_aod.W37_all_times{isw};
+                tau_dat(isnan(tau_dat))=0; %assume that the non-retrieved cloud pixels are not cloudy.
+                icoarse_grain=1; M_coarse_grain=4; N_coarse_grain=4;
+                tau_dat = reduce_matrix_subsample_mean(tau_dat,M_coarse_grain,N_coarse_grain);
+                %Also deal with lat and long
+                %gcm_Plat2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plat2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plon2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plon2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);
+                modis_lat = reduce_matrix_subsample_mean(modis_lat,M_coarse_grain,N_coarse_grain);
+                modis_lon = reduce_matrix_subsample_mean(modis_lon,M_coarse_grain,N_coarse_grain);
+                %[gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);
+                
+                switch modis_var_str
+                    case 'cf_LWP5_modis_4x4_coarse_grained'
+                        modis_tau_thresh = 5.0;
+                    case 'cf_LWP10_modis_4x4_coarse_grained'
+                        modis_tau_thresh = 10.0;
+                    case 'cf_LWP20_modis_4x4_coarse_grained'
+                        modis_tau_thresh = 20.0;
+                    case 'cf_LWP30_modis_4x4_coarse_grained'
+                        modis_tau_thresh = 30.0;
+                end
+                
+                modis_dat = zeros(size(tau_dat));
+                modis_dat(tau_dat>=modis_tau_thresh)=1;
+                modis_dat(isnan(tau_dat))=NaN;     
+                
+            case{'LWP_modis_4x4_coarse_grained'}
+                modis_dat = 1e3*modis_aod.W37_all_times{isw};
+                modis_dat(isnan(modis_dat))=0; %assume that the non-retrieved cloud pixels are not cloudy. Big assumption since
+                %there are the PCL pixels to consider too - should add
+                %these. Also, just because there is not LWP retrieval, it
+                %doesn't mean there is no LWP...
+                modis_pcl = 1e3*modis_aod.W37_pcl_all_times{isw};
+                modis_dat = modis_dat + modis_pcl;
+                modis_dat(isnan(modis_dat))=0;
+                
+                icoarse_grain=1; M_coarse_grain=4; N_coarse_grain=4;
+                modis_dat = reduce_matrix_subsample_mean(modis_dat,M_coarse_grain,N_coarse_grain);
+                %Also deal with lat and long
+                %gcm_Plat2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plat2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plon2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plon2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);
+                modis_lat = reduce_matrix_subsample_mean(modis_lat,M_coarse_grain,N_coarse_grain);
+                modis_lon = reduce_matrix_subsample_mean(modis_lon,M_coarse_grain,N_coarse_grain);
+                %[gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);                              
+                         
+            case{'tau_modis_4x4_coarse_grained_zero_NaNs'}
+                modis_dat_2 = modis_aod.tau37_all_times{isw};
+                cloud_phase = modis_aod.cloud_phase_all_times{isw};
+                cloud_mask_status_flag = modis_aod.cloud_mask_status_flag_all_times{isw};
+                cloud_mask_confidence_flag = modis_aod.cloud_mask_confidence_flag_all_times{isw};
+                igood_2=find(isnan(modis_dat_2)==0);                                                
+                modis_pcl = modis_aod.tau37_pcl_all_times{isw};
+                igood_pcl=find(isnan(modis_pcl)==0);
+                
+                %Blank swath of NaNs
+                modis_dat = NaN*ones(size(modis_dat_2));
+                modis_dat(igood_pcl) = modis_pcl(igood_pcl); %fill in PCL values first in case non-PCL ones overwrite (want them to
+                %be used preferentially).
+                modis_dat(igood_2) = modis_dat_2(igood_2); 
+                
+                % Assume that the pixels determined to be clear sky have
+                % zero tau. Bit of an assumption perhaps.
+                % Will use the cloud_phase to do this - is NaN when
+                % there was a MODIS fill value; 
+                % 0 = the cloud mask could not be determined (no phase result); 
+                % 1 = no phase result due to clear sky, etc.; 
+                % 2 = liquid water; 3=ice; 4=undetermined
+                % So will leave as NaN when is NaN, set to NaN for cloud_phase==0, 
+                %set the tau to zero for the cloud_phase=1,3,4
+%                 igood = find(isnan(modis_dat)==0);
+%                 f_good = length(igood)/length(modis_dat(:)); %fraction of the swath with good data
+%                 if f_good >= 0.02 %Only do if more than 2% of the swath has data
+%                     modis_dat(isnan(modis_dat))=0;
+%                 end
+
+%  mask(1,:,:) - Cloud Mask Status Flag  
+% 0 = Undetermined, 1 = Determined. Although prob not any undetermined cloud points with good confidence 
+
+%  mask(2,:,:) - Cloud Mask Confidence  0: confident cloudy, 1: probably
+%  cloudy, 2: probably clear, 3: confident clear
+
+                %set the NaNs
+                modis_dat(isnan(cloud_phase)==1 | cloud_phase==0 | cloud_mask_status_flag==0 | cloud_mask_confidence_flag==2) = NaN;
+                %set the zeros for non-liquid cloud
+                modis_dat(cloud_phase==1 | cloud_phase==3 | cloud_phase==4) = 0;
+                %modis_dat(cloud_phase==1 | cloud_phase==3 | cloud_phase==4 | cloud_mask_confidence_flag==3) = 0;                
+                %Will want to NaN the model data when the tau is NaN since
+                %those were points that could not be determined to be clear
+                %or cloudy (e.g., not in sunlight, etc.).
+                mask_modis_nans_in_model = 1; %setting this does that (via the mask)
+                
+                icoarse_grain=1; M_coarse_grain=4; N_coarse_grain=4;
+                modis_dat = reduce_matrix_subsample_mean(modis_dat,M_coarse_grain,N_coarse_grain);
+                %Also deal with lat and long
+                %gcm_Plat2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plat2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plon2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plon2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);
+                modis_lat = reduce_matrix_subsample_mean(modis_lat,M_coarse_grain,N_coarse_grain);
+                modis_lon = reduce_matrix_subsample_mean(modis_lon,M_coarse_grain,N_coarse_grain);
+                %[gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);                              
+                         
+            case{'tau_modis_4x4_coarse_grained_keep_NaNs'}
+                modis_dat_2 = modis_aod.tau37_all_times{isw};
+                igood_2=find(isnan(modis_dat_2)==0);                                                
+                modis_pcl = modis_aod.tau37_pcl_all_times{isw};
+                igood_pcl=find(isnan(modis_pcl)==0);
+                
+                %Blank swath of NaNs
+                modis_dat = NaN*ones(size(modis_dat_2));
+                modis_dat(igood_pcl) = modis_pcl(igood_pcl); %fill in PCL values first in case non-PCL ones overwrite (want them to
+                %be used preferentially).
+                modis_dat(igood_2) = modis_dat_2(igood_2);                   
+                
+                icoarse_grain=1; M_coarse_grain=4; N_coarse_grain=4;
+                modis_dat = reduce_matrix_subsample_mean(modis_dat,M_coarse_grain,N_coarse_grain);
+                %Also deal with lat and long
+                %gcm_Plat2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plat2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plon2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plon2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);
+                modis_lat = reduce_matrix_subsample_mean(modis_lat,M_coarse_grain,N_coarse_grain);
+                modis_lon = reduce_matrix_subsample_mean(modis_lon,M_coarse_grain,N_coarse_grain);
+                %[gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);                              
+                                                                                                                
+           case{'N37_modis_4x4_coarse_grained_keep_NaNs'}
+                modis_dat_2 = modis_aod.N37_all_times{isw};
+                igood_2=find(isnan(modis_dat_2)==0);                                                
+                modis_pcl = modis_aod.N37_pcl_all_times{isw};
+                igood_pcl=find(isnan(modis_pcl)==0);
+                
+                %Blank swath of NaNs
+                modis_dat = NaN*ones(size(modis_dat_2));
+                modis_dat(igood_pcl) = modis_pcl(igood_pcl); %fill in PCL values first in case non-PCL ones overwrite (want them to
+                %be used preferentially).
+                modis_dat(igood_2) = modis_dat_2(igood_2);                   
+                
+                icoarse_grain=1; M_coarse_grain=4; N_coarse_grain=4;
+                modis_dat = reduce_matrix_subsample_mean(modis_dat,M_coarse_grain,N_coarse_grain);
+                %Also deal with lat and long
+                %gcm_Plat2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plat2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plon2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plon2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);
+                modis_lat = reduce_matrix_subsample_mean(modis_lat,M_coarse_grain,N_coarse_grain);
+                modis_lon = reduce_matrix_subsample_mean(modis_lon,M_coarse_grain,N_coarse_grain);
+                %[gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);                              
+                                                                                                 
+         case{'N37_modis_4x4_coarse_grained_keep_NaNs_min_tau_3'}
+                modis_dat_2 = modis_aod.N37_all_times{isw};
+                igood_2=find(isnan(modis_dat_2)==0);                                                
+                modis_pcl = modis_aod.N37_pcl_all_times{isw};
+                igood_pcl=find(isnan(modis_pcl)==0);
+                
+                %Blank swath of NaNs
+                modis_dat = NaN*ones(size(modis_dat_2));
+                modis_dat(igood_pcl) = modis_pcl(igood_pcl); %fill in PCL values first in case non-PCL ones overwrite (want them to
+                %be used preferentially).
+                modis_dat(igood_2) = modis_dat_2(igood_2);
+                
+                %same for tau data
+                modis_dat_2 = modis_aod.tau37_all_times{isw};
+                igood_2=find(isnan(modis_dat_2)==0);                                                
+                modis_pcl = modis_aod.tau37_pcl_all_times{isw};
+                igood_pcl=find(isnan(modis_pcl)==0);
+                              
+                modis_dat_tau = NaN*ones(size(modis_dat_2));
+                modis_dat_tau(igood_pcl) = modis_pcl(igood_pcl); %fill in PCL values first in case non-PCL ones overwrite (want them to
+                %be used preferentially).
+                modis_dat_tau(igood_2) = modis_dat_2(igood_2);  
+                
+                %set values below tau=3 to NaN
+                itau = find(modis_dat_tau<3);
+                modis_dat(itau) = NaN;
+                
+                
+                
+                icoarse_grain=1; M_coarse_grain=4; N_coarse_grain=4;
+                modis_dat = reduce_matrix_subsample_mean(modis_dat,M_coarse_grain,N_coarse_grain);
+                %Also deal with lat and long
+                %gcm_Plat2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plat2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plon2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plon2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);
+                modis_lat = reduce_matrix_subsample_mean(modis_lat,M_coarse_grain,N_coarse_grain);
+                modis_lon = reduce_matrix_subsample_mean(modis_lon,M_coarse_grain,N_coarse_grain);
+                %[gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);                              
+                
+        case{'LWP_modis_4x4_coarse_grained_min_tau_3'}
+                modis_dat_2 = 1e3*modis_aod.W37_all_times{isw};
+                igood_2=find(isnan(modis_dat_2)==0);                                                
+                modis_pcl = 1e3*modis_aod.W37_pcl_all_times{isw};
+                igood_pcl=find(isnan(modis_pcl)==0);
+                
+                %Blank swath of NaNs
+                modis_dat = NaN*ones(size(modis_dat_2));
+                modis_dat(igood_pcl) = modis_pcl(igood_pcl); %fill in PCL values first in case non-PCL ones overwrite (want them to
+                %be used preferentially).
+                modis_dat(igood_2) = modis_dat_2(igood_2);
+                
+                %same for tau data
+                modis_dat_2 = modis_aod.tau37_all_times{isw};
+                igood_2=find(isnan(modis_dat_2)==0);                                                
+                modis_pcl = modis_aod.tau37_pcl_all_times{isw};
+                igood_pcl=find(isnan(modis_pcl)==0);
+                              
+                modis_dat_tau = NaN*ones(size(modis_dat_2));
+                modis_dat_tau(igood_pcl) = modis_pcl(igood_pcl); %fill in PCL values first in case non-PCL ones overwrite (want them to
+                %be used preferentially).
+                modis_dat_tau(igood_2) = modis_dat_2(igood_2);  
+                
+                %set values below tau=3 to NaN
+                thresh_model = [3];
+                itau = find(modis_dat_tau<3);
+                modis_dat(itau) = NaN;
+                
+                
+                
+                icoarse_grain=1; M_coarse_grain=4; N_coarse_grain=4;
+                modis_dat = reduce_matrix_subsample_mean(modis_dat,M_coarse_grain,N_coarse_grain);
+                %Also deal with lat and long
+                %gcm_Plat2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plat2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plon2D_GENERIC = reduce_matrix_subsample_mean(gcm_Plon2D_UM,M_coarse_grain,N_coarse_grain);
+                %gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);
+                modis_lat = reduce_matrix_subsample_mean(modis_lat,M_coarse_grain,N_coarse_grain);
+                modis_lon = reduce_matrix_subsample_mean(modis_lon,M_coarse_grain,N_coarse_grain);
+                %[gcm_Plat2D_edges_GENERIC,gcm_Plon2D_edges_GENERIC] = get_edges_lat_lon(gcm_Plat2D_GENERIC,gcm_Plon2D_GENERIC);                 
+                                                                                                 
+                
+            otherwise
+                %modis_dat = modis_aod.N37_all_times{isw};
+                eval_str = ['modis_dat = modis_aod.' modis_var_str '{isw};']; eval(eval_str);                                
+        end
+        
+        
+        
+        %modis_lat = modis_aod.Plat2_L2;
+        %modis_lon = modis_aod.Plon2_L2;  
+        %modis_dat = modis_aod.N37;
+        
+        %Use the corners of the swath as a polygon for inpolygon function to avoid
+        %interpolating for parts of the model domain that are outside of the swath
+        %with a nearest neighbour interpolation.
+        %Using corners is a lot faster than using the whole edge.
+        xv=[]; yv=[];
+        xv = cat(1,xv,modis_lon(1,1)); yv = cat(1,yv,modis_lat(1,1));
+        xv = cat(1,xv,modis_lon(end,1)'); yv = cat(1,yv,modis_lat(end,1)');
+        xv = cat(1,xv,modis_lon(end,end)); yv = cat(1,yv,modis_lat(end,end));
+        xv = cat(1,xv,modis_lon(1,end)'); yv = cat(1,yv,modis_lat(1,end)');
+        
+        %Find the model grid boxes that are inside the MODIS swath
+        [in] = inpolygon(model_lon2D,model_lat2D,xv,yv);
+        i_in = find(in==1);
+        if length(i_in)>0  %if we have a matching time and some spatial overlap - decided to use whether NaN or not to be consistent between MODIS variables.
+            %if length(find(isnan(d2)==0))>0  %if we have a matching time and some spatial overlap (containing non-NaN N37 values)
+            
+            if i_dummy_modis==0
+                %Do nearest neighbour interpolation of the MODIS swath for the model grid
+                %points. But need to just consider the model boxes that are inside of the MODIS
+                %swath since the ones outside will be given values by the 'nearest' interpolation.
+                d=griddata(modis_lon,modis_lat,modis_dat,model_lon2D(i_in),model_lat2D(i_in),'nearest');
+            else
+                d = zeros(size(model_lon2D(i_in)));
+            end
+            
+            %Create a full field of NaNs
+            d2 = NaN*ones(size(model_lon2D));
+            %Populate with the values inside the MODIS swath.
+            d2(i_in) = d;
+            
+            %Just select the model data within the MODIS swath area for a fairer comparison.
+            model_dat_it = model_dat(:,:,it);
+            model_dat_out = NaN*ones(size(model_dat_it));
+            model_dat_out(i_in) = model_dat_it(i_in);
+            for ivar=1:length(model_dat_extras)
+                inan = find(model_dat_extras(ivar).dat(:,:,it) < thresh_model(ivar));
+            end
+            
+            %Also create a mask array so that we know which part of the
+            %model domain was inside the swath
+            mask_it = NaN*ones(size(model_dat(:,:,it)));            
+            mask_it(i_in) = 1;
+            
+            %For some variables will want to ignore the model data for
+            %points when the MODIS data is NaN - do this via the mask for
+            %now. Actually the mask is only used to make sure that enough
+            %of the modis swath data that falls within the model domain 
+            % is non-NaN in Hawaii_Nd_satellite_model_pdf - so need to NaN
+            % the model data itself
+            if mask_modis_nans_in_model==1
+                model_dat_out(isnan(d2)==1) = NaN;
+            end
+            
+            isw2 = isw2 + 1; %increment the counter for the final arrays
+            model_match(:,:,isw2) = model_dat_out; 
+            modis_match(:,:,isw2) = d2;
+            mask_match(:,:,isw2) = mask_it;
+            %Save the model time index used to match the swath and the time
+            %of the MODIS swath too.
+            it_model_match(isw2) = it;
+            time_modis_match(isw2) = modis_time;
+            
+        end
+        
+        
+
+%         %Match each pixel to a model pixel.
+%         for ip=1:length(igood)
+%             i = igood(ip);
+%             lat_modis = modis_aod.lat_all_times{isw}(i);
+%             lon_modis = modis_aod.lon_all_times{isw}(i);
+%             %Narrow down the search for the nearest model point.
+%             lat_modis_init = [lat_modis - dlat_init lat_modis + dlat_init];
+%             lon_modis_init = [lon_modis - dlon_init lon_modis + dlon_init];
+%             i_init = find( model_lat2D >= lat_modis_init(1) & model_lat2D < lat_modis_init(2) ...
+%                 & model_lon2D >= lon_modis_init(1) & model_lon2D < lon_modis_init(2) );
+%             
+%             %Find the nearest model pixel and extract the model AOD
+%             if length(i_init)>0
+%                 latA = repmat(lat_modis,[length(i_init) 1]);
+%                 lonA = repmat(lon_modis,[length(i_init) 1]);
+%                 latB = model_lat2D(i_init);
+%                 lonB = model_lon2D(i_init);
+%                 [d,aob]=distlatlon(latA,lonA,latB,lonB);
+%                 
+%                 [minval,i_match] = min(d);
+%                 
+%                 dat_it = model_dat(:,:,it);
+%                 
+%                 model_match{isw}(ip) = dat_it(i_init(i_match));
+%                 modis_match{isw}(ip) = modis_aod.AOD_550_Dark_Target_Deep_Blue_Combined_all_times{isw}(i);
+%                 d_match{isw}(ip) = minval;
+%             end
+%         end
+        
+    end
+    
+end

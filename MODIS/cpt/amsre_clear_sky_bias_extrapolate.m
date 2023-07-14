@@ -1,0 +1,62 @@
+i=1; clear filename P_clear                
+%filename{i} = ['AMSRE_clear_sky_bias_3percent_VOCALS_region_20150918T065607']; i=i+1;
+filename{i} = ['AMSRE_clear_sky_bias_5percent_VOCALS_region_20150918T065504']; i=i+1;    
+filename{i} = ['AMSRE_clear_sky_bias_7percent_VOCALS_region_20150918T064749']; i=i+1;    
+filename{i} = ['AMSRE_clear_sky_bias_9percent_VOCALS_region_20150918T065119']; i=i+1;
+
+per_vals = [3 5 7 9];
+per_vals = [5 7 9];
+%per_vals = [7 9];
+
+filedir_savevars = '/home/disk/eos1/d.grosvenor/mat_files_various/';
+    
+for i=1:length(filename)
+   
+    filename_savevars = [filedir_savevars filename{i} '.mat'];
+    load(filename_savevars);
+    
+    M=3; N=3;
+    
+    P_clear(i,:,:) = reduce_matrix_subsample_mean(P_save_AMSRE_clear_sky,M,N);
+    Plon2D_reduced = reduce_matrix_subsample_mean(Plon2D_AMSRE_clear_sky,M,N);
+    Plat2D_reduced = reduce_matrix_subsample_mean(Plat2D_AMSRE_clear_sky,M,N);    
+    
+    
+end
+
+d = diff(P_clear,1);
+z = zeros(size(d));
+z(d>0)=1;
+z2 = sum(z,1);
+z3 = repmat(z2,[size(P_clear,1) 1]);
+ipos = find(z3~=size(d,1));
+P_clear2 = P_clear;
+%P_clear2(ipos)=NaN;
+
+
+LWP_clear_zero = interp1(per_vals,P_clear2,0,'linear','extrap');  
+%Trying using Polyfit instead - interp1 will only use the two end
+%datapoints to extrapolate, so the 9% data won't even be used here.
+
+for i=1:size(P_clear2,2)
+    for j=1:size(P_clear2,3)
+        poly{i,j} = polyfit(per_vals',P_clear2(:,i,j),1);
+        LWP_clear_zero(1,i,j) = poly{i,j}(2); %since want the x=0 value just need the y-intercept 
+    end
+end
+%The results are fairly similar when using 3x3 degree data, although the polyfit method is perhaps a little less noisy.   
+%The difference is more noticeable when using 1x1 data.
+
+
+
+%LWP_clear_zero2 = interp2(Plat2D_reduced,Plon2D_reduced,squeeze(LWP_clear_zero),Plat2D_AMSRE_clear_sky,Plon2D_AMSRE_clear_sky,'nearest');
+
+LWP_clear_zero2 = griddata(Plat2D_reduced,Plon2D_reduced,squeeze(LWP_clear_zero),Plat2D_AMSRE_clear_sky,Plon2D_AMSRE_clear_sky,'nearest');
+%LWP_clear_zero2 = griddata(Plat2D_reduced,Plon2D_reduced,squeeze(LWP_clear_zero),Plat2D_AMSRE_clear_sky,Plon2D_AMSRE_clear_sky,'linear');
+
+%M=2; N=2;
+%LWP_clear_zero3 = reduce_matrix_subsample_mean(LWP_clear_zero2,M,N);   
+
+P_save = LWP_clear_zero2; %For using save_vars_mat_run to save
+
+

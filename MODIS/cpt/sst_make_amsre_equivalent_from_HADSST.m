@@ -1,0 +1,53 @@
+%Convert the HADSST dataset from Dan McCoy into a file equivalent to the
+%AMSRE ones used, e.g. /home/disk/eos8/d.grosvenor/saved_data_L2/amsre_ssts_global_2006-2010.mat
+% N.B. - the HADSST data is weekly! So need to interpolate to daily
+
+%amsre_matfile = '/home/disk/eos8/d.grosvenor/saved_data_L2/amsre_ssts_global_2006-2010.mat';
+% whos('-file',amsre_matfile)
+%   Name                          Size                       Bytes  Class     Attributes
+% 
+%   day_amsre                     1x2130                     17040  double              
+%   gcm_Plat2D_AMSRE            180x360                     518400  double              
+%   gcm_Plat2D_edges_AMSRE      181x361                     522728  double              
+%   gcm_Plon2D_AMSRE            180x360                     518400  double              
+%   gcm_Plon2D_edges_AMSRE      181x361                     522728  double              
+%   month_amsre                   1x2130                     17040  double              
+%   sst_amsre_smooth            180x360x2130            1104192000  double              
+%   year_amsre                    1x2130                     17040  double   
+
+% HADSST dataset runs from 31st Dec 1989 to 11th Oct, 2015
+
+%% Specify the file to save to
+hadsst_matfile = '/home/disk/eos8/d.grosvenor/saved_data_L2/HADSST_matched_to_amsre_ssts_global_1990-Oct2015.mat';
+
+%% Run the read script for Dan McCoy's data
+sst_read_McCoy
+
+%% Read some of the AMSRE data (lat and lon)
+amsre_matfile = '/home/disk/eos8/d.grosvenor/saved_data_L2/amsre_ssts_global_2006-2010.mat';
+load(amsre_matfile,'gcm_Plat2D_AMSRE','gcm_Plat2D_edges_AMSRE','gcm_Plon2D_AMSRE','gcm_Plon2D_edges_AMSRE');
+
+%% Interpolate to daily data
+% sst_time is in days, so just make an array containig all the days in the
+% range
+time_req = [sst_time(1):sst_time(end)];
+sst_amsre_smooth = interp1(sst_time,SST,time_req);
+
+%% Convert the time into months and years
+[year_amsre,month_amsre,day_amsre] = datevec(time_req);
+
+%% Flip and permute the data
+%The data is flipped in lat dimension relative to that specified by the
+%AMSRE lat/lon grid in the file
+sst_amsre_smooth = flipdim(sst_amsre_smooth,2);
+%Permute to be the same order as for AMSRE (lat,lon,time)
+sst_amsre_smooth = permute(sst_amsre_smooth,[2 3 1]);
+
+%% Save to the new matfile
+save(hadsst_matfile,'gcm_Plat2D_AMSRE','gcm_Plat2D_edges_AMSRE','gcm_Plon2D_AMSRE','gcm_Plon2D_edges_AMSRE',...
+    'year_amsre','month_amsre','day_amsre','sst_amsre_smooth','-V7.3');
+
+
+
+
+

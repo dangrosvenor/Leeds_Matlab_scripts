@@ -1,0 +1,34 @@
+%Make a phase diagram of LWP (instead of zi as in Berner) vs Nd using the
+%domain and time means over the whole run (or some smaller time period
+%perhaps)
+
+
+%Run script to load data for this case
+UM_load_in_timeseries_LWP_vs_Na_phase_diagram
+
+time_range =[ datenum('12-Nov-2008 06:00')  datenum('14-Nov-2008 00:00') ];
+
+itime = eval(['find(' var_list{1} '(1).time_UM >= time_range(1) & ' var_list{1} '(1).time_UM<= time_range(2));'])
+
+
+figure
+
+%Loop through all the UM runs and plot
+for irun=1:length(fileUM)     
+    Na = accum_number_total_column_to_z1500(irun).timeseries_UM + coarse_number_total_column_to_z1500(irun).timeseries_UM + droplet_number_total_column_to_z1500(irun).timeseries_UM;
+    Na = Na ./ air_mass_total_column_to_z1500(irun).timeseries_UM; %I guess that this should be done for each column individually in case of variations and non-linearity
+    
+    lwp = LWP(irun).timeseries_UM;
+    
+    plot(1e-6*meanNoNan(Na(itime),2), meanNoNan(lwp(itime),2),'bo');
+    hold on
+end
+
+%set(gca,'ylim',[0 60]);
+set(gca,'xscale','log');
+xlabel('Mean total aerosol (mg^{-1})');
+ylabel('Mean LWP (g m^{-2})');
+
+
+
+

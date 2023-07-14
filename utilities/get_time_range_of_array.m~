@@ -1,0 +1,94 @@
+function [out, time_out, time_inds, dtime_match] = get_time_range_of_array(array_in,time_matlab,time_choice,dim)
+% function [out, time_out, time_inds] = get_time_range_of_array(array_in,time_matlab,time_choice,dim)
+% Finds the correct portion of an array given a set of time ranges or
+% specific times and some tolerances
+% To use the time range method specify time_matlab.time_range to be an [M 2] 
+% sized array where have M different ranges within time_matlab
+% It will return all values between those ranges.
+% For specific times need to remove time_choice.time_range and then specify
+% time_choice.time_specific and time_choice.tol for the times required and
+% the tolerances.
+% If just want the time indies then set array_in=[]
+% If just want the closest match in time then set time_choice.find_nearest=1
+% Could just use interp1 with 'nearest' option?
+
+if isfield(time_choice,'find_nearest')==0
+    time_choice.find_nearest=0;
+end
+
+dtime_match=0;
+
+
+%Sort out whether requesting a range or specific times
+if isfield(time_choice,'time_range')==1
+    time_range = time_choice.time_range;
+    if size(time_range,2) > 2
+        error('Time range should be of size [M 2]');
+    end
+    time_inds=[];
+    for irange=1:size(time_range,1)
+        time_inds2 = find(time_matlab >= time_choice.time_range(irange,1) & time_matlab <= time_choice.time_range(irange,2) );
+        time_inds = cat(2,time_inds,time_inds2);
+    end
+%  time_inds=[1 3 5];
+
+
+else
+    time_specific = time_choice.time_specific;
+    for it=1:length(time_specific)
+        time = time_specific(it);
+        dtime = abs(time_matlab - time);
+        if time_choice.find_nearest==0
+            ifind = find(  dtime < time_choice.tol );
+            if length(ifind)==0
+                error('Could not find the specified times within the chosen tolerance.');
+            elseif length(ifind)>1
+                error('More than one time found within the chosen tolerance.');
+            else
+                time_inds(it)=ifind;
+            end
+
+        else
+            %Otherwise find the closest matching time
+            [dtime_match(it),time_inds(it)]=min(dtime);
+                       
+        end
+             
+    end   
+    
+    
+end
+
+time_out = time_matlab(time_inds);
+
+
+if size(array_in,1)~=0
+    
+    %Make dim the first dimension
+    siz=size(array_in); siz2=siz;
+    inds = 1:length(siz); inds2=inds;
+    inds2(dim)=[];
+    siz2(dim)=[];
+    per_inds = [dim inds2];
+    array_in = permute(array_in,per_inds);
+
+    %Figure out how to get the original array back after permuting...
+    %  Actaully can just use ipermute (inverse permute) with orig indices.
+    % per_inds_out = NaN*ones(size(inds));
+    % a = 2:length(siz);
+    % i = inds;
+    % i(dim)=[];
+    % per_inds_out(inds2) = a;
+    % per_inds_out(dim) = 1;
+    
+    out = array_in(time_inds,:);
+    out=reshape(out,[length(time_inds) siz2]);
+    %out  = permute(out,[per_inds_out]);
+
+
+    % Permute back to original order
+    out  = ipermute(out,[per_inds]);
+else
+    out=NaN;
+end
+

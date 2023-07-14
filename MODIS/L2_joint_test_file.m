@@ -1,0 +1,14 @@
+function [success]=L2_joint_test_file(filename_h5)
+
+
+INFO = hdfinfo(filename_h5);
+SD_id = hdfsd('start',filename_h5,'read'); %open the file
+evalc('[lat_10km,dimsizes_lat,sampling_along_10km,sampling_across_10km,success]=get_hdf_data_dan(''Latitude_10km'',SD_id,INFO);');
+evalc('[tau,dimsizes_tau,tmp,tmp,success_tau]=get_hdf_data_dan(''Cloud_Optical_Thickness'',SD_id,INFO);'); %int16 (>0)
+
+success = min([success success_tau]);
+
+%close the hdf file
+status = hdfsd('end',SD_id);
+%success is returned by the above
+

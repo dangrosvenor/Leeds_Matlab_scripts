@@ -1,0 +1,107 @@
+function [me,nnums,stdev]=meanNoNan(dat,ndim,op,isqueeze,iweight,weights)
+%function [me,nnums,stdev]=meanNoNan(dat,ndim,op,isqueeze,iweight,weights)
+%finds the mean of an N dimensional array without the NaNs over dimension ndim
+%nnums is the number of values that went into each mean value (num of non-NaN
+%values). And std dev. For sum set op='sum'
+%If iweight is set then it will do a weighted mean using the weights given
+% I.e weighted_mean = sum( x_i * weight_i) / sum(weight_i)
+% Set op to 'sum' to do the sum instead of the mean
+
+if nargin<4
+    isqueeze=1;
+end
+
+if nargin<5
+    iweight=0;
+    weights = ones(size(dat));
+end
+
+sdat=size(dat);
+dims=1:length(sdat);
+if length(dims)<ndim
+    me=dat;
+    nnums=1;
+    stdev=NaN;
+    return
+else
+    dims(ndim)='';
+end
+
+%Put the averaging dimension (ndim) last.
+dat = permute(dat,[dims ndim]);
+weights = permute(weights,[dims ndim]);
+
+ndim=length(sdat);
+
+
+%dat=squeeze(dat);
+inotnan=~isnan(dat); %returns a matrix of ones for points that aren't NaN
+
+size_dat=size(dat);
+
+% sum_dims=1:length(size_dat); %list of all the dimensions of dat
+% sum_dims(sum_dims==ndim)=[]; %remove the dimension over which we require the mean
+% 
+% sum_dat=dat;
+% for i=1:length(sum_dims)
+%     sum_dat=sum(sum_dat,sum_dims(i));  %sum over the other dimensions
+%     
+    
+nnums=sum(inotnan,ndim); %number of non-NaN numbers in the ndim dimension
+ib=find(inotnan==0); %all the points that are NaN
+%clear inotnan
+dat(ib)=0; %set them to zero
+weights(ib)=0;
+
+if iweight==0
+    me=sum(dat,ndim)./nnums; %
+else
+   nweights = sum(weights,ndim);
+   me=sum(dat.*weights,ndim)./nweights;  
+end
+
+n_ones = ones([1 length(sdat)-1]);
+
+me2 = repmat(me,[n_ones size(dat,ndim)]);
+
+if iweight==1
+    %In this case want sum( (w_i * (x_i - weighted_mean).^2) ) /
+    %                           sum( N/N-1 * w_i)
+    % where N is the number of non-zero weights (NIST formula)
+    
+    %weights has been set to zero where there is NaN data in dat
+    A =  sum( weights .* (dat - me2).^2 , ndim);
+    B = (nweights-1)./(nweights) .* sum(weights,ndim);
+    stdev = sqrt(A ./ B);
+else
+    sq = (dat-me2).^2;
+    sq(ib)=0; %set these to zero so they aren't included in the sum
+    stdev = sqrt(  sum( sq, ndim ) ./ (nnums-1)   );
+end
+
+
+
+me(nnums==0)=NaN; %set the answer to NaN when have no non-NaN data for an entry
+stdev(nnums==0)=NaN; %set the answer to NaN when have no non-NaN data for an entry
+stdev(nnums-1==0)=0; %points where only had one value - can't divide by N-1 - set std to 0
+
+if nargin>2
+    if isstr(op)
+        if strcmp(op,'sum')==1
+            me=me.*nnums; %return the sum rather than the mean
+        end
+    end
+end
+
+ if isqueeze==1
+    me=squeeze(me);  
+    nnums=squeeze(nnums);
+    stdev=squeeze(stdev);
+ end
+    
+
+
+
+
+
+

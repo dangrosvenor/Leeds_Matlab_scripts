@@ -1,0 +1,6 @@
+file ecoll_2d.txt  - energy, momentum check results
+>> ecoll_2d
+Momentum, Energy Check: m1= 0.5000, m2= 1.5000
+v1i= 1.5000, v2i= 0.7500, th10=40.0000, th20=20.0000
+v1f= 1.5463, v2f= 0.7180, th1=30.0000, th2=26.7001
+Ei= 0.9844, Ef= 0.9844, Pxi= 1.6317 Pxf= 1.6317 Pyi=-0.0973 Pyf=-0.0973

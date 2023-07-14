@@ -1,0 +1,6 @@
+eval(['dSWdTS_' model '_' period_str ' = dSW_' model '_' period_str...
+        '/dTS_' model '_' period_str ';']);  %e.g. dSWdTS_ukesm_PB
+    
+%Calculates the N. Atlantic SW divided by teh global dT
+eval(['dSWdTSglobal_' model '_' period_str ' = dSW_' model '_' period_str...
+        '/dTSglobal_' model '_' period_str ';']);  %e.g. dSWdTSglobal_ukesm_PB

@@ -1,0 +1,25 @@
+% Profiles of theta and qv (RH?) from soundings vs model
+
+Nrows_sub=2;
+Ncols_sub=3;
+isub_DRIVER=0;
+
+xsub=2; %No. rows
+ysub=3; %No. columns
+
+% day_or_night='all';
+% day_or_night='day 12th Nov';
+% day_or_night='day 12th Nov 04 LST';
+
+iover_ride_plot_global=1;
+inew_figure=0;
+
+
+day_or_night='day 12th Nov 16 LST';
+    Boutle_case_12Nov2008_sounding_comparisons    
+day_or_night='day 13th Nov 04 LST';
+    Boutle_case_12Nov2008_sounding_comparisons
+day_or_night='day 13th Nov 16 LST';
+    Boutle_case_12Nov2008_sounding_comparisons
+
+

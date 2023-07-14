@@ -1,0 +1,22 @@
+function [hA,cl,uA,F0,h_H0,cl_c0]=mountain_Houghton_solve_uAhA(Hc,H0,U0,gd)
+
+%choose a range for thi in which a solution lies
+
+sign_fun=sign(mountain_Houghton_fun_uAhA(H0,Hc,H0,U0,gd));
+sign_fun_old=sign_fun;
+x=H0;
+while sign_fun==sign_fun_old
+    x=x+100;
+    sign_fun=sign(mountain_Houghton_fun_uAhA(x,Hc,H0,U0,gd));
+end
+    
+range=[H0 x];
+
+hA=fzero(@mountain_Houghton_fun_uAhA,range,[],Hc,H0,U0,gd);
+%function looks like:- y=mountain_Houghton_fun_uAhA(hA,Hc,H0,U0,gd);
+
+cl=U0 - sqrt(gd*hA/H0*(hA+H0)/2); %eqn (3.8 of Houghton)
+uA=(cl*(hA-H0)+H0*U0)/hA;
+F0=U0/sqrt(gd*H0);
+h_H0=Hc/H0;
+cl_c0 = cl / sqrt(gd*H0);

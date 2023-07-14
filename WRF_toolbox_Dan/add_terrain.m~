@@ -1,0 +1,4 @@
+terrain = nc{'HGT'}(time,:,:);
+x=[1:size(terrain,1)];
+hold on;
+contour(x,x,nc{'HGT'}(1,:,:),[0 1],'w');

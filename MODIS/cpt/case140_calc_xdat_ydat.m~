@@ -1,0 +1,15 @@
+
+%code snippet for case 140 of watervap
+
+
+xdat(idat).x=eval(['midXbins_' pdf_str '_' data_str ';']); %
+ydat(idat).y=eval(['PDF_' pdf_str '_' data_str './sum(PDF_' pdf_str '_' data_str ');']); %
+mean_pdf(idat) = sum(ydat(idat).y.*xdat(idat).x);
+
+switch pdf_plot_type
+    case 'Cumulative'
+        bin_widths
+        ydat(idat).y= cumsum( cat(1,[0 ydat(idat).y]) .* bin_widths );
+        %bin edges
+        xdat(idat).x=eval(['Xbins_' pdf_str '_' data_str ';']); 
+end

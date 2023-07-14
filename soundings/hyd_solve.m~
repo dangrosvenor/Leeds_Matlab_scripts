@@ -1,0 +1,12 @@
+function [P,h]=hyd_solve(Tprof,Pprof,PSPAN)
+%this solves the hydrostatic equation for height as a function
+%of pressure when have profiles as functions of pressure
+%[P,h] = ODE45(@hydrostatic2,PSPAN,0,[],Pprof,Tprof); %solve hydrostatic equation - uses TSPAN to interpolate temperautre for a given H		
+
+%[P,h] = ODE45_dan(@hydrostatic2,PSPAN(1),PSPAN(2),0,[],Pprof,Tprof); %solve hydrostatic equation - uses TSPAN to interpolate temperautre for a given H		
+   
+
+%[P,h] = ODE45_dan(@ode_test,PSPAN(1),PSPAN(2),0); %solve hydrostatic equation - uses TSPAN to interpolate temperautre for a given H		
+
+%[a,b]=ode45_dan_hyd('hydrostatic2',100e2,1e5,17000,1e-3,TT,PP)
+[P,h] = ode45_dan_hyd('hydrostatic2',PSPAN(1),PSPAN(end),0,1e-3,Pprof,Tprof);

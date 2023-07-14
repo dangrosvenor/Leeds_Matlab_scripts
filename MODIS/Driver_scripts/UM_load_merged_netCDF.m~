@@ -1,0 +1,70 @@
+function [dat_global] = UM_load_merged_netCDF(dirUM,var_UM,run_type,load_type,pole_lat,pole_lon)
+
+istr=strfind(var_UM,'_time_only');
+if length(istr)==0
+    time_only==0;
+else
+    time_only=1;
+    var_UM=var_UM(1:istr-1);
+end
+
+switch load_type
+    case 'mat'
+        filename = [dirUM '/' var_UM '/' run_type '_' var_UM '_native res_ALL.mat'];
+        dat_global = load(filename);
+        
+    case 'merged netCDF'
+        filename = [dirUM '/' var_UM '/merged.nc'];
+
+        nc = netcdf(filename);
+        if
+            case 'time_only'
+                dat_global.dat = NaN;
+            otherwise
+                dat_global.dat = nc{var_UM}(:);
+        end
+
+        lat_var = 'Latitude'; lon_var = 'Longitude';
+
+        %Slices have the lat lon converted from rotated coords for the nest
+        %already.
+        gcm_Plat2D_UM = nc{lat_var}(:);
+        gcm_Plon2D_UM = nc{lon_var}(:);
+        
+% N.B. - Values from Python scripts are already rotated to proper lat and lons!        
+%         switch run_type
+%             case 'nested'
+%                 [gcm_Plat2D_UM,gcm_Plon2D_UM]=em2gm(gcm_Plat2D_UM,gcm_Plo
+%                 n2D_UM,pole_lat,pole_lon);
+%        end
+
+
+i180 = find(gcm_Plon2D_UM>180);
+gcm_Plon2D_UM(i180) = gcm_Plon2D_UM(i180) - 360;
+
+
+        
+
+        time_glm = nc{'Time'}(:);
+        time_glm_matlab = datenum('01-Jan-1970') + time_glm/24;
+
+        [dat_global.gcm_Plon2D_edges_UM,dat_global.gcm_Plat2D_edges_UM] = get_edges_lat_lon(gcm_Plon2D_UM,gcm_Plat2D_UM);
+
+
+        time_shift=0;
+
+
+        time_LST = time_glm_matlab + time_shift;
+
+        [Y,M,D,HH,MM,SS]=datevec(time_LST);
+        if SS>59
+            SS=0;
+            MM=MM+1;
+        end
+        dat_global.time_ALL = datenum(Y,M,D,HH,MM,SS);
+
+        dat_global.gcm_Plat2D_UM = gcm_Plat2D_UM;
+        dat_global.gcm_Plon2D_UM = gcm_Plon2D_UM;
+
+end
+

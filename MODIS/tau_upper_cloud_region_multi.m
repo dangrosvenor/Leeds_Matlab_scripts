@@ -1,0 +1,54 @@
+%constants - won't bother varying these for now
+k=0.88;
+Q=2;
+
+tau_cont=0.2;
+
+%% Things that will test one-by-one
+f_ad = 0.7; %Fraction of adiabaticity of clouds
+
+% fraction of cloud depth from bottom where reach max LWC
+z_lwc_max=0.9;
+
+%Cloud temp to use for condensation rate
+CTT=275;
+
+%% Things that will make matrix of
+
+% Droplet conc (m^-3)
+dN = 25e6;
+N = [25e6:dN:500e6];
+
+%Total cloud depth (inc. ramp down at top)
+dH=20;
+H=[50:dH:500];
+
+nN=length(N);
+nH=length(H);
+
+tau = NaN*ones([nN nH]);
+for i=1:nN
+    for j=1:nH
+        tau(i,j) = tau_upper_cloud_region(H(j),N(i),z_lwc_max,f_ad,CTT,k,Q);
+    end
+    
+end
+
+Ne = 0.5*(N(2:end)+N(1:end-1));
+Ne = [Ne(1)-dN Ne Ne(2)+dN];
+    
+He = 0.5*(H(2:end)+H(1:end-1));
+He = [He(1)-dH He He(2)+dH];
+
+figure
+dpcolor(He,Ne*1e-6,tau);
+shading interp
+contour(H,N*1e-6,tau,[0.2 0.2],'k')
+colorbar
+xlabel('H (m)');
+ylabel('N (cm^{-3})');
+title(['f_{ad}=' num2str(f_ad) ', z\_lwc\_max=' num2str(z_lwc_max) ', CTT=' num2str(CTT)]);
+[c,h]=contour(He,Ne*1e-6,tau,[tau_cont tau_cont],'k');
+
+
+

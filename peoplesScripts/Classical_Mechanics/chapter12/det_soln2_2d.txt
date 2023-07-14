@@ -1,0 +1,13 @@
+det_soln2_2d.txt: Output from det_soln2_2d.m
+>> det_soln2_2d
+Inertia Tensor
+      1/3          -1/4            0      
+     -1/4           1/3            0      
+       0             0            2/3     
+Direction cosines matrix
+cos( 135) cos( 135) cos(  90)
+cos( 135) cos(  45) cos(  90)
+cos(  90) cos(  90) cos(  00)
+Principal moments
+      1/12          7/12          2/3     
+>> 

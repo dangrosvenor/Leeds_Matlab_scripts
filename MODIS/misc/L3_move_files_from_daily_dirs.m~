@@ -1,0 +1,10 @@
+direc = '/home/disk/eos8/d.grosvenor/MODIS_L3_data/';
+years = {'y2011','y2012','y2013','y2014'};
+
+for iday=1:366
+    for iyear=1:length(years)
+        direc2 = [direc years{iyear} '/' day];
+        
+    end
+    
+end

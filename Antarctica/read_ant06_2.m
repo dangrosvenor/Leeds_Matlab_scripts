@@ -1,0 +1,71 @@
+%filename2='C:\Documents and Settings\dan\My Documents\MATLAB\WRF_toolbox_Dan\XY_latlon.mat';
+filename2='/home/disk/eos1/d.grosvenor/matlab/work/WRF_toolbox_Dan/XY_latlon.mat';
+load(filename2); %loads LATS LONS X_latlon Y_latlon
+
+%filename='/home/mbexddg5/work/manchester_flt19.txt';
+%filename='c:/documents and settings/dan/my documents/Antarctica_mydocs/Antarctica_general/manchester_flt19.txt';
+filename='/home/disk/eos1/d.grosvenor/Ant_flights/flight19/manchester_flt19.txt';
+flight_no='19';
+
+%dat_flt19=dlmread(filename);
+fid=fopen(filename,'rt'); %is quicker to use fscanf that dlmread
+dat_flt19 = fscanf(fid,'%f',[15 inf]);
+fclose(fid);
+
+dat_flt19 = dat_flt19';
+dat_flt19=sortrows(dat_flt19); %the times in the file are not in order so this puts them in order
+inds=1:size(dat_flt19,1);
+
+time_flt19=dat_flt19(:,1)/3.6e6; %convert from ms to hours
+
+td_flt19=dat_flt19(inds,7)+273.15;  %frost point instrument ***wasn't working properly***
+td2_flt19=dat_flt19(inds,8)+273.15; %so use this humicap data
+
+f=1e6*28.97/18; 
+
+
+%%%%% think these should use 'ice' as it's the frost point not the dew point %%%%%
+qv_flt19 = SatVapPress(td_flt19,'goff','ice',100*dat_flt19(inds,4),1) / f;
+qv2_flt19 = SatVapPress(td2_flt19,'goff','ice',100*dat_flt19(inds,4),1) / f;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+X_flt19=interp2(LATS,LONS,X_latlon,dat_flt19(:,2),dat_flt19(:,3));
+Y_flt19=interp2(LATS,LONS,Y_latlon,dat_flt19(:,2),dat_flt19(:,3));
+
+%calculate the distance along the flight track (total distance travelled)
+%based on every 100 points throughout the data
+inds=[1:100:length(dat_flt19(:,1))];
+dist_flt19 = cumsum(distlatlon(dat_flt19(inds(1:end-1),2),dat_flt19(inds(1:end-1),3),dat_flt19(inds(2:end),2),dat_flt19(inds(2:end),3)),1);
+
+
+dat_flt19_proc = dat_flt19;
+dat_flt19_proc(:,10) = dat_flt19_proc(:,10)+180;
+dat_flt19_proc(:,1) = dat_flt19_proc(:,1)/3.6e6; %convert from ms to hours
+
+disp('Done Jan06 reading aircraft data');
+
+
+
+%profiles from aircraft data
+%descent starts at ~20.8 UTC and finishes at ~21 UTC
+
+%[ibeg iend]=findheight(dat(:,1)/3.6e6,20.8,21.0);
+%inds_prof=ibeg:iend;
+%plot(qv2(inds_prof),dat(inds_prof,11));
+
+
+% 1) time - milliseconds (Divide by 3.6e6 to get decimal hours)
+% 2) lat
+% 3) lon
+% 4) static pressure  (mb)
+% 5) surface temp (from infra red thermometer)
+% 6) air temperature
+% 7) dew point (from frost point hygrometer)  (degC) *** wasn't working properly according to the paper and they used the humicap data ***
+% 8) dew point (from humicap)		           (degC)
+% 9) wind speed
+% 10) wind direction (need to add 180 to get conventional wind direction)
+% 11) altitude (gps - not very good)
+% 12) short wave - upwelling
+% 13) short wave - downwelling
+% 14)long wave - upwelling
+% 15) long wave - down welling

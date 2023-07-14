@@ -1,0 +1,10 @@
+function saveas_ps(fig_handle,filename)
+%function saveas_ps(fig_handle,filename)
+%saves the supplied figure handle as a .ps and does the conversion
+%of the finsihed file to make the lines in line plots look
+%better (using fix_lines script)
+
+
+print(fig_handle,filename,'-depsc');
+%fixPSlinestyle(filename);
+fix_lines(filename,filename);

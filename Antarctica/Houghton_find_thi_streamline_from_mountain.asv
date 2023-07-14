@@ -1,0 +1,20 @@
+clear thi
+H_mountain=1500;
+
+hx=[1:1:H_mountain];
+
+for i=1:length(hx)
+    thi(i)=mountain_Houghton_solve_thi_for_given_h(hx(i),8,H0_Houghton,0.7,'windward');
+end
+
+hx2=[H_mountain-1:-1:1];
+
+L_thi=length(thi);
+for i=1:length(hx2)
+    thi(i+L_thi)=mountain_Houghton_solve_thi_for_given_h(hx2(i),8,H0_Houghton,0.7,'lee');
+end
+
+y_stream = thi + [hx hx2];
+
+
+

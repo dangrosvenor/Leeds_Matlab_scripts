@@ -1,0 +1,10 @@
+function UM_save_plot(gcf,isave_plot,savedir,save_str)
+
+if isave_plot==1
+    savename=['/home/disk/eos1/d.grosvenor/modis_work/ACSIS/global_LWP_' titlenam_driver '_vs_satellite'];
+        clear opts
+        %        opts.iplot_png=1;
+        opts.iplot_eps=1;
+        saveas_ps_fig_emf(gcf,[savename],'',0,1,0,'',[],0,opts);
+%    close(gcf);
+end

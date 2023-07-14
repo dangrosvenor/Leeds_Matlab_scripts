@@ -1,0 +1,15 @@
+function [year,month,day,hour,min,sec]=WRF_time_strings(Times,time)
+
+tstr=Times(time,:); 
+
+year=tstr(1:4);
+month=tstr(6:7);
+day=tstr(9:10);
+hour=tstr(12:13);
+min=tstr(15:16);
+sec=tstr(18:19);
+
+
+month_text = {'Jan','Feb','Mar
+month_text = month_strings(str2num(month));
+

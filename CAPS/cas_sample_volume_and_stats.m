@@ -1,0 +1,174 @@
+function [sample_volume_CAS,sample_volume_CIP,air_speed_1D,air_speed,CAS_total_number...
+    ,CAS_total_number_cutoff ...
+    ,CIP_total_number,LWC_dist_cas,LWC_dist_cip,CAS_mode_diameter,CAS_mean_diameter...
+    ,LWC_dist_cas_cutoff,LWC_size_dist,bin_range]...
+    =cas_sample_volume_and_stats(flt_dat,CAS_time,...
+    CAS_bins,CAS_counts,CIP_time,CIP_bins,CIP_counts,air_speed_type,...
+    cut_off_size,TAS,LWC_cutoff,airspeed_constant)
+
+if length(CIP_time)==0
+    no_cip=1;
+else
+    no_cip=0;
+end
+
+%For CAS:-
+%Tom LC says (and confirmed by DMT) that the sizes quoted are the upper end of the size bins. So the first bin contains
+%all of the counts for sizes less than 0.61 microns in diameter. So this can probably be ignored.
+
+% i_reduce_counts=1;
+% if i_reduce_counts==1
+%     CAS_counts = CAS_counts*0.43; %reduce the counts by a constant factor for testing
+%     disp('************ !!!!!   WARNING - have reduced the counts by a constant factor for testing !!!! ******');
+% end
+%Probably no need to do this really as overall LWC will be proportional to the reduction factor
+
+
+%            air_speed = 60*1e2; %assume 60 m/s for now - convert to cm/s
+%laser_area = beam_area*1e-2; %the beam_area of the CAS is read in as units mm^2 - convert to cm^-2
+laser_area = 0.24e-2; %cm^2. might as well hardwire at A=0.24 mm^2 for now in case of reading errors, etc.
+sample_time=1.0; %1 Hz data so is 1 second sample time.
+
+switch air_speed_type
+    case 'aircraft' %turbulence probe
+        air_speed_1D = 100*interp1(flt_dat(:,1)/1000,flt_dat(:,4),CAS_time); %interpolate the aircraft data onto CAS_time
+        air_speed_1D(air_speed_1D<10)=NaN;
+        air_speed = repmat(air_speed_1D',[1 size(CAS_counts,2)]);
+        sample_volume_CAS = laser_area.*air_speed*sample_time; %cm^{-3}
+    case 'constant'
+        air_speed_1D = ones(size(CAS_time))*100*airspeed_constant; %constant 60 m/s converted to cm/s
+        air_speed = repmat(air_speed_1D',[1 size(CAS_counts,2)]);
+        sample_volume_CAS = laser_area.*air_speed*sample_time; %cm^{-3}
+    case 'CIP probe'
+        air_speed_1D = 100*interp1(CIP_time,TAS,CAS_time,[],'extrap'); %extrapolate the last value if required
+        air_speed_1D(air_speed_1D<10)=NaN;
+        air_speed = repmat(air_speed_1D',[1 size(CAS_counts,2)]);
+        sample_volume_CAS = laser_area.*air_speed*sample_time; %cm^{-3}
+end
+
+icut_off = find(CAS_bins>cut_off_size);
+icut_off_cip = find(CIP_bins>0);
+if length(LWC_cutoff)==1
+    LWC_cutoff=[-1 LWC_cutoff];
+end
+min_bin = (CAS_bins(1)+CAS_bins(2))/2; %set the minimum bin to be above the first bin to exclude it (i.e. can't
+%include anything less than 0.61 microns as don't have any size info for these
+%LWC_cutoff(1)=max(LWC_cutoff(1),min_bin);
+LWC_cutoff(1)=max(LWC_cutoff(1),CAS_bins(1));
+icut_off_lwc = find(CAS_bins>=LWC_cutoff(1) & CAS_bins<=LWC_cutoff(2)); %so if have a range that covers all bins will
+icut_off_lwc(1)=[]; %discard this 1st bin as some or all of the counts in this bin will be < LWC_cutoff(1)
+%e.g. if LWC_cutoff(1)=30 then CAS_bins(icut_off_lwc(1)) will be 30 (in case of the CAS) - so this bin will be for
+%counts between 25 and 30 microns
+bin_range(1)=CAS_bins(icut_off_lwc(1)-1);
+bin_range(2)=CAS_bins(icut_off_lwc(end));
+disp([bin_range(1) bin_range(2)]);
+
+
+%contain indices 2:30 These correspond to CAS_counts(2:30) and mid_points_cas(1:29)
+
+size_CAS = size(CAS_counts,1);
+
+if no_cip==0
+    size_CIP = size(CIP_counts,1);
+
+
+
+    air_speed_CIP = repmat(interp1(CAS_time,air_speed_1D,CIP_time,[],'extrap')',[1 size(CIP_counts,2)]);
+    %sample volume scaling factor for each size bin is a function of airspeed too so need
+    %the full matrix
+    CIP_bins_pixels = repmat([0:length(CIP_bins)-1]',[1 size(CIP_counts,1)])';
+    %this is just an array of 0 to 61 replicated for each time
+    sample_volume_CIP = SampleVolumeCIP(air_speed_CIP/100,CIP_bins_pixels,sample_time);
+    %the sample volume for all bins at all times (i.e. at the different air speeds)
+    %N.B. is a function of sample_time (data frequency)
+
+    CIP_total_number{1}=sum(CIP_counts(:,icut_off_cip)./sample_volume_CIP,2);
+    %for CIP sample volume is a function of bin size (and a weak function of time)
+    %not using icut_off_cip at the moment
+
+end
+
+
+
+
+CAS_total_number{1}=sum(CAS_counts(:,icut_off),2)./sample_volume_CAS(1:size_CAS,1);
+%sample volume second dimension is just repeated data for each size bin (only varies over time)
+
+
+
+%calculate mode and mean diameters
+
+%mode
+if size(CAS_bins,2)==1
+    CAS_diameters = [NaN; 0.5*(CAS_bins(1:end-1)+CAS_bins(2:end))];
+else
+    CAS_diameters = [NaN 0.5*(CAS_bins(1:end-1)+CAS_bins(2:end))];
+end
+
+[nmax,imax] = max( CAS_counts ,[], 2);
+for imode=1:length(imax)
+    CAS_mode_diameter(imode) = CAS_diameters(imax(imode));
+end
+
+%mean
+%assume that the diameter for each bin is represented by the mid-point
+CAS_diameters_alltimes = repmat(CAS_diameters,[1 size(CAS_counts,1)])';
+CAS_mean_diameter = sum(CAS_counts(:,icut_off).*CAS_diameters_alltimes(:,icut_off),2)...
+    ./sum(CAS_counts(:,icut_off),2); %count bin 2 is to be used with bin edges CAS_bins(1) and CAS_bins(2) - we ignore the first count bin
+%Therefore count bin icut_off is to use CAS_bins(icut_off-1) and CAS_bins(icut_off)
+%This corresponds to CAS_diameters(icut_off) for the mid-point
+%because have put NaN in as the first value in the array CAS_diamters
+
+%%%%   now calculate the LWC from the size distribution        %%%%
+mid_points_cas1D = 1e-4 * ( CAS_bins(1:end-1) + CAS_bins(2:end) ) / 2; %mean diameter of each bin in cm
+mid_points_cas = repmat(mid_points_cas1D,[1 size(CAS_counts,1)])';
+%now calculate the volume of each bin assuming sphericity and multiply by water density (= 1g/cm3) and divde by sample vol in cm^3
+rho_w = 1.0; %water density (= 1g/cm3)
+%gives LWC in g/cm^3 so multiply by 1e6 to give per m^3
+%first calculate a time-size distribution (LWC in each bin for all times)
+LWC_size_dist = 1e6*( pi*mid_points_cas.^3/6 * rho_w .* CAS_counts(:,2:end)  ) ./ sample_volume_CAS(1:size_CAS,2:end); %in g/m^3
+%Now sum over all the bins for LWC timeseries
+LWC_dist_cas = sum( LWC_size_dist ,2 ); %in g/m^3
+
+
+LWC_dist_cas_cutoff = 1e6*( sum( pi*mid_points_cas(:,icut_off_lwc-1).^3/6 * rho_w .* CAS_counts(:,icut_off_lwc) ,2 )  )...
+    ./ sample_volume_CAS(1:size_CAS,1) ; %in g/m^3
+
+CAS_total_number_cutoff=sum(CAS_counts(:,icut_off_lwc),2)./sample_volume_CAS(1:size_CAS,1);
+
+
+
+if no_cip==0
+
+    %for the CIP the bins are considered to represent the size range n*R-R/2 to n*R+R/2 where n=1,2,3... and R is the resolution
+    %R=25 microns. So the first bin runs from 12.5 - 37.5 microns (CIP_bins are the mid-points)
+    mid_points_cip1D = 1e-4 * CIP_bins(1:end); %mean diameter of each bin in cm
+    mid_points_cip = repmat(mid_points_cip1D,[1 size(CIP_counts,1)])';
+    %now calculate the volume of each bin assuming spheicity and multiply by water density (= 1g/cm3) and divde by sample vol in cm^3
+    rho_w = 1.0; %water density (= 1g/cm3)
+    %gives LWC in g/cm^3 so multiply by 1e6 to give per m^3
+    LWC_dist_cip = 1e6*( sum( pi*mid_points_cip.^3/6 * rho_w .* CIP_counts./sample_volume_CIP(1:size_CIP,:) ,2 )  )  ; %in g/m^3
+
+else
+    sample_volume_CIP = [];
+    LWC_dist_cip =[];
+    CIP_total_number{1}=[];
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

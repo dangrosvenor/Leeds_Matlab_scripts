@@ -1,0 +1,12 @@
+function equiv=equivalent_potemp(TK,P,qv)
+%function equiv=equivalent_potemp(TK,P,qv)
+f=1e6*28.97/18; %conversion between MR and ppmv - use 18 for water vapour and 48 for ozone
+
+
+for i=1:size(TK,1)
+%AMS definition - is pretty similar
+qsat=SatVapPress(TK(i,:),'goff','liq',P(i,:),1)/f;   
+RH = qv./qsat;
+equiv(i,:) = TK(i,:).*(1e5./P(i,:)).^0.286 .* RH.^(-qv(i,:)*4.615e2/1005.7)...
+    .* exp( 2.501e6*qv(i,:)./TK(i,:)/1005.7 );
+                        

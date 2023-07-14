@@ -1,0 +1,194 @@
+%read Nimbus-7 sea ice data from NSDIC
+%data is stored as bytes in a flat map of a sterographic plot
+%see http://nsidc.org/data/docs/daac/nsidc0051_gsfc_seaice.gd.html#format
+
+if ~exist('ioverride_seaice')
+
+seaice_dir = '/home/disk/eos1/d.grosvenor/modis_work/Sea_ice_data/';
+seaice_file = 'nt_20091221_f17_v01_s.bin';
+seaice_file = 'nt_20090613_f17_v01_n.bin';
+seaice_file = 'nt_20090621_f17_v01_n.bin';
+%seaice_file = 'nt_20091213_f17_v01_s.bin';
+%seaice_file = 'nt_20040621_f13_v01_n.bin';
+seaice_file = 'nt_20040613_f13_v01_n.bin';
+seaice_file = 'nt_20070613_f17_v01_n.bin';
+%seaice_file = 'nt_20070630_f17_v01_n.bin';
+
+seaice_dir = '/home/disk/eos8/d.grosvenor/sea_ice_data/north/daily/';
+%seaice_dir = '/home/disk/eos8/d.grosvenor/sea_ice_data/south/daily/';
+seaice_file = '2007/nt_20070613_f17_v01_n.bin';
+%seaice_file = '2008/nt_20080613_f17_v01_n.bin';
+%seaice_file = '2009/nt_20090613_f17_v01_n.bin';
+%seaice_file = '2010/nt_20100613_f17_v01_n.bin';
+%seaice_file = '2006/nt_20061201_f13_v01_s.bin';
+%seaice_file = '2006/nt_20061231_f13_v01_s.bin';
+%seaice_file = '2007/nt_20070301_f13_v01_s.bin';
+%seaice_file = '2007/nt_20070101_f13_v01_s.bin';
+%seaice_file = '2007/nt_20070201_f13_v01_s.bin';
+%seaice_file = '2007/nt_20070401_f13_v01_s.bin';
+
+end
+
+fid = fopen([seaice_dir seaice_file],'rb');
+%fread(fid,hsize,'float=>double');
+
+%read in the 300 character header
+hsize=300;
+HEADER = fread(fid,hsize,'6*char');
+
+%so now char(HEADER(231:300)') = 'ANTARCTIC  SSMISONSSMIGRID CONCoast253Land254Pole251 06/16/2011'
+%etc - see the header info be0low
+
+ncols = str2num(char(HEADER(7:12)'));
+nrows = str2num(char(HEADER(13:18)'));
+
+if ncols==304
+    lat_pole = 90;
+else
+    lat_pole = -90;
+end
+
+hsize = ncols*nrows;
+seaice_data = fread(fid,hsize);
+
+
+fclose(fid);
+
+seaice_data = reshape(seaice_data,[ncols nrows]);
+
+seaice_data(seaice_data>250)=NaN;
+%scaling factor
+seaice_sf = str2num(char(HEADER(121:126)'));
+seaice_data = seaice_data / seaice_sf;
+
+%latitude enlclosed by the stero map
+lat_stereo = str2num(char(HEADER(25:30)'));
+%the longitude for the 0 degrees position of the stereographic plot
+lon_stereo = str2num(char(HEADER(31:36)'));
+
+Ipole = str2num(char(HEADER(43:48)'));
+Jpole = str2num(char(HEADER(49:54)'));
+
+
+figure
+m_proj('stereographic','lat',lat_pole,'lon',180+lon_stereo,'rad',90-abs(lat_stereo)); 
+%N.B. the latitude extension doesn't matter here since we allow the map
+%tool to go beyond the edge of the map
+%is 180+lon_stereo because m_map puts the specified longitude at the bottom
+%of the map
+%The way to work out the boxes requried from what is given on the website
+%is to first of all plot the data using pcolor(seaice_data). This reveals
+%that is not rotated shown on the website diagram of the grid box 
+%(but is according to 180+lon_stereo)
+%Getting the longitude rotation right is critical
+if lat_pole<0
+    m_grid('xaxislocation','top','yaxislocation','middle','tickdir','out','linest','-','backcolor',[0 0 0],'color','c');   %white doesn't come out when saved for some reason so can use cyan ('c')
+else
+    m_grid('xaxislocation','bottom','yaxislocation','middle','tickdir','out','linest','-','fontsize',14,'backcolor',[0 0 0],'color','k');
+end
+
+
+
+%stereo_ylims = get(gca,'ylim');
+%stereo_xlims = get(gca,'xlim');
+
+
+
+%I think there is some slight inaccuracy because m_grid assumes a spherical Earth,
+%whilst the sea-ice people do not (based on what was written on the m_map
+%webpage)
+switch lat_pole
+    %to work this out 
+    case 90
+        %the corners for the north grid are [279.26 350.03 102.34 168.35],[33.92 34.35 31.37 30.98]
+        %according to the website
+        [stereo_x,stereo_y] = m_ll2xy([279.26 350.03 102.34 168.35],[33.92 34.35 31.37 30.98],'clip','off');       
+        
+    case -90
+        %the corners for the south grid are [225 135 42.24 317.76],[-41.45 -41.45 -39.23 -39.23]
+        %according to the website
+        %pick two opposing corners
+        [stereo_x,stereo_y] = m_ll2xy([225 135 42.24 317.76],[-41.45 -41.45 -39.23 -39.23],'clip','off');
+        [stereo_xlims,stereo_ylims] = m_ll2xy([317.76 135],[-39.23 -41.45 ],'clip','off');
+end
+%from the grid box diagram on the website, but bearing in mind the different longitude rotation
+%we pick out the bottom left and top right corners
+ stereo_xlims = stereo_x([4 2]);
+ stereo_ylims = stereo_y([4 2]);
+%this also works - the top right and bottom left                       
+%        stereo_xlims = stereo_x([3 1]);
+%        stereo_ylims = stereo_y([1 3]);
+
+
+
+seaice_xgrid = linspace(stereo_xlims(1),stereo_xlims(2),nrows);
+seaice_ygrid = linspace(stereo_ylims(1),stereo_ylims(2),ncols);
+[seaice_Xgrid,seaice_Ygrid] = meshgrid(seaice_xgrid,seaice_ygrid);
+
+%convert from x,y co-ords to lat-lon
+[seaice_lon,seaice_lat]=m_xy2ll(seaice_Xgrid(:),seaice_Ygrid(:));
+
+seaice_lat = reshape(seaice_lat,[ncols nrows]);
+seaice_lon = reshape(seaice_lon,[ncols nrows]);
+
+i360 = find(seaice_lon>360);
+seaice_lon(i360) = seaice_lon(i360)-360;
+i180 = find(seaice_lon>180);
+seaice_lon(i180) = seaice_lon(i180)-360;
+
+% dlat = diff(seaice_lat);
+% seaice_lat_centres = seaice_lat(1)+dlat/2 : seaice_lat(end)-dlat/2;
+% 
+% dlon = diff(seaice_lon);
+% seaice_lon_centres = seaice_lon(1)+dlon/2 : seaice_lon(end)-dlon/2;
+
+
+m_pcolor(seaice_lon,seaice_lat,seaice_data); shading interp
+
+if lat_pole<0
+    m_grid('xaxislocation','top','yaxislocation','middle','tickdir','out','linest','-','backcolor',[0 0 0],'color','c');   %white doesn't come out when saved for some reason so can use cyan ('c')
+else
+    m_grid('xaxislocation','bottom','yaxislocation','middle','tickdir','out','linest','-','fontsize',14,'backcolor',[0 0 0],'color','k');
+end
+
+hcoast=m_coast('line','linewidth',2,'color',[0.2 0.2 0.2]);
+
+seaice_year = str2num(char(HEADER(103:108)'));
+seaice_day = str2num(char(HEADER(109:114)'));
+
+
+%HEADER = fread(fid,hsize,'integer');
+%fread(fid,hsize,'float=>double');
+
+
+
+
+
+% Bytes 	Description
+% 1-6 	Missing data integer value
+% 7-12 	Number of columns in polar stereographic grid
+% 13-18 	Number of rows in polar stereographic grid
+% 19-24 	Unused/internal
+% 25-30 	Latitude enclosed by polar stereographic grid
+% 31-36 	Greenwich orientation of polar stereographic grid
+% 37-42 	Unused/internal
+% 43-48 	J-coordinate of the grid intersection at the pole
+% 49-54 	I-coordinate of the grid intersection at the pole
+% 55-60 	Five-character instrument descriptor (SMMR, SSM/I)
+% 61-66 	Two descriptors of two characters each that describe the data;
+% (for example, 07 cn = Nimbus-7 ice concentration)
+% 67-72 	Starting Julian day of grid data
+% 73-78 	Starting hour of grid data (if available)
+% 79-84 	Starting minute of grid data (if available)
+% 85-90 	Ending Julian day of grid data
+% 91-96 	Ending hour of grid data (if available)
+% 97-102 	Ending minute of grid data (if available)
+% 103-108 	Year of grid data
+% 109-114 	Julian day of grid data
+% 115-120 	Three-digit channel descriptor (000 for ice concentrations)
+% 121-126 	Integer scaling factor
+% 127-150 	24-character file name
+% 151-230 	80-character image title
+% 231-300 	70-character data information (creation date, data source, etc.)
+
+%fseek(fid,hsize,'cof');

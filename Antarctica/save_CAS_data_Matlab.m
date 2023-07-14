@@ -1,0 +1,16 @@
+filename=['C:\Documents and Settings\dan\My Documents\MATLAB\WRF_toolbox_Dan\CAPS_data_flight' flight_no '.mat'];
+
+save(filename,'-v6','CAS_time_all','CAS_counts_all','CIP_time_all',...
+'CIP_counts_all','TAS_all','LWC_CAS_all','stats_CAS_all',...
+'stats_CIP_all','hotwire_raw_all','CAS_psep_all','CAS_back_all','CAS_bins','CIP_bins');
+
+
+
+filename=['C:\Documents and Settings\dan\My Documents\MATLAB\WRF_toolbox_Dan\terrain_data_WRF.mat'];
+save(filename,'-v6','x_grid','y_grid','terrain');
+
+filename_hdf5=['C:\Documents and Settings\dan\My Documents\MATLAB\WRF_toolbox_Dan\hdf5_flight' flight_no '.mat'];
+save(filename_hdf5,'-v6','INFO','CIP_size_bins_Jonny','CIP_time_Jonny','ice_PSD',...
+'round_PSD','small_PSD','ice_no_Jonny','ice_mass_Jonny','round_mass_Jonny',...
+'small_mass_Jonny','total_mass_Jonny','ice_no_CIP_Dan','mean_ice_size',...
+'ice_no_tot_CIP_Dan','CIP_time_Jonny2');

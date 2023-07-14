@@ -1,0 +1,5 @@
+function ans= alias_tau3(i,j,k)
+
+%evalin('caller',['Cloud_Optical_Thickness_Liquid_Mean.timeseries3(' i ',' j ',' k ');']);
+
+evalin('caller',['Cloud_Optical_Thickness_Liquid_Mean.timeseries3']);

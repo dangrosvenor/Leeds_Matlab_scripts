@@ -1,0 +1,10 @@
+%process Marshak data
+
+%reff = column 7
+
+reffA = segA(7,:);
+i0 = find(reffA==0);
+reffA(i0)= NaN;
+
+Xbins = [0:2:30];
+qh = ndHistc_run([reffA(:)]', Xbins');

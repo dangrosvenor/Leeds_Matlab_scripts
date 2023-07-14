@@ -1,0 +1,12 @@
+%Read in the zlevs (height) file for UM
+
+function [n,z,dz] = read_zlevs_UM(file)
+
+
+fid=fopen(file,'rt'); %is quicker to use fscanf that dlmread
+dat = textscan(fid,'&');
+
+dat = fscanf(fid,'%f
+
+fclose(fid);
+

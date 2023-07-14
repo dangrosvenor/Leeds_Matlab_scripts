@@ -1,0 +1,27 @@
+r_single_all = [50:100:450]*1e-9; %radius in m
+r_single_all = [70:100:450]*1e-9; %radius in m
+
+%rd = (3.0.*M_aero.*exp(-4.5.*log(sigma).^2.)./(4.0.*N_aero.*pi.*density)).^(1.0/3.0);
+% m_aero_single = density .* 4/3*pi.*r_single.^3;
+
+% - Fudge here to allow supply of rd value - re-work script to allow this!
+%Will supply at total mass MR and then work out the number needed to get
+%supplied rd (median diameter)
+rd = 50e-9; %50nm as in Ghan paper
+sigma = 2;
+density = 1777;
+M = 5.e-8 * 2;
+N = (M.*exp(-4.5.*log(sigma).^2.))  ./ (4/3*pi*rd.^3.*density);
+m_aero_single = M./N;
+
+r_single = (m_aero_single./(4/3*pi*density)) .^(1/3);
+
+r_single_all = r_single;
+
+%N_type = 'prescribed number';
+N_type = 'prescribed single aerosol mass'; %(prescribed as a radius rather than a mass)
+        
+for iab=1:length(r_single_all)
+    r_single = r_single_all(iab);
+    abdul_razzak_UM
+end

@@ -1,0 +1,186 @@
+function [ax_orig]=plot_wind_quiver_arrows(u,v,x,y,nx,ny,scale_speed,u_scale,v_scale,isquare,colour_string)
+% plots wind quivers based on the grid given and a maximum scale speed for u and v
+% function [ax_orig]=plot_wind_quiver_arrows(u,v,x,y,nx,ny,scale_speed,u_scale,v_scale,isquare,colour_string)
+% nx and ny are the number of arrows in horiz and vertical
+% scale_speed is a two element vector giving the max expected speed in u and v
+% arrows will then be scaled so that this speed fits into a grid box
+% don't use the u_scale, v_scale feautre - to scale to exaggerate one
+% direction just change the scale_speed for that direction
+
+u_orig=u;
+v_orig=v;
+
+%    spx=25;^M
+%    spy=15;^M
+%    nx = 15;
+%    ny = 15;
+
+idx=floor(length(x)/nx);
+idy=floor(length(y)/ny);
+
+xinds=[1:idx:length(x)];
+yinds=[1:idy:length(y)];
+
+x_draw = x(xinds);
+y_draw = y(yinds);
+
+%size of the grid boxes for x and y
+x_grid = ( max(x_draw)-min(x_draw) ) / ( length(x_draw) - 1 );
+y_grid = ( max(y_draw)-min(y_draw) ) / ( length(y_draw) - 1 );
+
+%    sf=maxALL(u)/maxALL(v);
+
+hold on;
+
+if nargin>=9  %if want to scale u and v winds differently
+    u=u*u_scale;
+    v=v*v_scale;
+end
+
+if nargin>=7 %if want to scale vectors - e.g. in order to make arrows proportional to wind speed on different plots
+    speed = sqrt(u(yinds,xinds).^2 + v(yinds,xinds).^2);
+    max_sp = maxALL(speed);
+    %	sf = 2 * max_sp/scale_speed; %scale factor to make arrows proportional to the wind speed - sf=2 is about right for getting arrows the right size on the plot. Then scale according to a max wind speed expected (scale_speed m/s)
+
+
+
+    u = u * x_grid/scale_speed(1);
+    v = v * y_grid/scale_speed(2);
+    sf=0;
+
+    %quiverDan('v6',x_draw,y_draw,u(yinds,xinds),v(yinds,xinds),sf,'g');
+
+    if isquare==1
+        axis square
+    end
+    quiverDan2('v6',x_draw,y_draw,u(yinds,xinds),v(yinds,xinds),sf,colour_string);
+
+    %quiverDan('v6',[xinds(1) 425 xinds(end)],[yinds(1) 0.25 yinds(end)],[0 0 0; 0 10*u_scale 0; 0 0 0],[0 0 0; 0 0.2*v_scale 0; 0 0 0],sf,'k');
+
+    %now plot the reference arrow for scale referece of winds
+    %make a new invisible axis to allow the plotting of the reference arrow in the top corner outside of the existing axis
+    ax_orig = gca;
+    posit = get(gca,'position'); %save position of old axis
+
+    width_factor=1.25;  %Note - this width factor was making the arrow length to be *1/width_factor.
+    %so have multiplied the length by the width_factor to put it back to its proper length
+    posit(3)=posit(3)*width_factor; % make *width_factor wider
+    xlims = get(gca,'xlim');
+    xlims(2) = xlims(2) + (xlims(2)-xlims(1))*(width_factor-1); % *width_factor wider
+    ylims = get(gca,'ylim');
+    ylims(2) = ylims(2) + (ylims(2)-ylims(1))*(width_factor-1); % *width_factor wider
+    
+    h=axes('position',posit,'visible','off','xlim',xlims,'ylim',ylims);
+
+    
+
+    %add the vertical reference arrow
+    %ioffx = 6;
+    %ioffy = -2;
+    ioffx = round(nx/4.5);
+    ioffy = -round(ny/10); 
+    ioffy = -round(ny/4.5);     
+    
+    xlims_single=get(gca,'xlim');
+    ylims_single=get(gca,'ylim');
+    
+    dX_single = (maxALL(x)-minALL(x));
+    dY_single = (maxALL(y)-minALL(y));    
+    
+%    dX_single = (maxALL(xlims_single)-minALL(xlims_single));
+%    dY_single = (maxALL(ylims_single)-minALL(ylims_single));    
+    
+    off_pos_x=dX_single/4;    
+    off_pos_y=dY_single/10;
+    off_pos_y=dY_single/4;    
+              
+    ioffx = round(off_pos_x/(dX_single/nx));
+    ioffy = -round(off_pos_y/(dY_single/ny));  
+    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+%%%%%%%%%%%%%%%%%%%%% these factors below determine the exact position of the single scale arrows **********
+% without affecting the spacing of the grid (I think), since otherwise the arrow size might be wrong *****
+    single_arrow_fine_tune_x_factor = 0.33;
+%    single_arrow_fine_tune_x_factor = 1.83;    
+    single_arrow_fine_tune_y_factor = 2.1;    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+
+
+
+        
+%now set up new grid with only one u and v vector specified to plot the reference arrow
+%    iadd=ceil(nx/4); %number of points to add onto the side and top of the grid
+    iadd=max(abs(ioffx),abs(ioffy));
+    u_single = zeros(size(u(yinds,xinds))+iadd);
+    v_single = zeros(size(u(yinds,xinds))+iadd);
+
+    u_single(:)=NaN; %make all values NaN initially so are ignored when plotting
+    v_single(:)=NaN;
+    
+    u_single(length(yinds)+ioffy,length(xinds)+ioffx) = 0;
+    v_single(length(yinds)+ioffy,length(xinds)+ioffx) = scale_speed(2);
+
+    %scale as for the other arrows
+    u_single = u_single * x_grid/scale_speed(1) * u_scale;
+    v_single = v_single * y_grid/scale_speed(2) * v_scale;
+    
+
+
+    %set up the x and y positions for the grid - offset y grid to plot in an altered place
+    x_single = [x(xinds(1)):x_grid:x(xinds(1))+x_grid*(length(xinds)+iadd-1)];
+    x_single(length(xinds)+ioffx) = x_single(length(xinds)+ioffx-1)+x_grid*single_arrow_fine_tune_x_factor; %alter the grid to make it non-regular at the position of the reference arrow
+    %to control the position of the horiz arrow more precisely (so doesn't have to be n*x_grid)
+    y_single = [y(yinds(1)):y_grid:y(yinds(1))+y_grid*(length(yinds)+iadd-1)]+y_grid*single_arrow_fine_tune_y_factor;
+
+    %plot the arrow
+    hold on
+    if isquare==1
+        axis square
+    end
+    quiverDan2('v6',x_single,y_single,u_single,v_single,sf,colour_string);
+%    quiverDan2('v6',x_pos_single,y_pos_single,0,y_grid*v_scale,sf,colour_string);
+%    quiverDan2('v6',xxdg,yydg,udg,vdg,sf,colour_string);
+    
+    %now do horizontal reference arrow
+    u_single = zeros(size(u(yinds,xinds))+iadd);
+    v_single = zeros(size(u(yinds,xinds))+iadd);
+    u_single(:)=NaN;
+    v_single(:)=NaN;
+
+    u_single(length(yinds)+ioffy,length(xinds)+ioffx) = scale_speed(1)*width_factor;
+    v_single(length(yinds)+ioffy,length(xinds)+ioffx) = 0;
+
+    u_single = u_single * x_grid/scale_speed(1) * u_scale;
+    v_single = v_single * y_grid/scale_speed(2) * v_scale;
+
+    hold on
+
+    if isquare==1
+        axis square
+    end
+
+    quiverDan2('v6',x_single,y_single,u_single,v_single,sf,colour_string);
+   
+%    quiverDan2('v6',x_pos_single,y_pos_single,x_grid*u_scale,0,sf,colour_string);
+
+    %now label the arrows with the speed
+    try
+        text(x_single(length(xinds)+ioffx+1)-3*x_grid/4,y_single(length(yinds)+ioffy)-y_grid*0.75,[num2str(scale_speed(1)) ' m/s'] );
+        text(x_single(length(xinds)+ioffx),y_single(length(yinds)+ioffy+1)+y_grid*0.3,[num2str(scale_speed(2)) ' m/s'] );
+    catch
+        text(x_single(end)-0.0*x_grid,y_single(length(yinds)+ioffy)-y_grid*0.75,[num2str(scale_speed(1)) ' m/s'] );
+        text(x_single(end),y_single(length(yinds)+ioffy+1)+y_grid*0.3,[num2str(scale_speed(2)) ' m/s'] );
+    end
+
+
+else
+    quiverDan(x(xinds),y(yinds),u(xinds,yinds),v(xinds,yinds),colour_string);
+end
+
+%quiverDan('v6',x(end)+(x(end)-x(1))*0.01,y(end)-(y(end)-y(1))*0.15,maxALL(u_orig),maxALL(v_orig),'k');
+
+%quiverDan('v6',[425 425],[0.25 0.5],[45 45],[45 45],sf,'k');
+
+
+
+

@@ -1,0 +1,30 @@
+case_exec = 'stream';
+
+switch case_exec
+    case 'grid'
+%load on wrfout file for d03
+x_grid = ([1:size(lat2d(1).var,2)]-1) * distlatlon(lat2d.var(1,1),lon2d.var(1,1),lat2d.var(1,2),lon2d.var(1,2));
+y_grid = ([1:size(lat2d(1).var,1)]-1) * distlatlon(lat2d.var(1,1),lon2d.var(1,1),lat2d.var(2,1),lon2d.var(2,1));
+
+    case 'stream'
+%then load the regular grid file
+u=nc{'UFINE'}(:);
+v=nc{'VFINE'}(:);
+w=nc{'WFINE'}(:);
+
+zfine=nc{'ZFINE'}(:);
+
+[x,y,z]=meshgrid(x_grid,y_grid,zfine(1:120));
+
+x=x*1000;
+y=y*1000; %convert to m
+
+ufine=permute(ufine,[2 3 1]); %need to check that have the right order for x and y
+vfine=permute(vfine,[2 3 1]);
+wfine=permute(wfine,[2 3 1]);
+
+S=stream3(x,y,z,ufine,vfine,wfine,200e3,400e3,1.25e3);
+%here the last 3 are the starting x,y,z positions for the streamline
+%looks good from this position - need to decide where is best to start the streamline
+
+plot(S{1}(:,1)/1e3,S{1}(:,2)/1e3,'g'); %to plot the x,y co-ords

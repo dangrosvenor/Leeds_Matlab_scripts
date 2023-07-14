@@ -1,0 +1,13 @@
+function beta=extinction_func_N_L(N,L,k,Q)
+
+if ~exist('k')
+    k=0.8;
+end
+
+if ~exist('Q')
+    Q=2;
+end
+
+rhow=1e3;
+
+beta = Q.* (3./4./rhow).^(2/3) .* (pi.*k).^(1/3) .* N.^(1/3) .* L.^(2/3);

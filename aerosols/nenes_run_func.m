@@ -1,0 +1,89 @@
+function [Nd,Dg,N_aero,r_single] = nenes_run_func(N_aero0,M_aero0,w,r_single,N_type)
+%Think that w is in cm/s
+
+clear nccn_all
+
+sig = 1.5; %Lognormal distribution width
+T=283; %Temperature in K
+
+%% Make the distribution based upon the prescribed aerosol mass MR and the
+%% aerosol size
+
+if exist('r_single')==0
+    r_single = 117e-9; %Default value - used for volcano as of 17th Nov 2016
+end
+
+if exist('N_type')==0
+        N_type = 'prescribed number';
+        N_type = 'prescribed single aerosol mass';
+end
+
+%N_type = 'prescribed number';
+%N_type = 'prescribed single aerosol mass';
+        
+
+% aerosol properties
+nmodes = 1;   % number of modes
+density = 1777; %1777 = ammonium sulphate (kg/m3)
+
+
+
+switch N_type
+    case 'prescribed number'
+        % N_aero set by function inputs - just calculate r_single for output
+        m_aero_single = M_aero0 ./ N_aero0;
+        r_single = ( m_aero_single ./ (density .* 4/3*pi) ).^(1/3);
+        N_aero = N_aero0;
+        %Mode diameter in metres (calculated from mass and number)
+        Dg = 2* (3.0.*M_aero0.*exp(-4.5.*log(sig).^2.)./(4.0.*N_aero.*pi.*density)).^(1.0/3.0);
+    case 'prescribed single aerosol mass'
+        m_aero_single = density .* 4/3*pi.*r_single.^3;
+        N_aero = M_aero0 ./ m_aero_single;
+        %Mode diameter in metres (calculated from mass and number)
+        Dg = 2* (3.0.*M_aero0.*exp(-4.5.*log(sig).^2.)./(4.0.*N_aero.*pi.*density)).^(1.0/3.0);
+    case 'prescribed median radius (rd)'
+        %Supplied M_aero0, but calculate N_aero0
+        N_aero = (M_aero0.*exp(-4.5.*log(sigma).^2.))  ./ (4/3*pi*rd.^3.*density);
+        Dg = rd *2;
+end
+
+
+
+%Make an 800 bin aerosol size distribution (lognormal)
+Nbins=800;
+
+Dlow=Dg/10/sig;
+Dhigh=Dg*10*sig;
+Dspacing=( log(Dhigh)-log(Dlow) )/Nbins; %log spacing
+
+logD=[log(Dlow):Dspacing:log(Dhigh)]; %equally spaced in log space
+
+Dmid=(logD(2:end) + logD(1:end-1) )/2;
+Dmid=exp(Dmid);
+
+%Make a lognormal aerosol distribution
+nd=lognormal(Dmid,N_aero,sig,Dg); %dN/dlogD
+
+%Calculate the critical supersat of each dry aerosol size since this is
+%what the Nenes scheme operates on. The critical supersat can then account for composition if
+%needed.
+[S,Dcrit]=Scrit(T,fliplr(exp(logD)/2)); %fliplr flips matrix so that low supersats will be first
+%S in %
+
+% The number in each bin - sum of this gives total N
+% nd is dN/dlnD and Dspacing is dlnD
+NN=nd*Dspacing;
+
+for i=1:length(w)
+    %Find the max supersat using fzero
+    sm=fzerodan(@nenes,[min(S) max(S)],[],10e4,T,w(i),NN,S);
+    %Plug back in to get the other values if needed
+    [I(i),sp(i),smax(i)]=nenes(sm,10e4,T,w(i),NN,S);
+    
+    % Activate all the aerosol up to smax
+%    is=findheight(S,smax(i));
+    is=findheight_nearest(S,smax(i));    
+    Nd(i)=sum(NN(1:is));
+end
+
+

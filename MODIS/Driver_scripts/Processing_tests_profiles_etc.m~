@@ -1,0 +1,61 @@
+ivar_proc=1;
+vars{ivar_proc} = 'accum_mass'; ivar_proc=ivar_proc+1;
+vars{ivar_proc} = 'accum_num'; ivar_proc=ivar_proc+1;
+vars{ivar_proc} = 'qL'; ivar_proc=ivar_proc+1;
+
+%add a case in UM_maps_generic_time_loop_20141126T041216_v1.m for the
+%variable requested
+
+irun=1; %which of the UM runs to plot
+iget_dat=0;
+
+if iget_dat==1
+    for ivar_proc = 1:length(vars)
+
+        % Run this script first to get the UM data
+        UM_maps_generic_time_loop_RUN_v1_Processing_tests
+
+        %Copy the structure of the several runs to the name of the variable
+        eval([vars{ivar_proc} '_ALL = UM_time_out;']);
+
+        proc_lab{ivar_proc} = UM_time_out{1}.var_nice_name;
+        proc_units{ivar_proc} = UM_time_out{1}.var_units_str;
+    end
+end
+
+%plotting
+cols=['r','g','b'];
+marks=['o','^','s'];
+for ivar_proc = 1:length(vars)
+    figure
+    for i=1:length(UM_time_out{1}.time)
+
+        z_um = UM_time_out{1}.z_um{1};
+        dat = eval([vars{ivar_proc} '_ALL{irun}.datUM{i};']);   %UM_time_out{1}.datUM{i};
+        prof = meanNoNan(meanNoNan(dat,2),2);
+
+        %    accum_num_plot(:,i) = accum_num_prof;
+        plot(prof,z_um,'-','marker',marks(i),'color',cols(i));
+        hold on
+
+        legs{i} = datestr(UM_time_out{1}.time(i));
+
+    end    
+    
+    ylabel('Height (m)');
+    %        xlabel('Mean accum. mode number conc. (kg^{-1})');
+    xlabel([proc_lab{ivar_proc} ' (' proc_units{ivar_proc} ')']);
+    set(gca,'ylim',[0 2000]);
+    legend(legs);
+end
+
+
+figure
+it=1;
+dat = accum_num_ALL{irun}.datUM{i};
+accum_num = UM_time_out{irun}.datUM{it};
+ilat=300; %centre of domain for latitude, plot all lons
+qpcolor(accum_num(:,ilat,:));
+
+
+

@@ -1,0 +1,160 @@
+try
+% Makes an array equivalent to the daynum_timeseries3_block array for ssts with
+% NaNs for missing data. Or uses just daynum_timeseries3 if ioverride_block_amsre flag is
+% cleared or =0.
+% If sst_amsre_smooth doesn't exist then tries to create it using amsre_block_av_time_function2
+% run multi_read_amsre_daily to load the amsre data
+% modisyear_timeseries3_block contains the modis years, daynum_timeseries3_block contains the
+% days.
+% Creates the array sst_amsre_time3
+% Uses day_amsre and year_amsre (which are saved in the save files too)
+
+% % this is run from two different places within MODIS_multi_day_processL3L2
+% 1) Before processing for the 'load, average and save' process in order to create an sst array
+% for all the days required - this will be used to make into a daily file
+% for the 20 swaths. This runs with the flag ioverride_block_amsre=1. Will
+% want to create an array the same size as modisyear_timeseries3_block for
+% the time dimension (global for the space dimension - here we are building
+% screened datasets with daily data - so since this is a reduced dataset
+% there is prob no need to be restricting to a smaller region).
+
+% 2) After loading & processing for the 'load processed L2 and concatenate','load L3 and concatenate'
+% processes in order to create an SST field the same size as the data
+% loaded in.
+% This will run with the flag ioverride_block_amsre cleared (not set). Can
+% use Cloud_Fraction_Liquid for the size of the sst array requried.
+
+% month_amsre(idat2) = str2num(months(imonth).name(2:end));
+% year_amsre(idat2) = str2num(years(iyear).name(2:end));
+% day_amsre(idat2) = day_file;
+
+%MLAT_AMSRE = gcm_Plat2D_edges_AMSRE(:,1);
+%MLON_AMSRE = gcm_Plon2D_edges_AMSRE(1,:);
+
+MLAT_AMSRE = gcm_Plat2D_AMSRE(:,1);
+MLON_AMSRE = gcm_Plon2D_AMSRE(1,:);
+
+if exist('lat_restrict') & exist('lon_restrict')
+    LAT_val = lat_restrict;
+    LON_val = lon_restrict;
+end
+
+if exist('ignore_amsre') & ignore_amsre==1
+    MLAT = zeros(size(Cloud_Fraction_Liquid.timeseries3,1));
+    MLON = zeros(size(Cloud_Fraction_Liquid.timeseries3,2));
+    ilat = 1:length(MLAT); %Previously used length(MLAT_AMSRE)-1, saying "since are using the edges"
+    ilon = 1:length(MLON);
+
+else
+
+    if (exist('LAT_val') & length(LAT_val)>0) | ~exist('ignore_amsre') & ignore_amsre==0
+        %N.B. - the standard ordering for MODIS appears to become (at least for my
+        %files) that the lat dimension is ordered from 89.5 to -89.5, whereas LON
+        %runs from -179.5 to 179.5
+        %So, below use > min(lat) and <= max(lat) for lat restriction and >= & <
+        %for lon...
+
+        if ~exist('MLAT')
+            MLAT = flipdim([round(min(LAT_val))+0.5:1:round(max(LAT_val))-0.5],2); %flipdim to make the order from high lat to low lat
+            MLON = [round(min(LON_val))+0.5:1:round(max(LON_val))-0.5];
+        end
+        %    ilat_MODIS = find(MLAT>min(LAT_val) & MLAT<=max(LAT_val));
+        %    ilon_MODIS = find(MLON>=min(LON_val) & MLON<max(LON_val));
+
+        %    ilat = find(MLAT_AMSRE>min(LAT_val) & MLAT_AMSRE<=max(LAT_val));
+        %    ilon = find(MLON_AMSRE>=min(LON_val) & MLON_AMSRE<max(LON_val));
+
+        clear ilat ilon
+        for i=1:length(MLAT)
+            ilat(i) = find(MLAT_AMSRE == MLAT(i));
+        end
+        for i=1:length(MLON)
+            ilon(i) = find(MLON_AMSRE == MLON(i));
+        end
+
+
+
+    else
+        ilat = 1:length(MLAT_AMSRE); %Previously used length(MLAT_AMSRE)-1, saying "since are using the edges"
+        ilon = 1:length(MLON_AMSRE); %But have removed the -1 on 16th March, 2015 as caused an error
+    end
+
+end
+
+if ~exist('ioverride_block_amsre') | ioverride_block_amsre==0
+    modisyear_timeseries3_block = modisyear_timeseries3;
+    daynum_timeseries3_block = daynum_timeseries3;    
+       
+    if exist('Cloud_Fraction_Liquid')==1
+        siz = size(Cloud_Fraction_Liquid.timeseries3);  %i.e. called as (2) above.
+    else
+        siz = size(Cloud_Effective_Radius_Liquid_Mean.timeseries3);  %i.e. called as (2) above.        
+    end
+    
+    if ~exist('sst_amsre_smooth')
+        sst_amsre_smooth = amsre_block_av_time_function2(sst_amsre,5,year_amsre,month_amsre,day_amsre);
+    end
+else
+  %Called as (1) above.
+        siz = [length(ilat) length(ilon) length(modisyear_timeseries3_block)];        
+end
+
+if length(siz==2)
+    siz = [siz 1]; %keep the last dimension as a singleton if only have one time
+end
+
+sst_amsre_time3 = NaN*ones(siz);
+lwp_amsre_time3 = NaN*ones([siz 2]);
+
+
+
+
+%day_amsre used here (this is saved in the save files too)
+daynum_amsre = datenum(year_amsre,month_amsre,day_amsre) - datenum(year_amsre,1,1) + 1;
+
+%these days are missing from the AMSRE database, so add them as a known
+%exception
+exceptions_yrs = [2006 2007];
+exceptions_days = [322 332];
+
+ain='stop';
+for it=1:length(modisyear_timeseries3_block)
+    i = find(year_amsre==modisyear_timeseries3_block(it) & daynum_amsre==daynum_timeseries3_block(it));
+    if length(i)>0
+        inds_save(it) = i;
+    end
+    if length(i)>0
+       sst_amsre_time3(:,:,it) = sst_amsre_smooth(ilat,ilon,i);
+       %lwp_amsre is larger in the 3rd dimension than sst_asmre_smooth, but
+       %the end of it will just be padded with zeros as is created as
+       %nmonths*31, whereas smooth one is only the size of the actual data
+       %since it is based on year_amsre, which grows each loop
+       if exist('lwp_amsre')
+           lwp_amsre_time3(:,:,it,:) = lwp_amsre(ilat,ilon,i,:);
+       end
+    else %watch out in case can't find the sst for a particular day
+        %but allow these known exceptions
+        iex = find( exceptions_yrs==modisyear_timeseries3_block(it) & exceptions_days==daynum_timeseries3_block(it));
+        if strcmp(ain,'ignore')~=1 & length(iex)==0
+            fprintf(1,'\n*** WARNING from amsre_black_average_time.m - cannot find SST data for day %d in year %d.\n ***',daynum_timeseries3_block(it),modisyear_timeseries3_block(it));
+            ain=input('Enter ''ignore'' to ignore for all other days, press enter to check other days >>  ');
+        end
+        
+    end
+    
+end
+
+   
+if ~exist('var_names')   %for save_amsre_loaded_data
+    var_names{1} = 'lwp';
+    var_names{2} = 'sst';
+end
+
+clear ioverride_block_amsre
+catch block_error_amsre
+    clear ioverride_block_amsre     
+    rethrow(block_error_amsre)
+end
+
+
+

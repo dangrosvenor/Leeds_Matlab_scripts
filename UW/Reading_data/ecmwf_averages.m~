@@ -1,0 +1,28 @@
+function [F_daily,F_mon,time_daily] = ecmwf_averages(F,time) 
+
+ecDateVec_Man = datevec(time);    %[Y,MO,D,H,MI,S]
+
+%average into daily values
+        sMan = size(F);
+        istart=1; stride=4;
+        n = sMan(1)/stride;
+        F_daily = NaN*ones([n-1 sMan(2) sMan(3) sMan(4)]);
+        for i=1:n-1
+            F_daily(i,:,:,:) = meanNoNan(F(istart:istart+stride-1,:,:,:),1);
+            istart = istart + stride;
+        end
+
+        time_daily = time(1:stride:n*stride);
+        
+        %make monthly averages for each time of day (0, 6 , 12 and 18 UTC).
+        F_mon = NaN*ones([4 12 sMan(2) sMan(3) sMan(4)]);
+        
+        
+        
+for i=1:12
+    imon = find(ecDateVec_Man(:,2)==i);
+    
+        
+        
+        
+        

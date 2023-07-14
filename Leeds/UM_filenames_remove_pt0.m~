@@ -1,0 +1,29 @@
+
+
+   for idat_UM=1:length(fileUM)
+%for idat_UM=1:length(fileUM)
+    idat_driver = idat_driver+1;
+    
+    if iscell(dirUM)==1
+        dirUM_i = dirUM{idat_UM};
+    else
+        dirUM_i = dirUM;
+    end 
+    
+     filename = [dirUM_i fileUM{idat_UM}];
+     
+     ifind = strfind(filename,'/');
+     dir_name = filename(1:ifind(end));
+    
+    
+    search_str=remove_character(filename,'VAR_NAME','*');
+    files=dir([search_str '*.txt']);
+    
+    for ifile=1:length(files)
+       
+        new_name = remove_character(files(ifile).name,'z1500.0','z1500')
+        
+        
+    end
+    
+   end

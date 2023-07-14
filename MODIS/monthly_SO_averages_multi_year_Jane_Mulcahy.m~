@@ -1,0 +1,164 @@
+imake_plot=0;
+ioutput_txt=1;
+
+thresh_LAT = [-55 -35];
+thresh_LON = [-1e9 1e9];
+
+i_seaice_screened = 1; %Whether to load the data that has been screened for sea-ice.
+
+%Only have until 2014 for the sea-ice screening
+%direcs={'aqua'};  years_multi=[2003:2015]; days_multi={[1:365],[1:366],[1:365],[1:365],[1:365],[1:366],[1:365],[1:166 168:365],[1:365],[1:366],[1:365],[1:365],[1:365]}; %,[1:365]};%
+%direcs={'aqua'};  years_multi=[2007]; days_multi={[1:365],[1:366],[1:365],[1:365],[1:365],[1:366],[1:365],[1:166 168:365],[1:365],[1:366],[1:365],[1:365],[1:365]}; %,[1:365]};%
+direcs={'aqua'};  years_multi=[2003:2014]; days_multi={[1:365],[1:366],[1:365],[1:365],[1:365],[1:366],[1:365],[1:166 168:365],[1:365],[1:366],[1:365],[1:365],[1:365]}; %,[1:365]};%
+
+
+CF_str = '0.8'; CF_str2 = '80';
+%CF_str = '0.0'; CF_str2 = '0'; %N.B. - don't currently have the
+%Cloud_Fraction_Liquid variable for CF>0 dataset...
+
+
+
+line_str{1,1} = 'bo-';
+line_str{1,2} = 'b^-';
+line_str{2,1} = 'ro-';
+line_str{2,2} = 'r^-';
+
+channel_str_multi = {'21','37'};
+
+str_1km_1deg_multi = {'1km','1deg'};  %1km is based on 1km tau and reff data.
+%str_1km_1deg = '1deg'; %Based on the 1x1 deg re and tau - but note that originally the files were not labelled as '_1deg' for this (e.g. just Nd_monthly_37_2015_SZA_LT_65_CF_GT_80_CTH_LT_3.2km.mat)
+
+%channel_str_multi = {'21'}; str_1km_1deg_multi = {'1deg'};
+
+file_dir_load=['/home/disk/eos1/d.grosvenor/mock_L3/CF_' CF_str '_meanCTT_173_meanCTH_3.2km_SZA_65/'];
+
+
+clear legend_str
+
+
+for iyear_Nd_dataset = 1:length(years_multi)
+    
+
+    
+    if imake_plot==1
+        figure
+    end
+ 
+
+iplot=0;
+for ichannel=1:length(channel_str_multi)    
+    channel_str = channel_str_multi{ichannel};
+    
+    for istr=1:length(str_1km_1deg_multi)        
+        str_1km_1deg = str_1km_1deg_multi{istr};
+        
+        iplot=iplot+1;
+        
+        legend_str{iplot} = [channel_str ' ' str_1km_1deg];
+        
+
+  
+    
+    
+    year = years_multi(iyear_Nd_dataset);
+    days = days_multi(iyear_Nd_dataset);
+
+            
+       
+
+            
+            if i_seaice_screened == 1
+                file_dir=file_dir_load;                
+                seaice_str = '_screened_for_seaice_';
+                seaice_max_2week_str = '_2week_max';
+            else
+%                file_dir=['/home/disk/eos15/d.grosvenor/mock_L3/CF_' CF_str '_meanCTT_173_meanCTH_3.2km_SZA_65/'];
+                file_dir=file_dir_load;                       
+                seaice_str = '';
+                seaice_max_2week_str = '';
+            end
+            
+            year_str = num2str(year);
+            
+            file_load = [file_dir 'Nd_monthly_' channel_str '_' str_1km_1deg '_' year_str '_SZA_LT_65_CF_GT_' CF_str2 '_CTH_LT_3.2km' seaice_str seaice_max_2week_str '.mat'];            
+            
+%            eval_str=['modisL3_dat_ ' channel_str '_'  str_1km_1deg '= load(file_load);']; eval(eval_str);
+            modisL3_dat = load(file_load);
+            
+            MLAT = modisL3_dat.lat; LAT = MLAT;
+            MLON = modisL3_dat.lon; LON = MLON;  
+          
+            
+           
+
+          
+
+
+    
+%% 
+    
+
+            clear var_str
+            var_str{1} = ['Nd_' str_1km_1deg '_mean']; 
+            var_str{2} = ['Nd_' str_1km_1deg '_Ndatap'];
+            var_str{3} = ['Nd_' str_1km_1deg '_std_dev'];            
+  
+            Nd_mean = eval(['modisL3_dat.' var_str{1}]);
+            Nd_N = eval(['modisL3_dat.' var_str{2}]);
+            Nd_std_dev = eval(['modisL3_dat.' var_str{3}]);
+            
+            ilat = find(MLAT>=thresh_LAT(1) & MLAT<=thresh_LAT(2));
+            ilon = find(MLON>=thresh_LON(1) & MLON<=thresh_LON(2));
+
+            if ioutput_txt==1
+                if iyear_Nd_dataset==1
+                    file_out_txt = [file_dir 'Nd_monthly_' channel_str '_' str_1km_1deg '_SZA_LT_65_CF_GT_' CF_str2 '_CTH_LT_3.2km' seaice_str seaice_max_2week_str '.txt'];            
+                    fid(iplot)=fopen(file_out_txt,'wt');
+                    fprintf(fid(iplot),'Year Month Nd Ndata_points Std_dev\n');
+                end
+            end
+           
+
+            clear Nd_region_mean Nd_region_N
+            for imonth=1:12
+                dat = Nd_mean(ilat,ilon,imonth);
+                [Nd_region_mean(imonth),Nd_region_N(imonth),std_region_N(imonth)] = meanNoNan(dat(:),1);
+                
+                if ioutput_txt==1
+                    fprintf(fid(iplot),'%s %d %f %d %f \n',year_str,imonth,Nd_region_mean(imonth),Nd_region_N(imonth),std_region_N(imonth));
+                end
+            
+            end
+            
+            if ioutput_txt==1
+                fclose(fid(iplot));
+            end
+            
+            if imake_plot==1
+
+                plot(Nd_region_mean,line_str{ichannel,istr},'linewidth',3);
+                hold on
+                
+                title(year_str);
+            end
+            
+            
+            
+            
+
+end
+
+end
+
+end
+
+if imake_plot==1
+    legend(legend_str);
+end
+
+d
+    
+
+
+
+

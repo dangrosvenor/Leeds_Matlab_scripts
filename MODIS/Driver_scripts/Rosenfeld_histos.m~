@@ -1,0 +1,559 @@
+%% Make data for histograms of MODEL cloud fraction vs Nd (Rosenfeld comparison)
+
+dat_str='Model';
+
+clear gca
+model_CTH_thresh = 3.2e3;
+%nmin=300; %min no. points for each bin
+nmin=50; %min no. points for each bin
+
+%CF type just for the y-axis
+%CF_type = 'Modis COSP low CF';
+CF_type = 'Model low CF';
+%CF_type = 'Model tot CF';
+CF_type = 'Modis COSP liq CF';
+%CF_type = 'CALIPSO COSP low CF';
+
+%CF type just for the LWP binning
+%CF_type_LWP = 'Modis COSP low CF';
+CF_type_LWP = 'Model low CF';
+%CF_type_LWP = 'Model tot CF';
+%CF_type_LWP = 'Modis COSP liq CF';
+%CF_type_LWP = 'CALIPSO COSP low CF';
+
+restrict_height_method = 'max_cloud_height_in_cloud_LWC_IWC_PD';
+%restrict_height_method = 'max_cloud_height_in_cloud_LWC_CFice_PD';
+restrict_height_method = 'none';
+
+bin_var = 'LWP';
+%bin_var = 'CTH';
+
+bin_vals = 'Rosenfeld';
+%bin_vals = 'Dan';
+%bin_vals = 'Percentiles';
+bin_vals = 'Lower LWPs';
+
+Nd_bins = 'Orig'; %[5:20:265] - as originally used in this work - more bins at high end in log space. But those high end bins
+%have few datapoints.
+Nd_bins = 'Equal log'; %Equally spaced in log space - similar to as in Rosenfeld
+
+
+iocean_only=1;
+iuse_Rosenfeld_cf_bins=0; %flag for whether to try and match the CF bins used by Rosenfeld in the ppt (17th Nov 2014 case)
+iadd_conv_LWP=0; %Whether to include convective LWP
+ilow_cloud_states_only=0; %whether to restrict to low-only model cloud scenes
+
+line_cols='Reverse of Rosenfeld';                    
+line_cols='Rosenfeld';
+
+
+var_UM = 'Land_mask'; %Max height of cloud with in-cloud LWC>=0.05 g/kg (in metres); my diag, not COSP
+um_case=um_case_PD; pole_lat=45.0; pole_lon=145.0; run_type = 'umglaa'; icoarse=0; ivar_dir=1; %global ACSIS PD emissions
+dirUM = ['/home/disk/eos10/d.grosvenor/UM/12Nov2008_Boutle/' um_case];
+dat_global = UM_load_merged_netCDF(dirUM,var_UM,run_type,load_type);
+time_inds_landmask=1;
+[Land_mask_PD,nT] = UM_get_time_data_mat_nc(dat_global,time_inds_landmask,load_type,gcm_Plat2D_UM); %1 is land, 0 is ocean
+Land_mask_PD_ALL = repmat(Land_mask_PD,[1 1 length(time_inds)]); %replicate to the size of the 3D arrays
+
+switch load_type
+    case 'cam6'
+        
+    otherwise
+        
+        % included to get zero CFs).
+        
+        %inds_PI_clear_low = unique( [inds_PD{1}; inds_PD{2}] ); %Both states 1 and 2 (clear and low-only)
+        %inds_PI_clear_low = unique( [inds_PI{1}; inds_PI{2}; inds_PD{1}; inds_PD{2}] ); %Both states 1 and 2 (clear and low-only)
+        
+        %I think that the way it is done below will allow non-clear/low points
+        %to be included for one of the states
+        %inds_PI_clear_low = unique( [inds_PI{1}; inds_PI{2}; inds_PD{1}; inds_PD{2}] ); %Both states 1 and 2 (clear and low-only)
+        
+        
+        if ilow_cloud_states_only==1
+            %Whereas using intersect here should make it so that e.g. PI needs to
+            %be in the clear state AND PD in the clear state (but using the 4
+            %combinations :- clear + clear, clear + low, etc.)
+            inds_CC = intersect( inds_PI{1}, inds_PD{1} );
+            inds_CL = intersect( inds_PI{1}, inds_PD{2} );
+            inds_LC = intersect( inds_PI{2}, inds_PD{1} );
+            inds_LL = intersect( inds_PI{2}, inds_PD{2} );
+            
+            inds_PI_clear_low = unique( [inds_CC; inds_CL; inds_LC; inds_LL] );
+            
+        else
+            inds_PI_clear_low = [1:prod(size(LWP_PD_ALL))];
+        end
+        
+        %run 2D histo template script :-
+        
+        clear xvals_LWP
+        clear yvals_LWP
+        
+        switch bin_var
+            case 'LWP'
+                if iadd_conv_LWP==1
+                    LWP_Rosenfeld =  LWP_PD_ALL + Conv_LWP_PD_ALL + RWP_PD_ALL + Conv_RWP_PD_ALL;
+                else
+                    LWP_Rosenfeld =  LWP_PD_ALL;
+                end
+                
+                switch CF_type_LWP
+                    case 'Modis COSP low CF'
+                        cf_Rosen_LWP = low_modisCF_PD_ALL;
+                    case 'Model low CF'
+                        cf_Rosen_LWP = cf_low_PD;
+                    case 'Model tot CF'
+                        cf_Rosen_LWP = cf_total_PD;
+                    case 'Modis COSP liq CF'
+                        %cf_Rosen_LWP = liqCF_COSP_MODIS_PD_ALL; %MODIS liquid CF
+                        cf_Rosen_LWP = liqCF_COSP_region;
+                    case 'CALIPSO COSP low CF'
+                        cf_Rosen_LWP = low_calipsoCF_COSP_region;
+                end
+                
+                LWP_in_cloud =  LWP_Rosenfeld ./ cf_Rosen_LWP;
+                inan=find(cf_Rosen_LWP<0.02);
+                LWP_in_cloud(inan)=NaN;
+                
+            case 'CTH'
+                LWP_in_cloud = max_cloud_height_in_cloud_LWC_IWC_PD/1e3;
+                bin_vals = 'CTH';
+                
+        end
+        
+        switch CF_type
+            case 'Modis COSP low CF'
+                %cf_Rosen = low_modisCF_PD_ALL;
+                cf_Rosen = liqCF_COSP_region;
+            case 'Model low CF'
+                cf_Rosen = cf_low_PD;
+            case 'Model tot CF'
+                cf_Rosen = cf_total_PD;
+            case 'Modis COSP liq CF'
+                %cf_Rosen = liqCF_COSP_MODIS_PD_ALL; %MODIS liquid CF
+                cf_Rosen = liqCF_COSP_region;
+            case 'CALIPSO COSP low CF'
+                cf_Rosen = low_calipsoCF_COSP_region;
+        end
+        
+        switch restrict_height_method
+            case 'max_cloud_height_in_cloud_LWC_IWC_PD'
+                inan = find(max_cloud_height_in_cloud_LWC_IWC_PD > model_CTH_thresh | isnan(max_cloud_height_in_cloud_LWC_IWC_PD) );
+                LWP_in_cloud(inan)=NaN;
+            case 'max_cloud_height_in_cloud_LWC_CFice_PD'
+                inan=find(max_cloud_height_in_cloud_LWC_CFice_PD>model_CTH_thresh | isnan(max_cloud_height_in_cloud_LWC_CFice_PD) );
+                LWP_in_cloud(inan)=NaN;
+        end
+        
+        if iocean_only==1
+            inan = find(Land_mask_PD_ALL==1);
+            LWP_in_cloud(inan)=NaN;
+        end
+        
+        
+        
+        
+        
+        switch bin_vals
+            case 'Rosenfeld'
+                LWP_bins=[0 75 120 170 240 300 400 600];
+            case 'Dan'
+                LWP_bins=[34 36];
+                LWP_bins=[66 68];
+                LWP_bins=[0 600];
+                
+            case 'Percentiles'
+                lwp_max=6000; %Apply the same max LWP as in Rosenfeld
+                nbins=7;
+                dprc=100/nbins;
+                prcs=[0 dprc:dprc:100];
+                lwp_for_prc = LWP_in_cloud(inds_PI_clear_low);
+                lwp_for_prc(lwp_for_prc>lwp_max)=NaN;
+                LWP_bins = prctile(lwp_for_prc,prcs);
+            case 'Lower LWPs'
+                LWP_bins=[0:17.1:17.1*7+10];
+                LWP_max=80; 
+                LWP_bins=[0:LWP_max/7:LWP_max];
+                
+                
+            case 'CTH'
+                LWP_bins = [0:0.2:3.6];
+                LWP_bins = [0:0.1:1.6];
+                
+        end
+        
+        
+        clear xvals_LWP yvals_LWP NY_vals_LWP
+        for iLWP=1:length(LWP_bins)-1
+            
+            inan=find(LWP_in_cloud(inds_PI_clear_low)<=LWP_bins(iLWP) | LWP_in_cloud(inds_PI_clear_low)>LWP_bins(iLWP+1) | isnan(LWP_in_cloud(inds_PI_clear_low))==1 );
+            
+            X_driver = Nd_region(inds_PI_clear_low)/1e6;
+            Y_driver = cf_Rosen(inds_PI_clear_low);
+            Y_driver(inan)=NaN;
+            %Z_driver = forcing(inds_PI_clear_low);
+            ylabelstr='Low cloud fraction';
+            xlabelstr = 'Mean droplet Concentration (cm^{-3})';
+            
+            %plot the mean forcing in each cloud fraction bin
+            DRIVER_template_2D_histo_CF_vs_Nd_UM
+            shading faceted; %this adds grid lines to the plot - but gives NaNs a
+            %colour...
+            lb_map = lbmap(16,'brownblue'); colormap(flipdim(lb_map,1));
+            %caxis([0 100]);
+            %label_text_pcolor; %Script to add text labels of the numbers for each block
+            title('CF vs CDNC histogram');
+            
+            close(gcf);
+            
+            xvals_LWP{iLWP} = mid_Xbins;
+            yvals_LWP{iLWP} = Y_mean;
+            NY_vals_LWP{iLWP} = NY_vals; %number of datapoints in each Nd bin
+            
+        end
+        
+        
+        
+%% Make the CF vs Nd plots
+        %      cols='rbgkmrcymkgbrrrgykmc';
+        cols_rgb{1}=[0 0 1];
+        cols_rgb{2}=[1 0 1];
+        cols_rgb{3}=[0 0.7 0.7];
+        cols_rgb{4}=[1 1 0];
+        cols_rgb{5}=[1 0.7 0];
+        cols_rgb{6}=[1 0.3 0];
+        cols_rgb{7}=[1 0 0];
+        cols_rgb{8}=[0 0 1];
+        cols_rgb{9}=[1 0 1];
+        cols_rgb{10}=[0 0.7 0.7];
+        cols_rgb{11}=[1 1 0];
+        cols_rgb{12}=[1 0.7 0];
+        cols_rgb{13}=[1 0.3 0];
+        cols_rgb{14}=[1 0 0];
+        cols_rgb{15}=[0 0 1];
+        cols_rgb{16}=[1 0 1];
+        cols_rgb{17}=[0 0.7 0.7];
+        cols_rgb{18}=[1 1 0];
+        
+        
+        
+        %patt={'-','--','-','--','-','--','-','--','-','--','-','--','-','--','-','--','-','--','-','--','-','--','-','--'};
+        patt={'-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-','-'};
+        
+        figure('color','w');
+        set(gcf,'position',[20 210 600 384])
+        for iLWP=1:length(LWP_bins)-1
+            xvals = xvals_LWP{iLWP};
+            switch line_cols
+                case 'Reverse of Rosenfeld'
+                    ind_col = iLWP;
+                case 'Rosenfeld';
+                    ind_col = 8-iLWP;
+            end
+            
+            
+            xvals(NY_vals_LWP{iLWP} < nmin) = NaN;
+            
+            %plot( xvals , yvals_LWP{iLWP} ,['x' cols(iLWP) patt{iLWP}],'linewidth',3);
+            plot( xvals , yvals_LWP{iLWP} ,['o' patt{iLWP}],'linewidth',3,'color',cols_rgb{ind_col},'markerfacecolor',cols_rgb{ind_col});
+            hold on
+            leg_str{iLWP}=['LWP=' num2str(LWP_bins(iLWP)) '-' num2str(LWP_bins(iLWP+1)) ];
+        end
+        legend(leg_str,'location','northeastoutside');
+        
+        set(gca,'xscale','log');
+        set(gca,'xlim',[10 300]);
+        set(gca,'ylim',[0 1]);
+        set(gca,'fontsize',16);
+        xlabel(xlabelstr);
+        ylabel(ylabelstr);
+        titlenam = remove_character( ['UKCA (' um_case_PD '), ' CF_type ', ' CF_type_LWP, ', restrict_height_method=' restrict_height_method ', iocean_only=' num2str(iocean_only) ', nmin=' num2str(nmin)] ,  '_',' ');
+        titwrapped = wrap_title_to_nlines(titlenam,50,3);
+        title(titwrapped);
+        grid on
+        
+        save_str = [region_choice '_2D_PDF_cf_vs_Nd'];
+        
+        titlenam_driver = [um_case_PD '_Model_CFvsNd_' save_str];
+        savename=[savedir_date titlenam_driver];
+        clear opts
+        %        opts.iplot_png=1;
+        opts.iplot_eps=1;
+        saveas_ps_fig_emf(gcf,[savename],'',0,1,0,'',[],0,opts);
+        
+        isave_data=0;
+        if isave_data==1
+            save([savename '.mat'],'-V7.3','xvals_LWP','yvals_LWP','NY_vals_LWP','titlenam','LWP_bins');
+        end
+        
+        
+        %savedir='/home/disk/eos1/d.grosvenor/modis_work/ACSIS/';
+        %UM_save_plot(gcf,isave_mean_2D_PDF,savedir_date,[save_str] );
+        
+        
+        
+end
+
+
+
+
+%% Make data for CF vs Nd plot using 2D histogram for MODIS (Rosenfeld comparison)
+
+dat_str='MODIS';
+
+%N.B. - screening out of land points (ocean only) is done when load the
+%MODIS data - search for modis_Nd_file_CF0_2 or screen_seaice_MODIS in
+%UM_ACSIS_SW_vs_cloud_properties_global.m
+
+min_CF_thresh_histos = 0.02;
+%min_CF_thresh_histos = 0.06;
+
+nmin=50; %min no. points for each bin
+
+LWP_bins=[0 75 120 170 240 300 400 600];
+%dLWP=17.1; LWP_bins=[0:dLWP:dLWP*7+10];
+LWP_max=80; LWP_bins=[0:LWP_max/7:LWP_max];
+%LWP_max=120; LWP_bins=[0:LWP_max/7:LWP_max];
+
+
+%Spacing for the Ybins :-
+dcf_vs_LWP=[0.1/9 0.1/5 0.3/10 0.1/2 0.1/2 0.1/2 0.1/2];
+
+
+clear xvals_LWP
+clear yvals_LWP
+
+iuse_Rosenfeld_cf_bins=0; %flag for whether to try and match the CF bins used by Rosenfeld in the ppt (17th Nov 2014 case)
+mockL3_type = 'CTH<3.2km';
+%mockL3_type = 'no CTH screening';
+
+i_screen_ice_cloud_frac=1;
+ice_frac_screen_type = 'ice only';
+ice_frac_screen_type = 'ice and undetermined';
+
+cf_modis_type='liquid';
+%cf_modis_type='liquid + undetermined';
+%cf_modis_type='MOD35';
+
+switch mockL3_type
+    case 'CTH<3.2km'
+        modis_struct = modis_loaded_CF0;
+    case 'no CTH screening'
+        modis_struct = modis_loaded_CF0_2;
+        
+end
+
+LWP_in_cloud = modis_struct.W_time3*1e3; %convert to g/m2
+switch cf_modis_type
+    case 'liquid'
+        cf_modis = modis_struct.Cloud_Fraction_Liquid.timeseries3;
+    case 'liquid + undetermined'
+        %cf_modis = modis_struct.Cloud_Fraction_Combined.timeseries3; %Includes ice, so probably not useful.
+        cf_modis = modis_struct.Cloud_Fraction_Liquid.timeseries3 + modis_struct.Cloud_Fraction_Undetermined.timeseries3;
+    case 'MOD35'
+        cf_modis = modis_struct.Cloud_Fraction_MOD35_L2.timeseries3;
+end
+inan=find(cf_modis<min_CF_thresh_histos);
+LWP_in_cloud(inan)=-1e9;
+
+if i_screen_ice_cloud_frac==1
+    ice_cf_screen_thresh=1e-10;
+    switch ice_frac_screen_type
+        case 'ice only'
+            inan2=find(modis_struct.Cloud_Fraction_Ice.timeseries3>ice_cf_screen_thresh);
+        case 'ice and undetermined'
+            inan2=find(modis_struct.Cloud_Fraction_Ice.timeseries3>ice_cf_screen_thresh | modis_struct.Cloud_Fraction_Undetermined.timeseries3>ice_cf_screen_thresh);
+    end
+    LWP_in_cloud(inan2)=-1e9;
+end
+
+[gcm_Plon2D_edges_AMSRE,gcm_Plat2D_edges_AMSRE] = get_edges_lat_lon(gcm_Plon2D_AMSRE,gcm_Plat2D_AMSRE);
+nT_modis = size(LWP_in_cloud,3);
+
+
+[iregion_lin_modis,iregion_lin_edges_modis,cf_regional_modis]=get_lat_lon_irregular_with_time(nT_modis,LAT_val_DRIVER2,LON_val_DRIVER2,gcm_Plat2D_AMSRE,gcm_Plon2D_AMSRE,gcm_Plat2D_edges_AMSRE,gcm_Plon2D_edges_AMSRE,cf_modis);
+[iregion_lin_modis,iregion_lin_edges_modis,Nd_regional_modis]=get_lat_lon_irregular_with_time(nT_modis,LAT_val_DRIVER2,LON_val_DRIVER2,gcm_Plat2D_AMSRE,gcm_Plon2D_AMSRE,gcm_Plat2D_edges_AMSRE,gcm_Plon2D_edges_AMSRE,modis_struct.Droplet_Number_Concentration_37.timeseries3);
+
+clear xvals_LWP yvals_LWP CF_counts_MODIS_LWP_bins CF_bins_MODIS_LWP_bins
+for iLWP=1:length(LWP_bins)-1
+    
+    inan=find(LWP_in_cloud<=LWP_bins(iLWP) | LWP_in_cloud>LWP_bins(iLWP+1) | isnan(LWP_in_cloud)==1);
+    
+    X_driver = Nd_regional_modis;
+    Y_driver = cf_regional_modis;
+    
+    Y_driver(inan)=NaN;
+    %Z_driver = forcing(inds_PI_clear_low);
+    ylabelstr='Mean liquid low cloud fraction';
+    xlabelstr = 'Droplet Concentration (cm^{-3})';
+    
+    %plot the mean forcing in each cloud fraction bin
+    DRIVER_template_2D_histo_CF_vs_Nd_UM
+    shading faceted; %this adds grid lines to the plot - but gives NaNs a
+    %colour...
+    lb_map = lbmap(16,'brownblue'); colormap(flipdim(lb_map,1));
+    %caxis([0 100]);
+    %label_text_pcolor; %Script to add text labels of the numbers for each block
+    title('CF vs CDNC histogram');
+    
+    xvals_LWP{iLWP} = mid_Xbins;
+    yvals_LWP{iLWP} = Y_mean;
+    NY_vals_LWP{iLWP} = NY_vals; %number of datapoints in each Nd bin
+    
+    CF_counts_MODIS_LWP_bins{iLWP} = NX_vals;
+    CF_bins_MODIS_LWP_bins{iLWP} = mid_Ybins;
+    
+    close(gcf)
+    
+end
+
+
+%% Make MODIS CF vs Nd plot.
+
+figure
+set(gcf,'color','w')
+cols='rbgkmyc';
+cols='rbgkmyc';
+cols_rgb{1}=[0 0 1];
+cols_rgb{2}=[1 0 1];
+cols_rgb{3}=[0 0.7 0.7];
+cols_rgb{4}=[1 1 0];
+cols_rgb{5}=[1 0.7 0];
+cols_rgb{6}=[1 0.3 0];
+cols_rgb{7}=[1 0 0];
+patt={'-','--','-','--','-','--','-','--'};
+for iLWP=1:length(LWP_bins)-1
+    xvals = xvals_LWP{iLWP};
+    xvals(NY_vals_LWP{iLWP} < nmin) = NaN; %Don't plot datapoints with fewer than the nmin
+    %plot( xvals_LWP{iLWP} , yvals_LWP{iLWP} ,['x' cols(iLWP) patt{iLWP}],'linewidth',3);
+    plot( xvals , yvals_LWP{iLWP} ,['o' patt{iLWP}],'linewidth',3,'color',cols_rgb{iLWP},'markerfacecolor',cols_rgb{iLWP});
+    hold on
+    leg_str{iLWP}=['LWP=' num2str(LWP_bins(iLWP),'%.1f') '-' num2str(LWP_bins(iLWP+1),'%.1f') ];
+end
+legend(leg_str,'location','northeastoutside');
+
+set(gca,'xscale','log');
+set(gca,'xlim',[10 300]);
+set(gca,'ylim',[0 0.7]);
+set(gca,'fontsize',16);
+xlabel(xlabelstr);
+ylabel(ylabelstr);
+switch_str=['region=' region_choice ', ' mockL3_type];
+switch_str2=[', i_screen_ice_cloud_frac=' num2str(i_screen_ice_cloud_frac)];
+switch_str3=[ice_frac_screen_type ',cf_modis_type=' cf_modis_type ', nmin=' num2str(nmin)];
+%tit_str={remove_character(switch_str,'_',' '),remove_character(switch_str2,'_',' '),remove_character(switch_str3,'_',' '),'',dat_str};
+titlenam = remove_character( [switch_str ' ' switch_str2 ' ' switch_str3] ,  '_',' ');
+titwrapped = wrap_title_to_nlines(titlenam,50,3);
+L=length(titwrapped);
+titwrapped{L+2} = dat_str;
+%title(tit_str);
+%title('MODIS');
+title(titwrapped);
+grid on
+
+
+
+save_str = [region_choice '_2D_PDF_cf_vs_Nd'];
+%savedir='/home/disk/eos1/d.grosvenor/modis_work/ACSIS/';
+
+titlenam_driver = ['MODIS_CFvsNd_' save_str];
+savename=[savedir_date titlenam_driver];
+clear opts
+%        opts.iplot_png=1;
+opts.iplot_eps=1;
+saveas_ps_fig_emf(gcf,[savename],'',0,1,0,'',[],0,opts);
+
+
+isave_data=0;
+if isave_data==1
+    save([savename '.mat'],'-V7.3','xvals_LWP','yvals_LWP','NY_vals_LWP','titlenam','LWP_bins');
+end
+
+
+%% Make PDF of Nd for different LWP bins (Model or MODIS).
+
+figure
+set(gcf,'color','w')
+cols='rbgkmyc';
+cols='rbgkmyc';
+cols_rgb{1}=[0 0 1];
+cols_rgb{2}=[1 0 1];
+cols_rgb{3}=[0 0.7 0.7];
+cols_rgb{4}=[1 1 0];
+cols_rgb{5}=[1 0.7 0];
+cols_rgb{6}=[1 0.3 0];
+cols_rgb{7}=[1 0 0];
+patt={'-','--','-','--','-','--','-','--'};
+for iLWP=1:length(LWP_bins)-1
+    xvals = xvals_LWP{iLWP};
+    %xvals(NY_vals_LWP{iLWP} < nmin) = NaN;
+    %plot( xvals_LWP{iLWP} , yvals_LWP{iLWP} ,['x' cols(iLWP) patt{iLWP}],'linewidth',3);
+    plot( xvals , NY_vals_LWP{iLWP} ,['o' patt{iLWP}],'linewidth',3,'color',cols_rgb{iLWP},'markerfacecolor',cols_rgb{iLWP});
+    hold on
+    leg_str{iLWP}=['LWP=' num2str(LWP_bins(iLWP),'%.1f') '-' num2str(LWP_bins(iLWP+1),'%.1f') ];
+end
+legend(leg_str,'location','northeastoutside');
+
+set(gca,'xscale','log');
+set(gca,'xlim',[10 300]);
+%set(gca,'ylim',[0 0.7]);
+set(gca,'fontsize',16);
+xlabel(xlabelstr);
+ylabel('Number of datapoints');
+switch_str=['region=' region_choice ', ' mockL3_type];
+switch_str2=[' i_screen_ice_cloud_frac=' num2str(i_screen_ice_cloud_frac)];
+switch_str3=[ice_frac_screen_type ',cf_modis_type=' cf_modis_type];
+tit_str={remove_character(switch_str,'_',' '),remove_character(switch_str2,'_',' '),remove_character(switch_str3,'_',' '),'',dat_str};
+title(tit_str);
+%title('MODIS');
+grid on
+
+
+
+save_str = [region_choice '_2D_PDF_cf_vs_Nd'];
+%savedir='/home/disk/eos1/d.grosvenor/modis_work/ACSIS/';
+
+titlenam_driver = ['MODIS_CFvsNd_' save_str];
+savename=[savedir_date titlenam_driver];
+clear opts
+%        opts.iplot_png=1;
+opts.iplot_eps=1;
+%saveas_ps_fig_emf(gcf,[savename],'',0,1,0,'',[],0,opts);
+
+
+
+
+
+%% Do a subplot plot of model and MODIS CF vs Nd side-by-side
+figure('color','w');
+set(gcf,'position',[20 210 1200 384]);
+
+filename = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS/plots_20190426T051238/u-bf666_Model_CFvsNd_Rosenfeld ALL_2D_PDF_cf_vs_Nd.mat';
+load(filename);
+subplot(1,3,1);
+tit_str='Model';
+ilegend=0;
+Rosenfeld_CF_vs_Nd_plot
+set(gca,'ylim',[0.2 0.9]);
+
+filename = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS/plots_20190426T051238/MODIS_CFvsNd_Rosenfeld ALL_2D_PDF_cf_vs_Nd.mat';
+load(filename);
+subplot(1,3,2);
+tit_str='MODIS';
+ilegend=1;
+Rosenfeld_CF_vs_Nd_plot
+set(gca,'ylim',[0.0 0.8]);
+
+leg_pos=get(hL,'position');
+set(hL,'position',[0.6424  leg_pos(2)-0.05 leg_pos(3) leg_pos(4)]);
+
+
+titlenam_driver = [um_case_PD 'Model_CFvsNd_' save_str];
+savename=[savedir_date titlenam_driver];
+clear opts
+%        opts.iplot_png=1;
+opts.iplot_eps=1;
+%saveas_ps_fig_emf(gcf,[savename],'',0,1,0,'',[],0,opts);
+
+

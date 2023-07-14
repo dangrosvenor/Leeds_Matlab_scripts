@@ -1,0 +1,79 @@
+%simple plot saver
+comp='laptop';
+comp='pc';
+
+if ~exist('idir'); idir=1; end
+   
+
+switch comp
+case 'laptop'
+    mydocs = 'c:/documents and settings/g/my documents/';
+    mydocs = 'c:/documents and settings/g/my documents/';
+
+case 'pc'
+    mydocs = 'c:/documents and settings/dan/my documents/';
+end
+
+if exist('savename')
+    icolon=findstr(savename,':');
+    savename2=savename;
+    savename2(icolon)='_';
+end
+
+
+
+picname=[mydocs 'fun/arty_science_pics/wind_dir3_Ant_Peninsula_d02_with_terrain.emf'];
+picname=[mydocs 'fun/arty_science_pics/abstract_squares.emf'];
+%picname=[mydocs 'Leeds_MMOCCA/EMM/lwc_EMM_c2000.emf'];
+%picname=[mydocs 'logbook/vapour_paper/pics/timeseries_150_300km' num2str(idir) '.emf'];
+%picname=[mydocs 'logbook/vapour_paper/pics/liq_sources_ccn_smoothing_below_10km_0-2.67hrs' num2str(idir) '.emf'];
+% picname=[mydocs 'Leeds_MMOCCA/pics_lem_2008/texas_wmax_14_21km.emf'];
+% picname=[mydocs 'Leeds_MMOCCA/pics_lem_2008/timser_maxQL_miles6deg.emf'];
+% picname=[mydocs 'Leeds_MMOCCA/pics_lem_2008/Jan06_windprof_18UTC.emf'];
+% picname=[mydocs 'Leeds_MMOCCA/pics_lem_2008/lem_liq_mphys_psacw0.35.emf'];
+% picname=[mydocs 'Leeds_MMOCCA/pics_lem_2008/lem_liq_mphys_adLWC.emf'];
+% picname=[mydocs 'WRF/Antarctica/6thJan06/2dSurfaceWind_sf2'];
+% picname=['/home/mbexddg5/work/Ant_Jan06/vertical_wind_slices/380km_09UTC_6thJan.png'];
+% %picname=[mydocs 'WRF/Antarctica/6thJan06/Temp_profile_sf2'];
+% picname=['/home/mbexddg5/work/Ant_Jan06/sfRUC/wind_cross-sections/y380km_07Jan12UTC.png'];
+% %picname=['/home/mbexddg5/work/Ant_Jan06/Press_descent_aircraft_comp_ncep_21UTC.png'];
+% picname=[mydocs 'WRF\ant_jan06_ncep_polarWRF/temp_analysis_upwind_comparison_7thJan0UTC.emf'];
+% %picname=[mydocs 'WRF\ant_jan06_ecmwf_ncep_polar/temp_3km_slice_wrf_comparison_6thJan21UTC.emf'];
+% %picname=[mydocs 'WRF/aircraft_profiles/sky_blu_ecmwf_pressure.emf'];
+% %picname=[mydocs 'WRF/aircraft_profiles/surface_pressure_init_AWSs_ecmwf.emf'];
+% picname=[mydocs 'WRF/plots/2ndFeb09/Equiv_potemp_temp_profile_NCEP_6th21UTC_nudging.emf'];
+% picname=[mydocs 'WRF/plots/2ndFeb09/_NCEP_timeseries_nudging.emf'];
+% picname=[mydocs 'WRF/plots/2ndFeb09/SWDOWN_NCEP_constant_lat_67.5_nudging.emf'];
+ picname=[mydocs 'WRF/plots/2ndFeb09/Froude_profile_height_left_above_location_H.emf'];
+% picname=[mydocs 'WRF/plots/2ndFeb09/Equiv_potemp_vert_cross_section_streamline_ECMWF_nudging_6th6UTC.emf'];
+%  picname=[mydocs 'WRF/plots/2ndFeb09/streamline_path_ECMWF_nudging_6th6UTC.emf'];
+ picname=[mydocs 'WRF/plots/2ndFeb09/horiz_wind_cross_section_line.emf'];
+  picname=[mydocs 'WRF/plots/2ndFeb09/cross_section_location.emf'];
+  picname=[mydocs 'WRF/plots/29thSep09/pressure2.3km_6UTC_1stJan_wrfinput.emf'];
+picname=[mydocs 'WRF/plots/29thSep09/windspeed_WRF_18UTC_6thJan_NCEP.emf'];
+% picname=[mydocs 'WRF/plots/29thSep09/component_uvw_cross_ecmwf_09_12_09_12_x235_5_602_9_y413_254_8_1st_Jan_6UTC.emf'];
+%picname=[mydocs 'WRF/plots/29thSep09/vert_cross_section_with_aircraft_Rothera.emf'];
+%  picname=[mydocs 'WRF/plots/29thSep09/streamlines_0.6km_6UTC_6thJan.emf'];
+picname=[mydocs 'WRF/plots/29thSep09/wind_speed_spike_after_L-shaped_leg_152m'];  
+
+%picname=[mydocs 'Antarctica_mydocs\Feb2010_BAS_campaign\CAS_plots\calibrations\size_dist_nebuliser.emf'];
+  
+ %location_line pot_cross U_cross
+%picname=[mydocs 'WRF/plots/29thSep09/' savename2 '.emf'];
+
+%picname=[direcDan(idir).dir 'results/tephigram_all'];
+%picname=['c:/documents and settings/login/my documents/Leeds_MMOCCA/LWC_lem.emf'];
+
+picname=[mydocs 'volcano/mass_conc_dlogD_CDP_bmp.bmp'];
+
+picname='Y:\BAS_flights\flight100\CAS_plots\zoomed_in_flight_track.png';
+
+set(gcf,'paperpositionmode','auto');
+print(gcf,'-dmeta',picname);
+%print(gcf,'-deps',picname);
+print(gcf,'-dpng',picname);
+%print(gcf,'-djpeg',picname);
+%print(gcf,'-dbitmap',picname);
+
+disp('Done simple_save');
+%saveas(gcf,[mydocs 'arty_science_pics/threeD_cloud_grid.fig'],'fig');       

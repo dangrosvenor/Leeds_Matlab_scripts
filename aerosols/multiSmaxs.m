@@ -1,0 +1,62 @@
+Dg=0.076e-6; %mode diameter (metres)
+sig=2.0; %Distribution width
+Nbins=800;
+N=2300e6; %total no. conc m^-3 - if all aerosol activated
+T=283;
+
+Dg=234e-9; %mode diameter (metres)
+sig=1.5; %Distribution width
+Nbins=800;
+N=400e6; %total no. conc m^-3 - if all aerosol activated
+T=283;
+
+Dlow=Dg/10/sig;
+Dhigh=Dg*10*sig;
+Dspacing=( log(Dhigh)-log(Dlow) )/Nbins; %log spacing
+
+logD=[log(Dlow):Dspacing:log(Dhigh)]; %equally spaced in log space
+
+Dmid=(logD(2:end) + logD(1:end-1) )/2;
+Dmid=exp(Dmid);
+
+%Make a lognormal aerosol distribution
+nd=lognormal(Dmid,N,sig,Dg); %dN/dlogD
+
+%Calculate the critical supersat of each dry aerosol size since this is
+%what the Nenes scheme operates on. The critical supersat can then account for composition if
+%needed.
+[S,Dcrit]=Scrit(T,fliplr(exp(logD)/2)); %fliplr flips matrix so that low supersats will be first
+%S in %
+
+% The number in each bin - sum of this gives total N
+NN=nd*Dspacing;
+
+% Calculation of teh mean diameter for comaprison to Abdul-Razaak
+density = 1777; %1777 = ammonium sulphate (kg/m3) - as used in Scrit above
+mass_D = pi/6 .* Dmid.^3 * density;
+M_aero = sum(NN.*mass_D);
+%Mean (or mode?) radius for a lognormal distribution in nm :-
+r_mean = 1e9 * (3.0.*M_aero.*exp(-4.5.*log(sig).^2.)./(4.0.*N.*pi.*density)).^(1.0/3.0)
+
+
+
+
+
+W=[1:2:50];
+
+for i=1:length(W)
+    %Find the max supersat using fzero
+    sm=fzerodan(@nenes,[min(S) max(S)],[],10e4,T,W(i),nd*Dspacing,S);
+    %Plug back in to get the other values if needed
+    [I(i),sp(i),smax(i)]=nenes(sm,10e4,T,W(i),nd*Dspacing,S);
+    
+    % Activate all the aerosol up to smax
+%    is=findheight(S,smax(i));
+    is=findheight_nearest(S,smax(i));    
+    Ntot(i)=sum(NN(1:is));
+end
+
+figure;plot(W,Ntot/1e6);
+xlabel('W (m/s)');
+ylabel('N_d (cm^{-3})');
+

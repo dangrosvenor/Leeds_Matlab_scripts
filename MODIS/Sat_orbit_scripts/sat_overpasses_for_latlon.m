@@ -1,0 +1,120 @@
+function [sat_times,sat_sza,sat_sensor] = sat_overpasses_for_latlon(llh,sat_llh,tsince,epoch,epoch_next,sat_times_IN,sat_sza_IN,sat_sensor_IN,first_day_of_year_mat,xsat_ecf,vsat_ecf,month_now)
+%function [sat_times,sat_sza,sat_sensor] =sat_overpasses_for_latlon(llh,sat_llh,tsince)
+%Finds overpass information for the satellite with LAT,LON,HEIGHT of
+%sat_llh for the ground location llh
+%tsince is an array of elapsed time in minutes that corresponds with
+%sat_llh (starts at t=0 - time since the "epoch time")
+% OUTPUT:
+% sat_times - array of times in days at which the satellite was
+%at its maximum elevation during overpasses - this corresponds to the
+%minimum distance to the satellite and therefore the point where the ground
+%location is at 90 degrees to the path of the sat - this will be where the
+%cross track beams (like Aqua and Terra) sweeps across the ground location
+%(I think!).
+% sat_sza is an array of the local solar zenith angle at these times
+% sat_sensor is as above, but the satellite sensor angle.
+% can do datestr(datenum(['01-Jan-' num2str(satrec.epochyr)])-1+satrec.epochdays+sat_times(:,1),31)
+% for times converted into proper times
+
+dtr = pi/180;
+
+SIZ=size(llh,2);
+npts = length(tsince);
+
+%don't want to pre-allocate as will wipe the existing array (I think?)
+%sat_times  = NaN * ones([16 SIZ]);
+%sat_sza    = NaN * ones([16 SIZ]);
+%sat_sensor = NaN * ones([16 SIZ]);
+
+%copy the original array to the output array
+%will add to the array later
+sat_times = sat_times_IN;
+sat_sza = sat_sza_IN;
+sat_sensor = sat_sensor_IN;
+
+counter=0;
+counter2=0;
+
+%loop for each lat/lon location
+for i=1:SIZ
+     counter=counter+1;
+     if counter==SIZ/5;  %1000
+         counter2=counter2+1;
+         fprintf(1,'\nDone %i out of 5',counter2);
+         counter=0;
+%         return
+     end
+
+    origin_llh(1) = llh(1,i)*dtr;
+    origin_llh(2) = llh(2,i)*dtr;
+    origin_llh(3) = llh(3,i);
+
+    sat_tcs=llh2tcsT(sat_llh,origin_llh);  %llh to tcs at origin_llh
+    %function [tcs]=llh2tcsT(llh,origin);
+    %
+    % Description:
+    % 	This function returns the x, y, and z topocentric (TCS)
+    %	coordinates of the point specified by llh [lat lon hgt],
+    %   relative to the input origin [lat lon alt].
+
+    %The satellite elevation as viewed from the origin (ground location)
+    %I.e., presumably the angle between the surface and the satellite
+    sat_elev=atan2(sat_tcs(3,:),sqrt(sat_tcs(1,:).^2+sat_tcs(2,:).^2));
+
+
+    %Identify visible segments - when the elevation is above zero :
+    VIS = find(sat_elev>=0);
+    
+    if length(VIS)>0
+
+    %Extract start and end times for visible segment:
+    %When the index jumps by more than one we are at the end of a
+    %consequetive segment in the visible indices
+    iend = find(diff(VIS)>1);
+    t_end= tsince(VIS(iend));  iends=VIS(iend);
+    t_start = tsince(VIS(iend+1)); istarts=VIS(iend+1);
+    t_start = [tsince(VIS(1)) t_start]; istarts=[VIS(1) istarts];
+    t_end =[t_end tsince(VIS(end))]; iends =[iends VIS(end)];
+
+    clear max_elev lat_max_elev d aob sens_angle
+    %fprintf('PASS#  N START/END: MONTH DAY HOUR:MIN\n');
+    inpass=0;
+    for npass=1:length(t_start)
+        inds = istarts(npass):iends(npass);
+        
+        inpass = inpass +1;
+        [max_elev(inpass),imax]=max(sat_elev(inds));
+        max_elev(inpass)=max_elev(inpass)/dtr; %convert to degrees
+        lat_max_elev(inpass) = sat_llh(1,inds(imax))/dtr;
+        lon_max_elev(inpass) = sat_llh(2,inds(imax))/dtr;
+        [d(inpass),aob(inpass)]=distlatlon(origin_llh(1)/dtr,origin_llh(2)/dtr,lat_max_elev(inpass),lon_max_elev(inpass));
+
+
+        tmins = tsince(inds(imax)); %in mins since the epoch
+        %convert to days since the start of the year
+        tdays = epoch + tmins/60/24; %in days since the start of the year
+        tmat = tdays + first_day_of_year_mat - 1; %in days since 01-Jan-0000
+        [Y,M,day_of_month,H,MI,S]  = datevec(tmat);
+        %make sure that the max elev time is not outside of the specified
+        %period (but want to identify the real max of each overpass (with time offsets) as
+        %otherwise will pick up the max of the "partial" overpass
+        %also make sure that we only enter data into arrays for the
+        %current month
+        if tmins >= 0 & tmins < (epoch_next - epoch)*24*60 & M==month_now
+
+          
+            
+            %find the first non-Nan position and write to there
+            inan=isnan(sat_times(day_of_month,:,i));
+            istart_ind = find(inan==1);
+            sat_times(day_of_month,istart_ind(1),i) = tmat;
+%            sat_sensor(day_of_month,istart_ind(1),i) = 90 - aob(inpass) - max_elev(inpass);
+            sat_sensor(day_of_month,istart_ind(1),i) = 90 - max_elev(inpass);            
+            sat_sza(day_of_month,istart_ind(1),i) = sun_pos2(Y,M,day_of_month,H,MI,S,origin_llh(1)/dtr,origin_llh(2)/dtr);
+        end
+    end
+
+    end
+
+end %end of loop for each lat/lon location
+

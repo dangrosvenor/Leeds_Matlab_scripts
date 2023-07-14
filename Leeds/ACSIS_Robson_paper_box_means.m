@@ -1,0 +1,33 @@
+if ~exist('end_str')
+    end_str='';
+end
+
+switch season
+    case 'Annual'
+        season_str=''; 
+    case 'DJF'
+        season_str='_DJF';
+    case 'MAM'
+        season_str='_MAM';
+    case 'JJA'
+        season_str='_JJA';    
+    case 'SON'
+        season_str='_SON';       
+end
+
+dat_ukesm.gcm_area_UM = gcm_area_UM;
+
+% eval_str = [ '[dat_annual_box_ukesm' end_str ',dat_annual_box_ukesm_ens_std' end_str ',trend_dat_box' end_str ','...
+%             'trend_dat_box_ens' end_str ',trend_ens_dat_box' end_str ', dat_annual_box_ukesm_ens' end_str ','...
+%             'me_t_PI' end_str ',N_t_PI' end_str ',std_t_PI' end_str ',itrend_start' end_str ',itrend_end' end_str ']' ...
+%             '= ACSIS_Robson_paper_CALC_timeseries2(dat_ukesm' end_str season_str ',dat_PI' end_str season_str ',LAT_val,LON_val,land_ocean,gcm_area_UM,'...
+%             'yr_start_trend_box2,yr_end_trend_box2,p_conf,ibox);' ];
+        
+eval_str = [ '[dat_annual_box_ukesm' end_str ',dat_annual_box_ukesm_ens_std' end_str ',trend_dat_box' end_str ','...
+            'trend_dat_box_ens' end_str ',trend_ens_dat_box' end_str ', dat_annual_box_ukesm_ens' end_str ','...
+            'me_t_PI' end_str ',N_t_PI' end_str ',std_t_PI' end_str ',itrend_start' end_str ',itrend_end' end_str...
+            ',N_dat_annual_box_ukesm' end_str ',std_dat_annual_box_ukesm' end_str ...
+            ',Ntot_dat_annual_box_ukesm' end_str ',Nfrac_dat_annual_box_ukesm' end_str ']' ...
+            '= ACSIS_Robson_paper_CALC_timeseries2(dat_ukesm' end_str season_str ',dat_PI' end_str season_str ',LAT_val,LON_val,land_ocean,'...
+            'yr_start_trend_box2,yr_end_trend_box2,p_conf,ibox);' ];        
+eval(eval_str);

@@ -1,0 +1,31 @@
+%save amsre sst and lwp data loaded from using the daily option
+years_amsre_str2 = remove_character(years_amsre_str,' ','_');
+%amsre_matfile = ['/home/disk/eos5/d.grosvenor/AMSRE/amsre_daily_SouthernOcean_AquaTerra_' years_amsre_str2 '_' datestr(now,30) '.mat'];
+amsre_matfile = ['/home/disk/eos5/d.grosvenor/AMSRE/amsre_daily_global_Aqua_' years_amsre_str2 '_' datestr(now,30) '.mat']; 
+
+save(amsre_matfile,'year_amsre','month_amsre','day_amsre','gcm_Plon2D_edges_AMSRE','gcm_Plat2D_edges_AMSRE','gcm_Plon2D_AMSRE','gcm_Plat2D_AMSRE','years_amsre_str');
+ 
+for ivar=1:length(var_names)
+    app_str=' ,''-APPEND'') ';
+    eval(['save(amsre_matfile,''' var_names{ivar} '_amsre''' app_str]);   
+    if exist([var_names{ivar} '_amsre_time3'])
+        eval(['save(amsre_matfile,''' var_names{ivar} '_amsre_time3''' app_str]);
+    end
+    if exist([var_names{ivar} '_amsre_smooth'])
+        eval(['save(amsre_matfile,''' var_names{ivar} '_amsre_smooth''' app_str]);
+    end    
+    %sst_amsre_smooth','year_amsre','month_amsre','day_amsre','gcm_Plat2D_e
+    %dges_AMSRE','gcm_Plat2D_AMSRE','gcm_Plon2D_edges_AMSRE','gcm_Plon2D_AMSRE');
+end
+
+
+
+disp('Done save AMSR SSTs');
+
+%saved 2008 daily data in /home/disk/eos5/d.grosvenor/AMSRE/amsre_daily_global_2007_to_2009_20130206T170947.mat
+%  --- OR this one where flipped the lat dimension - need to calc
+%  lwp_amsre_time3 too :-
+% /home/disk/eos5/d.grosvenor/AMSRE/amsre_daily_global_2007_to_2009_20130212T091452.mat
+
+%NOTE - files say 2007-2009 for 2008 since load in the last month of 2007
+%and the first of 2009

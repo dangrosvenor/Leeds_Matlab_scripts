@@ -1,0 +1,84 @@
+
+%fileWRF(1).file=['/ddisk3/mbexddg5/d03'];
+%fileWRF(2).file=['Y:\WRF\ant_jan06\d03'];
+fileWRF(1).file=['/home/mbexddg5/work/Ant_Jan06/d03'];
+%fileWRF(1).file=['/home/mbexddg5/work/Ant_Jan06/wrfout_d02_2006-01-05_00:00:00'];
+
+file_num=1; %set file_num for file required
+
+nc=netcdf(fileWRF(file_num).file);
+
+add_ground_height=0; %value for some plotting scripts
+
+% Times array
+Times=nc{1}(:);
+% Times=datenum(str2num(Times(:,1:4)),str2num(Times(:,6:7)),...
+%     str2num(Times(:,9:10)),str2num(Times(:,12:13)),str2num(Times(:,15:16)),...ncnclslfalsdfj
+%     str2num(Times(:,18:19)))+8.5./24-tShift./24;
+% The times array
+time=16;
+
+lat2d=WRFUserARW(nc,'XLAT',time);
+lon2d=WRFUserARW(nc,'XLONG',time);
+
+switch file_num
+case 1
+    
+LAT=[-11.6];
+LON=[130.8];
+[ilat,ilon] = getind_latlon_quick(lat2d.var,lon2d.var,LAT,LON,0.1); %reduce the last number as higher resolution
+
+case 2  
+
+LAT=[-67.2 -67.2 -67.2 -68.0168 lat2d(1).var(140,240) lat2d(1).var(174,290)];
+LON=[-62 -63 -64 -62.4159 lon2d(1).var(140,240) lon2d(1).var(174,290)];
+[ilat,ilon] = getind_latlon_quick(lat2d.var,lon2d.var,LAT,LON,1);
+
+end
+
+ %returns index of point nearest to lat lon (i.e. closest_lat=latitude(ilat,ilon)
+                                                              %closest_lon=longitude(ilat,ilon)min
+
+                                                              
+% terrain = nc{'HGT'}(time,:,:);
+% x=[1:size(terrain,1)];
+% contour(x,x,nc{'HGT'}(1,:,:),[0 1]);
+% 
+% sea_ice=nc{'SEAICE'}(time,:,:);
+
+
+% temp=nc{'QRAIN'}(15,:,:,:);
+% temp=temp+nc{'QICE'}(15,:,:,:);
+% temp=temp+nc{'QSNOW'}(15,:,:,:);
+% temp=temp+nc{'QGRAUP'}(15,:,:,:);
+% temp=temp+nc{'QCLOUD'}(15,:,:,:);
+% 
+% mean_cloud=squeeze(mean(temp));
+
+
+
+% for i=1:length(LAT)
+% 	
+% 	ydat(i).y=WRFUserARW(nc,'Z',time,ilat(i),ilon(i));
+% 	xdat(i).x=WRFUserARW(nc,'tc',time,ilat(i),ilon(i));
+%     labs(i).l=[num2str(LAT(i)) ' , ' num2str(LON(i)) ];    
+% end
+
+
+% LON=-63;
+% [ilat,ilon] = getind_latlon(lat2d.var,lon2d.var,LAT,LON);
+% ydat(2).y=WRFUserARW(nc,'Z',time,ilat,ilon);
+% xdat(2).x=WRFUserARW(nc,'tc',time,ilat,ilon);
+% 
+% LON=-64;
+% [ilat,ilon] = getind_latlon(lat2d.var,lon2d.var,LAT,LON);
+% ydat(2).y=WRFUserARW(nc,'Z',time,ilat,ilon);
+% xdat(2).x=WRFUserARW(nc,'tc',time,ilat,ilon);
+% 
+
+
+%p =WRFUserARW(nc,'p',time);
+%rho_a=p.var.*100./287./(tc.var+273.15);
+
+disp('done load WRF');
+

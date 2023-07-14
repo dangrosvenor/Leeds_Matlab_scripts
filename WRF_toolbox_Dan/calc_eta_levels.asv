@@ -1,0 +1,60 @@
+res_top=1400;
+res_top=1150; %height at which want to start to increase resolution (linerally) to that of current wrf
+dz=25; %high resoltuion of the lower part of domain (below res_top)
+[eta,zeta,p,psfc]=eta_wrf(nc); %get the current eta, z, p and psfc. Pressures in Pa
+
+
+z_abv_top=1807.07; %height where want to match the current wrf resolution
+res_aim = 238.024; %resolution at this height
+
+%going to iterate downwards from z_abv_top towards res_top
+clear z_abv
+z=z_abv_top;
+z_abv(1)=z;
+
+iz=2;
+
+while z>res_top %stop when have got below res_top
+    dz_abv = dz+(z-res_top)*(res_aim-dz)/(z_abv_top-res_top); %increase resoltuion linearlly with height as move downwards
+    z=z-dz_abv; %move down
+    z_abv(iz)=z; %store value
+    iz=iz+1;
+end
+
+[temp imin]=min(abs(z_abv-res_top)); %find height closest to res_top and discard will be very close
+z_grid=[dz:dz:res_top fliplr(z_abv(1:imin-1))];
+
+p_res=interp1(zeta,[psfc p],z_grid); %linerally interpolate the pressure as a function of height for the required vertical z-levels
+eta_res_lower=(p_res - 5000)/(psfc - 5000); %calculate eta using 50 hPa top pressure
+
+[temp imin]=min(abs(zeta-z_grid(end))); %find the point closest to z_grid(end) as this should be the same as z_grid(end)
+%i_res=find(zeta>z_grid(end));
+
+%i_res=i_res(2:end); %discard first index as will be the z=1807.07 point
+
+%eta_res = [1 eta_res_lower eta(i_res) 0];
+eta_res = [1 eta_res_lower eta(imin+1:end) 0]; %don't include the point in question
+z_res = [z_grid zeta(i_res)];
+
+file_eta = 'c:/documents and settings/dan/my documents/wrf/eta_levels_BL';
+fid=fopen(file_eta,'wt');
+fprintf(fid,'eta_levels = 1.0,');
+nrows=floor(length(eta_res)/6);
+for i=1:nrows
+    if i==1 
+        j_start=2;
+    else
+        j_start=1;
+    end
+        
+    for j=j_start:6
+        fprintf(fid,'%f,',eta_res((i-1)*6+j));
+    end
+    fprintf(fid,'\n');
+end
+
+for j=6*nrows+1:length(eta_res)-1
+    fprintf(fid,'%f,',eta_res(j));
+end
+fprintf(fid,'0.0,');
+fclose(fid)

@@ -1,0 +1,7 @@
+function y=mountain_SmithSun_fun_del_for_given_h(del,H0,U,gd)
+F0=U/sqrt(gd*H);
+h=H0*( 1 + 0.5*F0.^2 - 1.5*F0.^(2/3) );
+
+A=1-U*H0/(H0+del
+
+y=del*cos(L*(H0+del-h))-h;   %=0  %try different h values until satisfies

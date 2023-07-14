@@ -1,0 +1,116 @@
+%Want to create PDFs of paired Nd and CF 
+%Could also add the error in LWP caused by the assumed Nd error
+
+case_to_run = 'Nd CF correlation';
+case_to_run = 'Half points biased';
+
+nocorr = [1 0;0 1]; %no correlation
+corr_choose = nocorr;
+nsample = 1e4;
+
+switch case_to_run
+    case 'Nd CF correlation'
+
+x=1;%Going to make Nd_new = Nd.*CF.^x Larger x will mean higher correlation coeff between Nd and CF
+
+vals={[100 0.5]};
+vals_std={[20 0.1]};
+nsample = 1e5;
+CF_cutoff = [0 1];
+Nd_cutoff = [0 1e9];
+
+
+
+xmean = vals{1}; %orig values
+xsd2 = vals_std{1};
+z_orig=lhs_iman(xmean,xsd2,corr_choose,nsample); %
+Nd = z_orig(:,1);
+CF = z_orig(:,2);
+
+
+icut = find( CF<CF_cutoff(1) & CF>CF_cutoff(2) );
+CF(icut,:)=[];
+
+icut = find( Nd<Nd_cutoff(1) & Nd>Nd_cutoff(2) );
+CF(icut,:)=[];
+
+
+
+tau = 3.*Nd.^(1/3);
+
+
+
+Nd2 = Nd.*CF.^x;
+%But keep the original tau values since this is what would happen with the
+%retreivals
+
+figure
+hold on
+logNd = log10(Nd); logtau = log10(tau);
+plot(logNd,logtau,'bo');
+xlabel('log10(N_d)');
+ylabel('log10(tau)');
+xx=[10:10:1000];
+yy=3.*xx.^(1/3);
+plot(log10(xx),log10(yy),'b-')
+logNd2 = log10(Nd2);
+plot(logNd2,logtau,'ro');
+%set(gca,'xscale','log');
+%set(gca,'yscale','log');
+set(gca,'xlim',log10([10 500]));
+set(gca,'ylim',log10([5 20]));
+grid
+
+r1=polyfit(logNd,logtau,1); slope_theoretical = r1(1)
+r2=polyfit(logNd2,logtau,1); slope_redpoints = r2(1)
+
+case 'Half points biased'
+
+%% Trying out some distributions of tau and re to see what effect of re bias
+%  would lokely hav on the slope of log(tau) vs log(Nd) relationship.
+
+xmean = [20 10]; %orig values
+xsd2 = xmean.*0.05; % 15% of mean.
+z_orig=lhs_iman(xmean,xsd2,corr_choose,nsample); %
+tau = z_orig(:,1);
+re = z_orig(:,2);
+
+%Increase the reff of a random sample of half of the points
+bias=1.0;
+nhalf=floor(nsample/2);
+re(1:nhalf)=re(1:nhalf)*bias;
+
+LWP = 5/9 .* 1e3 .* tau .* re/1e6; %kg/m2
+
+meanLWP = mean(LWP);
+meanLWP = meanLWP - 20e-3; % to try different LWP values
+LWP_tol = 10e-3;
+
+i=find(LWP>meanLWP-LWP_tol & LWP <meanLWP+LWP_tol);
+Nd3 = MODIS_N_H_func(tau,re/1e6,'calc',0,275);  % /cm3
+
+figure
+hold on
+logNd3 = log10(Nd3(i)); logtau = log10(tau(i));
+plot(logNd3,logtau,'bo');
+xlabel('log10(N_d)');
+ylabel('log10(tau)');
+r1=polyfit(logNd3,logtau,1); slope_Dec2015 = r1(1)
+xx=[1:0.1:3];
+yy = xx.*r1(1) + r1(2);
+plot(xx,yy,'b-');
+title(['Slope = ' num2str(r1(1)) ', NLWP=' num2str(length(i))]);
+
+%plot the theoretical line
+LWP_tol = 1e-3;
+i=find(LWP>meanLWP-LWP_tol & LWP <meanLWP+LWP_tol);
+Nd32 = MODIS_N_H_func(tau,re/1e6,'calc',0,275);  % /cm3
+logNd32 = log10(Nd3(i)); logtau2 = log10(tau(i));
+r12=polyfit(logNd32,logtau2,1);
+xx=[1:0.1:3];
+yy = xx.*r12(1) + r12(2);
+plot(xx,yy,'r-');
+set(gca,'xlim',[min(logNd3) max(logNd3)]);
+end
+
+

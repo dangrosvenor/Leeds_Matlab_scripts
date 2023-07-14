@@ -1,0 +1,379 @@
+% Read Zhibo's DYCOMS2 LES results with 1D and 3D RT
+% Summary of what is in the file (all at various viewing geometries, one SZA per file) :-
+% Reflectances for 0.86, 2.1 and 3.7um bands for LES at 50 (LES), 100, 400 and 800m
+% averaging scales (50m is the native LES resolution).
+% Ditto for tau and re and cloud mask (although no wavelength dependence
+% for this)
+% Have files for SZA = 20 (cos 20=0.9396), 60 (cos 60=0.5) and 80 (cos 80
+% =0.1736)
+% There are 8 files for each SZA - 8 different time snapshots?
+% Domain size is 128*50 = 6400m
+
+%filedir='/home/disk/eos1/d.grosvenor/modis_work/Zhibo_Marshak_work/Ackermann_DYCOMS2_25bins_from_Zhibo/';
+
+%SZA=20
+%file_read =
+%'Ackerman_DYCOMS2_25bins_dharma_003043_retrieval_results_sz0.9396.nc'; filetag='SZA-20':
+%SZA=80
+%file_read =
+%'Ackerman_DYCOMS2_25bins_dharma_003043_retrieval_results_sz0.1736.nc'; filetag='SZA_80'
+
+clear LES_struct LES_struct_times
+
+ntimes = length(time_strs); %used later too
+for itime=1:ntimes
+
+    file_read2 = remove_character(file_read,'TIME',time_strs{itime});
+    nc_filepath = [filedir file_read2];
+    nc = netcdf([nc_filepath],'nowrite');
+
+    %sza = nc{'Mu0'}(:); %can't do this for some reason?? nc.Mu0(1) doesn't work
+    %either (as done for nc.DX in WRF output).
+    VZA = nc{'Mu'}(:);
+    RAZ = nc{'Phi'}(:); %is this the relative AZ?
+
+    var_list = {'R86_LES_1D','R21_LES_1D','R37_LES_1D',...
+        'R86_LES_3D','R21_LES_3D','R37_LES_3D',...
+        'R86_100m_1D','R21_100m_1D','R37_100m_1D',...
+        'R86_100m_3D','R21_100m_3D','R37_100m_3D',...
+        'R86_400m_1D','R21_400m_1D','R37_400m_1D',...
+        'R86_400m_3D','R21_400m_3D','R37_400m_3D',...
+        'R86_800m_1D','R21_800m_1D','R37_800m_1D',...
+        'R86_800m_3D','R21_800m_3D','R37_800m_3D',...
+        'Re21_LES_1D','Re37_LES_1D',...
+        'Re_LES_3D','Re37_LES_3D',...
+        'Re21_100m_1D','Re37_100m_1D',...
+        'Re21_100m_3D','Re37_100m_3D',...
+        'Re21_400m_1D','Re37_400m_1D',...
+        'Re21_400m_3D','Re37_400m_3D',...
+        'Re21_800m_1D','Re37_800m_1D',...
+        'Re21_800m_3D','Re37_800m_3D',...
+        'Tau_LES_1D',...
+        'Tau_LES_3D',...
+        'Tau_100m_1D',...
+        'Tau_100m_3D',...
+        'Tau_400m_1D',...
+        'Tau_400m_3D',...
+        'Tau_800m_1D',...
+        'Tau_800m_3D',...
+        'CM_LES_1D',...
+        'CM_LES_3D',...
+        'CM_100m_1D',...
+        'CM_100m_3D',...
+        'CM_400m_1D',...
+        'CM_400m_3D',...
+        'CM_800m_1D',...
+        'CM_800m_3D',...
+        };
+
+    for i=1:length(var_list)
+        %    eval([var_list{i} '_' filetag '=nc{''' var_list{i} '''}(:);']);
+        eval(['LES_struct.(var_list{i}) = nc{''' var_list{i} '''}(:);']);
+        %store them all in a structure with the variable names as the
+        %fields, since structures have the advantage that can acess them
+        %using e.g. str='CM_100m_1D'; data = SZA_80.(str) and it will
+        %replace (str) with the contents of str, which makes for easier to
+        %read code.
+
+    end
+
+
+    %eval(['Re21_LES_3D_' filetag ' = Re_LES_3D_' filetag ';']); %this one was mis-labelled for some reason
+    LES_struct.Re21_LES_3D = LES_struct.Re_LES_3D; %this one was mis-labelled for some reason
+
+
+%% Run script to do domain (in-cloud only) and put into vs res fields, etc.
+
+    % ------------------------
+    calc_mean_fields_Zhibo
+    % ------------------------
+    
+
+
+%% Do time averaging
+
+var_strs_timemean = {'Re21','Re37'...
+    ,'R86_1km','R21_1km','R37_1km','R86_std_1km','R21_std_1km','R37_std_1km','R86_R21_cov_1km','R86_R37_cov_1km'...
+    ,'H86_1km','H21_1km','H37_1km','Hcov_R86_R21_1km','Hcov_R86_R37_1km'...
+    ,'R86_1km_250m','R21_1km_250m','R37_1km_250m','R86_std_1km_250m','R21_std_1km_250m','R37_std_1km_250m','R86_R21_cov_1km_250m','R86_R37_cov_1km_250m'...
+    ,'H86_1km_250m','H21_1km_250m','H37_1km_250m','Hcov_R86_R21_1km_250m','Hcov_R86_R37_1km_250m'};
+
+        for irt=1:length(rt)
+            rt_str = rt{irt};
+            %2.1 um
+
+            for ivar2=1:length(var_strs_timemean)
+                var_str2 = var_strs_timemean{ivar2};
+                [LES_struct] = calc_mean_fields_Zhibo_FUNCS_timemean(LES_struct,var_str,var_str2,rt_str,itime,ntimes);
+            end
+            
+            
+            
+%             re21_str = ['Re21_' var_str];
+%             if itime==1
+%                 LES_struct.(['timemean_Re21_' rt_str '_vs_res']) = 0;
+%             end
+%             LES_struct.(['timemean_Re21_' rt_str '_vs_res']) =  LES_struct.(['timemean_Re21_' rt_str '_vs_res']) + LES_struct.(['mean_Re21_' rt_str '_vs_res']) ./ ntimes; %save running average for time mean
+%             %3.7 um
+%             re37_str = ['Re37_' var_str];
+%             if itime==1
+%                LES_struct.(['timemean_Re37_' rt_str '_vs_res']) = 0;
+%             end
+%             LES_struct.(['timemean_Re37_' rt_str '_vs_res']) = LES_struct.(['timemean_Re37_' rt_str '_vs_res']) + LES_struct.(['mean_Re37_' rt_str '_vs_res']) ./ ntimes; %save running average for time mean
+
+        end
+
+
+
+        LES_struct_times(itime) = LES_struct;
+
+end %time loop
+
+
+% perhaps better as a cell array, or another dimension (one for each SZA?)
+
+%
+% 180/pi*acos(VZA)
+%
+% ans =
+%
+%    60.0000
+%    50.0000
+%    40.0000
+%    30.0000
+%    20.0000
+%    10.0000
+%          0
+%    10.0000
+%    20.0000
+%    30.0000
+%    40.0000
+%    50.0000
+%    60.0000
+
+% RAZ is 0 for the first 7 indices (when VZA=60 to 0) - i.e. forward
+% scatter, and 180 for 8:13 (for VZA 10-60, back scatter)
+
+
+% 
+% netcdf Ackerman_DYCOMS2_25bins_dharma_003043_retrieval_results_sz0.1736 {
+% dimensions:
+%         NX_LES = 128 ;
+%         NY_LES = 128 ;
+%         NZ_LES = 96 ;
+%         NX_100m = 64 ;
+%         NY_100m = 64 ;
+%         NX_400m = 16 ;
+%         NY_400m = 16 ;
+%         NX_800m = 8 ;
+%         NY_800m = 8 ;
+%         Ndir = 13 ;
+% variables:
+%         float X_LES(NX_LES) ;
+%                 X_LES:units = "km" ;
+%         float Y_LES(NY_LES) ;
+%                 Y_LES:units = "km" ;
+%         float Z(NZ_LES) ;
+%                 Z:units = "km" ;
+%         float X_100m(NX_100m) ;
+%                 X_100m:units = "km" ;
+%         float Y_100m(NY_100m) ;
+%                 Y_100m:units = "km" ;
+%         float X_400m(NX_400m) ;
+%                 X_400m:units = "km" ;
+%         float Y_400m(NY_400m) ;
+%                 Y_400m:units = "km" ;
+%         float X_800m(NX_800m) ;
+%                 X_800m:units = "km" ;
+%         float Y_800m(NY_800m) ;
+%                 Y_800m:units = "km" ;
+%         float Mu0 ;
+%         float Phi0 ;
+%         float Mu(Ndir) ;
+%         float Phi(Ndir) ;
+%         float R86_LES_1D(Ndir, NY_LES, NX_LES) ;
+%                 R86_LES_1D:units = "reflectance" ;
+%                 R86_LES_1D:long_name = "BRDF of 0.86um band at LES resolution based on 1D radiative transfer simulation"
+%  ;
+%         float R21_LES_1D(Ndir, NY_LES, NX_LES) ;
+%                 R21_LES_1D:units = "reflectance" ;
+%                 R21_LES_1D:long_name = "BRDF of 2.1um band at LES resolution based on 1D radiative transfer simulation" 
+% ;
+%         float R37_LES_1D(Ndir, NY_LES, NX_LES) ;
+%                 R37_LES_1D:units = "reflectance" ;
+%                 R37_LES_1D:long_name = "BRDF of 3.7um band at LES resolution based on 1D radiative transfer simulation" 
+% ;
+%         float R86_LES_3D(Ndir, NY_LES, NX_LES) ;
+%                 R86_LES_3D:units = "reflectance" ;
+%                 R86_LES_3D:long_name = "BRDF of 0.86um band at LES resolution based on 3D radiative transfer simulation"
+%  ;
+%         float R21_LES_3D(Ndir, NY_LES, NX_LES) ;
+%                 R21_LES_3D:units = "reflectance" ;
+%                 R21_LES_3D:long_name = "BRDF of 2.1um band at LES resolution based on 3D radiative transfer simulation" 
+% ;
+%         float R37_LES_3D(Ndir, NY_LES, NX_LES) ;
+%                 R37_LES_3D:units = "reflectance" ;
+%                 R37_LES_3D:long_name = "BRDF of 3.7um band at LES resolution based on 3D radiative transfer simulation" 
+% ;
+%         float R86_100m_1D(Ndir, NY_100m, NX_100m) ;
+%                 R86_100m_1D:units = "reflectance" ;
+%                 R86_100m_1D:long_name = "BRDF of 0.86um band at 100m resolution based on 1D radiative transfer simulatio
+% n" ;
+%         float R21_100m_1D(Ndir, NY_100m, NX_100m) ;
+%                 R21_100m_1D:units = "reflectance" ;
+%                 R21_100m_1D:long_name = "BRDF of 2.1um band at 100m resolution based on 1D radiative transfer simulation
+% " ;
+%         float R37_100m_1D(Ndir, NY_100m, NX_100m) ;
+%                 R37_100m_1D:units = "reflectance" ;
+%                 R37_100m_1D:long_name = "BRDF of 3.7um band at 100m resolution based on 1D radiative transfer simulation
+% " ;
+%         float R86_100m_3D(Ndir, NY_100m, NX_100m) ;
+%                 R86_100m_3D:units = "reflectance" ;
+%                 R86_100m_3D:long_name = "BRDF of 0.86um band at 100m resolution based on 3D radiative transfer simulatio
+% n" ;
+%         float R21_100m_3D(Ndir, NY_100m, NX_100m) ;
+%                 R21_100m_3D:units = "reflectance" ;
+%                 R21_100m_3D:long_name = "BRDF of 2.1um band at 100m resolution based on 3D radiative transfer simulation
+% " ;
+%         float R37_100m_3D(Ndir, NY_100m, NX_100m) ;
+%                 R37_100m_3D:units = "reflectance" ;
+%                 R37_100m_3D:long_name = "BRDF of 3.7um band at 100m resolution based on 3D radiative transfer simulation
+% " ;
+%         float R86_400m_1D(Ndir, NY_400m, NX_400m) ;
+%                 R86_400m_1D:units = "reflectance" ;
+%                 R86_400m_1D:long_name = "BRDF of 0.86um band at 400m resolution based on 1D radiative transfer simulatio
+% n" ;
+%         float R21_400m_1D(Ndir, NY_400m, NX_400m) ;
+%                 R21_400m_1D:units = "reflectance" ;
+%                 R21_400m_1D:long_name = "BRDF of 2.1um band at 400m resolution based on 1D radiative transfer simulation
+% " ;
+%         float R37_400m_1D(Ndir, NY_400m, NX_400m) ;
+%                 R37_400m_1D:units = "reflectance" ;
+%                 R37_400m_1D:long_name = "BRDF of 3.7um band at 400m resolution based on 1D radiative transfer simulation
+% " ;
+%         float R86_400m_3D(Ndir, NY_400m, NX_400m) ;
+%                 R86_400m_3D:units = "reflectance" ;
+%                 R86_400m_3D:long_name = "BRDF of 0.86um band at 400m resolution based on 3D radiative transfer simulatio
+% n" ;
+%         float R21_400m_3D(Ndir, NY_400m, NX_400m) ;
+%                 R21_400m_3D:units = "reflectance" ;
+%                 R21_400m_3D:long_name = "BRDF of 2.1um band at 400m resolution based on 3D radiative transfer simulation
+% " ;
+%         float R37_400m_3D(Ndir, NY_400m, NX_400m) ;
+%                 R37_400m_3D:units = "reflectance" ;
+%                 R37_400m_3D:long_name = "BRDF of 3.7um band at 400m resolution based on 3D radiative transfer simulation
+% " ;
+%         float R86_800m_1D(Ndir, NY_800m, NX_800m) ;
+%                 R86_800m_1D:units = "reflectance" ;
+%                 R86_800m_1D:long_name = "BRDF of 0.86um band at 800m resolution based on 1D radiative transfer simulatio
+% n" ;
+%         float R21_800m_1D(Ndir, NY_800m, NX_800m) ;
+%                 R21_800m_1D:units = "reflectance" ;
+%                 R21_800m_1D:long_name = "BRDF of 2.1um band at 800m resolution based on 1D radiative transfer simulation
+% " ;
+%         float R37_800m_1D(Ndir, NY_800m, NX_800m) ;
+%                 R37_800m_1D:units = "reflectance" ;
+%                 R37_800m_1D:long_name = "BRDF of 3.7um band at 800m resolution based on 1D radiative transfer simulation
+% " ;
+%         float R86_800m_3D(Ndir, NY_800m, NX_800m) ;
+%                 R86_800m_3D:units = "reflectance" ;
+%                 R86_800m_3D:long_name = "BRDF of 0.86um band at 800m resolution based on 3D radiative transfer simulatio
+% n" ;
+%         float R21_800m_3D(Ndir, NY_800m, NX_800m) ;
+%                 R21_800m_3D:units = "reflectance" ;
+%                 R21_800m_3D:long_name = "BRDF of 2.1um band at 800m resolution based on 3D radiative transfer simulation
+% " ;
+%         float R37_800m_3D(Ndir, NY_800m, NX_800m) ;
+%                 R37_800m_3D:units = "reflectance" ;
+%                 R37_800m_3D:long_name = "BRDF of 3.7um band at 800m resolution based on 3D radiative transfer simulation
+% " ;
+%         float CM_LES_1D(Ndir, NY_LES, NX_LES) ;
+%                 CM_LES_1D:long_name = "cloud mask at LES resolution based on 1D radiative transfer simulation" ;
+%         float CM_LES_3D(Ndir, NY_LES, NX_LES) ;
+%                 CM_LES_3D:long_name = "cloud mask at LES resolution based on 3D radiative transfer simulation" ;
+%         float CM_100m_1D(Ndir, NY_100m, NX_100m) ;
+%                 CM_100m_1D:long_name = "cloud mask at 100m resolution based on 1D radiative transfer simulation" ;
+%         float CM_100m_3D(Ndir, NY_100m, NX_100m) ;
+%                 CM_100m_3D:long_name = "cloud mask at 100m resolution based on 3D radiative transfer simulation" ;
+%         float CM_400m_1D(Ndir, NY_400m, NX_400m) ;
+%                 CM_400m_1D:long_name = "cloud mask at 400m resolution based on 1D radiative transfer simulation" ;
+%         float CM_400m_3D(Ndir, NY_400m, NX_400m) ;
+%                 CM_400m_3D:long_name = "cloud mask at 400m resolution based on 3D radiative transfer simulation" ;
+%         float CM_800m_1D(Ndir, NY_800m, NX_800m) ;
+%                 CM_800m_1D:long_name = "cloud mask at 800m resolution based on 1D radiative transfer simulation" ;
+%         float CM_800m_3D(Ndir, NY_800m, NX_800m) ;
+%                 CM_800m_3D:long_name = "cloud mask at 800m resolution based on 3D radiative transfer simulation" ;
+%         float Tau_LES_1D(Ndir, NY_LES, NX_LES) ;
+%                 Tau_LES_1D:long_name = "optical thickness at LES resolution based on 1D radiative transfer simulation" ;
+%         float Tau_LES_3D(Ndir, NY_LES, NX_LES) ;
+%                 Tau_LES_3D:long_name = "optical thickness at LES resolution based on 3D radiative transfer simulation" ;
+%         float Tau_100m_1D(Ndir, NY_100m, NX_100m) ;
+%                 Tau_100m_1D:long_name = "optical thickness at 100m resolution based on 1D radiative transfer simulation"
+%  ;
+%         float Tau_100m_3D(Ndir, NY_100m, NX_100m) ;
+%                 Tau_100m_3D:long_name = "optical thickness at 100m resolution based on 3D radiative transfer simulation"
+%  ;
+%         float Tau_400m_1D(Ndir, NY_400m, NX_400m) ;
+%                 Tau_400m_1D:long_name = "optical thickness at 400m resolution based on 1D radiative transfer simulation"
+%         float Tau_400m_3D(Ndir, NY_400m, NX_400m) ;
+%                 Tau_400m_3D:long_name = "optical thickness at 400m resolution based on 3D radiative transfer simulation"
+%  ;
+%         float Tau_800m_1D(Ndir, NY_800m, NX_800m) ;
+%                 Tau_800m_1D:long_name = "optical thickness at 800m resolution based on 1D radiative transfer simulation"
+%  ;
+%         float Tau_800m_3D(Ndir, NY_800m, NX_800m) ;
+%                 Tau_800m_3D:long_name = "optical thickness at 800m resolution based on 3D radiative transfer simulation"
+%  ;
+%         float Re21_LES_1D(Ndir, NY_LES, NX_LES) ;
+%                 Re21_LES_1D:long_name = "effective radius based on 2.1um at LES resolution based on 1D radiative transfe
+% r simulation" ;
+%         float Re_LES_3D(Ndir, NY_LES, NX_LES) ;
+%                 Re_LES_3D:long_name = "effective radius based on 2.1um at LES resolution based on 3D radiative transfer 
+% simulation" ;
+%         float Re21_100m_1D(Ndir, NY_100m, NX_100m) ;
+%                 Re21_100m_1D:long_name = "effective radius based on 2.1um at 100m resolution based on 1D radiative trans
+% fer simulation" ;
+%         float Re21_100m_3D(Ndir, NY_100m, NX_100m) ;
+%                 Re21_100m_3D:long_name = "effective radius based on 2.1um at 100m resolution based on 3D radiative trans
+% fer simulation" ;
+%         float Re21_400m_1D(Ndir, NY_400m, NX_400m) ;
+%                 Re21_400m_1D:long_name = "effective radius based on 2.1um at 400m resolution based on 1D radiative trans
+% fer simulation" ;
+%         float Re21_400m_3D(Ndir, NY_400m, NX_400m) ;
+%                 Re21_400m_3D:long_name = "effective radius based on 2.1um at 400m resolution based on 3D radiative trans
+% fer simulation" ;
+%         float Re21_800m_1D(Ndir, NY_800m, NX_800m) ;
+%                 Re21_800m_1D:long_name = "effective radius based on 2.1um at 800m resolution based on 1D radiative trans
+% fer simulation" ;
+%         float Re21_800m_3D(Ndir, NY_800m, NX_800m) ;
+%                 Re21_800m_3D:long_name = "effective radius based on 2.1um at 800m resolution based on 3D radiative trans
+% fer simulation" ;
+%         float Re37_LES_1D(Ndir, NY_LES, NX_LES) ;
+%                 Re37_LES_1D:long_name = "effective radius based on 3.7um at LES resolution based on 1D radiative transfe
+% r simulation" ;
+%         float Re37_LES_3D(Ndir, NY_LES, NX_LES) ;
+%                 Re37_LES_3D:long_name = "effective radius based on 3.7um at LES resolution based on 3D radiative transfe
+% r simulation" ;
+%         float Re37_100m_1D(Ndir, NY_100m, NX_100m) ;
+%                 Re37_100m_1D:long_name = "effective radius based on 3.7um at 100m resolution based on 1D radiative trans
+% fer simulation" ;
+%         float Re37_100m_3D(Ndir, NY_100m, NX_100m) ;
+%                 Re37_100m_3D:long_name = "effective radius based on 3.7um at 100m resolution based on 3D radiative trans
+% fer simulation" ;
+%         float Re37_400m_1D(Ndir, NY_400m, NX_400m) ;
+%                 Re37_400m_1D:long_name = "effective radius based on 3.7um at 400m resolution based on 1D radiative trans
+% fer simulation" ;
+%         float Re37_400m_3D(Ndir, NY_400m, NX_400m) ;
+%                 Re37_400m_3D:long_name = "effective radius based on 3.7um at 400m resolution based on 3D radiative trans
+% fer simulation" ;
+%         float Re37_800m_1D(Ndir, NY_800m, NX_800m) ;
+%                 Re37_800m_1D:long_name = "effective radius based on 3.7um at 800m resolution based on 1D radiative trans
+% fer simulation" ;
+%         float Re37_800m_3D(Ndir, NY_800m, NX_800m) ;
+%                 Re37_800m_3D:long_name = "effective radius based on 3.7um at 800m resolution based on 3D radiative trans
+% fer simulation" ;
+% 
+% // global attributes:
+%                 :Title = "1D & 3D radiative transfer simulations and retreival results" ;
+% }
+                

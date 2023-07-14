@@ -1,0 +1,21 @@
+function [out_array] = load_gcm_dataset(gcm_var,gcm_year_case,gcm_model_case,gcm_month_case,am3_filepaths_chunk,igcm_type)
+%loop through all of the filenames containing data - load in and place into
+%one array for each model variable (this function to be called separaetly
+%for each variable) and for each model (e.g AM3, CAM5)
+%End up with e.g. max_Nd_CAM5 and max_Nd_AM3
+    
+%get the current filename - based on gcm_year_cases{ifile} and gcm_model_cases
+gcm_filename_for_year    %a list of all the current filenames for the year to be loaded
+%(=filename_gcm)
+
+%load the variable
+eval_str = ['load(''' filename_gcm ''',''' gcm_var ''');'];      
+eval(eval_str);
+
+%put it in out_array
+eval_str2=['out_array=' gcm_var ';'];
+eval(eval_str2);
+
+    
+    
+end

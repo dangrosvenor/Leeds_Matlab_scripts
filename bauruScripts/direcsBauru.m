@@ -1,0 +1,12 @@
+direcDan(1).dir='g:homogen\ccn6e7';
+direcDan(2).dir='g:homogen\ccn1.2e8'; %51
+direcDan(3).dir='g:homogen\ccn1.8e8'; %42
+direcDan(4).dir='g:homogen\ccn2.4e8'; %19
+direcDan(5).dir='g:homogen\ccn3e8';   %19
+direcDan(6).dir='g:homogen\ccn3.6e8'; %19
+direcDan(7).dir='g:homogen\ccn4.2e8'; %19 
+direcDan(8).dir='g:homogen\ccn4.8e8'; %19
+direcDan(9).dir='g:homogen\ccn6e8';   %51
+direcDan(10).dir='g:homogen\ccn7.2e8'; %
+direcDan(11).dir='g:homogen\ccn8.4e8';
+direcDan(12).dir='g:homogen\ccn9.6e8';

@@ -1,0 +1,335 @@
+min_cf = 0.5; %minimum cloud fraction for 1km regions to count the tpixel in the stats
+pixel_size = 800; %1000; %pixel size to calculate variances and H values for.
+switch case_str_zhibo
+    case 'ATEX'
+        res={'100m','400m','800m'};
+        %ATEX native LES res is 100m and the LES and 100m fields are the
+        %same - so ignore the LES fields.
+        N_av_250m = 3; %Want to get to 250m, but only have 100m data, so use 300m
+        M_av_250m = 3; 
+        N_av_250m_1km = 3; %For 250m to 1km - so actually have 900m squares here
+        M_av_250m_1km = 3;
+        
+        %If using 800m instead of 1km
+        N_av_250m = 2; %Want to get to 200m, but only have 100m data, so use 300m
+        M_av_250m = 2; 
+        N_av_250m_1km = 4; %For 200m to 800m
+        M_av_250m_1km = 4;
+        
+    otherwise
+        %FOr Dycoms the LES resolution is 50m
+        res={'LES','100m','400m','800m'};
+        N_av_250m = 5; %Want to get to 250m and have 50m res
+        M_av_250m = 5; 
+        N_av_250m_1km = 4; %For 250m to 1km
+        M_av_250m_1km = 4;
+        
+        %If using 800m instead of 1km        
+        N_av_250m = 4; %Want to get to 200m and have 50m res
+        M_av_250m = 4; 
+        N_av_250m_1km = 4; %For 200m to 800m
+        M_av_250m_1km = 4;
+        
+end
+
+rt={'1D','3D'};
+
+clear R86_1km N_vals_R86_1km R86_std_1km R21_1km R21_std_1km R86_R21_cov_1km R37_1km R37_std_1km R86_R37_cov_1km Re21_1km Re37_1km tau_1km
+clear R86_1km_250m N_vals_R86_1km_250m R86_std_1km_250m R21_1km_250m R21_std_1km_250m R86_R21_cov_1km_250m R37_1km_250m R37_std_1km_250m R86_R37_cov_1km_250m
+clear Re21 Re37 tau
+
+for ires=1:length(res)
+    res_str = res{ires};
+    switch res_str
+        case 'LES'
+            res_val = 50; %DYCOMS case, LES=50m
+        case '100m'
+            res_val = 100; %ATEX
+    end
+    
+    for irt=1:length(rt)      
+        var_str = [res{ires} '_' rt{irt}]; CM_var_str = ['CM_' var_str];
+        rt_str = rt{irt};
+        %Use only the points where the cloud mask indicates cloud
+%        icloud = find( LES_struct.(CM_var_str) >=1 ); %Changed to >= here since in some files 
+        % (e.g.
+        % Ackerman_DYCOMS2_25bins_dharma_TIME_retrieval_results_sz0.9396.nc
+        % ) the cloud mask file is all 1e36 values - perhaps should not
+        % trust? Still seem to get rerievals where there is no cloud mask -
+        % how can this produce an re value?
+        tau_str = ['Tau_' var_str];
+        tau_read = LES_struct.(tau_str);       
+        tau_str = ['Tau_800m_' rt_str];
+        tau_800m = LES_struct.(tau_str);
+
+        Re21_str = ['Re21_' var_str];
+        re_read = LES_struct.(Re21_str);
+        re_read_800m = LES_struct.(['Re21_800m_' rt_str]);        
+        
+        Re37_str = ['Re37_' var_str];
+        Re37_read = LES_struct.(Re37_str);
+        Re37_800m_read = LES_struct.(['Re37_800m_' rt_str]);
+        
+        R86_str = ['R86_' var_str];
+        R86_read = LES_struct.(R86_str);
+        R21_str = ['R21_' var_str];
+        R21_read = LES_struct.(R21_str);
+        R37_str = ['R37_' var_str];
+        R37_read = LES_struct.(R37_str);
+        %Remove non-sensible values (perhaps occuring due to cloud mask not
+        %working very well).
+        lower_re_thresh=4; %4
+        upper_re_thresh=30; %60; %30
+        lower_tau_thresh=0.3; %4
+        upper_tau_thresh=150; %30        
+        
+        icloud = find( tau_read>=lower_tau_thresh & tau_read<=upper_tau_thresh & re_read>=lower_re_thresh & re_read<=upper_re_thresh); %Trying with tau a re limits
+        inan_800m = find( tau_800m<lower_tau_thresh | tau_800m>upper_tau_thresh | re_read_800m<lower_re_thresh | re_read_800m>upper_re_thresh); %Trying with tau a re limits
+%        inan_800m=[]; %switch off 800m filtering
+        
+        %set up blank (NaN) arrays
+        Re21 = NaN*ones( size(LES_struct.(Re21_str)) );
+        Re37 = Re21;        
+        R86 = Re21;
+        R21 = Re21;
+        R37 = Re21;
+        tau = Re21;
+
+        %Take only the good points
+        Re21(icloud) = re_read(icloud);
+        Re37(icloud) = Re37_read(icloud); 
+        tau(icloud) = tau_read(icloud);  
+        
+        icloud2 = icloud;
+%Trying not screening the LES res values for calculating the H values since
+%in reality the reflectances would be averaged by the instrument before any
+%filtering.
+        icloud2 = [1:size(R86_read(:))];
+        R86(icloud2)=R86_read(icloud2);
+        R21(icloud2)=R21_read(icloud2);
+        R37(icloud2)=R37_read(icloud2);
+        
+
+        
+        %Put all of the values from different resolutions in order in a [nres
+        %nvza] sized array
+        LES_struct.(['mean_Re21_' rt_str '_vs_res'])(ires,:) = MeanNoNan(Re21(:,:),2);
+        LES_struct.(['mean_Re37_' rt_str '_vs_res'])(ires,:) = MeanNoNan(Re37(:,:),2);
+        
+        
+        if ires==1 %Just to std dev and cov for the highest resolution base data
+            for iview=1:size(R86,1)
+                R86_2=squeeze(R86(iview,:,:));
+                R21_2=squeeze(R21(iview,:,:));
+                R37_2=squeeze(R37(iview,:,:));
+                Re21_2=squeeze(Re21(iview,:,:));                
+                Re37_2=squeeze(Re37(iview,:,:));  
+                tau_2=squeeze(tau(iview,:,:));                  
+                
+                N_av = pixel_size/res_val;
+                M_av = N_av;
+                thresh_N = min_cf*N_av*M_av; %require all or a fraction of points to be present for a value to count
+                [R86_1km(iview,:,:),N_vals_R86_1km(iview,:,:),R86_std_1km(iview,:,:),R21_1km(iview,:,:),R21_std_1km(iview,:,:),R86_R21_cov_1km(iview,:,:)]=reduce_matrix_subsample_mean(R86_2,N_av,M_av,'covariance N_threshold',R21_2,thresh_N);
+                [R86_1km(iview,:,:),N_vals_R86_1km(iview,:,:),R86_std_1km(iview,:,:),R37_1km(iview,:,:),R37_std_1km(iview,:,:),R86_R37_cov_1km(iview,:,:)]=reduce_matrix_subsample_mean(R86_2,N_av,M_av,'covariance N_threshold',R37_2,thresh_N);
+
+                [Re21_1km(iview,:,:)]=reduce_matrix_subsample_mean(Re21_2,N_av,M_av,'N_threshold',NaN,thresh_N);                                
+                [Re37_1km(iview,:,:)]=reduce_matrix_subsample_mean(Re37_2,N_av,M_av,'N_threshold',NaN,thresh_N);                
+                [tau_1km(iview,:,:)]=reduce_matrix_subsample_mean(tau_2,N_av,M_av,'N_threshold',NaN,thresh_N);                    
+                
+                
+                %now coarse grain to 250m and see what the variances look
+                %like
+                N_av = N_av_250m; M_av = M_av_250m;
+                thresh_N = min_cf*N_av*M_av;
+                [R86_250m]=reduce_matrix_subsample_mean(R86_2,N_av,M_av,'N_threshold',NaN,thresh_N);
+                [R21_250m]=reduce_matrix_subsample_mean(R21_2,N_av,M_av,'N_threshold',NaN,thresh_N);
+                [R37_250m]=reduce_matrix_subsample_mean(R37_2,N_av,M_av,'N_threshold',NaN,thresh_N);  
+                
+                              
+                
+                % re-calculate the 1km values based on 250m R values
+                N_av = N_av_250m_1km; M_av = M_av_250m_1km;
+                thresh_N = 1*N_av*M_av;
+                [R86_1km_250m(iview,:,:),N_vals_R86_1km_250m(iview,:,:),R86_std_1km_250m(iview,:,:),R21_1km_250m(iview,:,:),R21_std_1km_250m(iview,:,:),R86_R21_cov_1km_250m(iview,:,:)]=reduce_matrix_subsample_mean(R86_250m,N_av,M_av,'covariance N_threshold',R21_250m,thresh_N);
+                [R86_1km_250m(iview,:,:),N_vals_R86_1km_250m(iview,:,:),R86_std_1km_250m(iview,:,:),R37_1km_250m(iview,:,:),R37_std_1km_250m(iview,:,:),R86_R37_cov_1km_250m(iview,:,:)]=reduce_matrix_subsample_mean(R86_250m,N_av,M_av,'covariance N_threshold',R37_250m,thresh_N);                                                                                
+                
+                
+                
+            end
+            
+            R86_1km(inan_800m)=NaN;
+            R86_std_1km(inan_800m)=NaN;
+            R21_1km(inan_800m)=NaN;
+            R21_std_1km(inan_800m)=NaN;
+            R86_R21_cov_1km(inan_800m)=NaN;
+            R37_1km(inan_800m)=NaN;
+            R37_std_1km(inan_800m)=NaN;
+            R86_cov_R37_1km(inan_800m)=NaN;
+            Re21_1km(inan_800m)=NaN;
+            Re37_1km(inan_800m)=NaN;            
+            tau_1km(inan_800m)=NaN;               
+            
+            
+            R86_1km_250m(inan_800m)=NaN;
+            R86_std_1km_250m(inan_800m)=NaN;
+            R21_1km_250m(inan_800m)=NaN;
+            R21_std_1km_250m(inan_800m)=NaN;
+            R86_R21_cov_1km_250m(inan_800m)=NaN;
+            R37_1km_250m(inan_800m)=NaN;
+            R37_std_1km_250m(inan_800m)=NaN;
+            R86_R37_cov_1km_250m(inan_800m)=NaN;
+            
+
+            
+            R86_R21_var_ratio_1km = R86_std_1km.^2 ./ R21_std_1km.^2;
+            R86_R37_var_ratio_1km = R86_std_1km.^2 ./ R37_std_1km.^2;            
+            R86_R21_cov_ratio_1km = R86_std_1km.^2 ./ R86_R21_cov_1km;
+            R86_R37_cov_ratio_1km = R86_std_1km.^2 ./ R86_R37_cov_1km;            
+            
+            R86_R21_var_ratio_1km_250m = R86_std_1km_250m.^2 ./ R21_std_1km_250m.^2;
+            R86_R37_var_ratio_1km_250m = R86_std_1km_250m.^2 ./ R37_std_1km_250m.^2;            
+            R86_R21_cov_ratio_1km_250m = R86_std_1km_250m.^2 ./ R86_R21_cov_1km_250m;
+            R86_R37_cov_ratio_1km_250m = R86_std_1km_250m.^2 ./ R86_R37_cov_1km_250m;             
+            
+            H86_1km = R86_std_1km ./ R86_1km;
+            H21_1km = R21_std_1km ./ R21_1km;            
+            H37_1km = R37_std_1km ./ R37_1km; 
+            Hcov_R86_R21_1km = R86_R21_cov_1km ./ (R86_1km.*R21_1km);
+            Hcov_R86_R37_1km = R86_R37_cov_1km ./ (R86_1km.*R37_1km);   
+            
+            H86_1km_250m = R86_std_1km_250m ./ R86_1km_250m;
+            H21_1km_250m = R21_std_1km_250m ./ R21_1km_250m;            
+            H37_1km_250m = R37_std_1km_250m ./ R37_1km_250m; 
+            Hcov_R86_R21_1km_250m = R86_R21_cov_1km_250m ./ (R86_1km_250m.*R21_1km_250m);
+            Hcov_R86_R37_1km_250m = R86_R37_cov_1km_250m ./ (R86_1km_250m.*R37_1km_250m); 
+            
+            vars_save={'R86_1km','R21_1km','R37_1km','R86_1km_250m','R21_1km_250m','R37_1km_250m'...
+                ,'R86_std_1km','R21_std_1km','R37_std_1km','R86_R21_cov_1km','R86_R37_cov_1km'...
+                ,'R86_std_1km_250m','R21_std_1km_250m','R37_std_1km_250m','R86_R21_cov_1km_250m','R86_R37_cov_1km_250m'...                
+                ,'H86_1km','H21_1km','H37_1km','Hcov_R86_R21_1km','Hcov_R86_R37_1km','H86_1km_250m','H21_1km_250m'...
+                ,'H37_1km_250m','Hcov_R86_R21_1km_250m','Hcov_R86_R37_1km_250m'...
+                ,'R86_R21_var_ratio_1km','R86_R37_var_ratio_1km','R86_R21_cov_ratio_1km'...
+                ,'R86_R37_cov_ratio_1km','R86_R21_var_ratio_1km_250m','R86_R37_var_ratio_1km_250m'...
+                ,'R86_R21_cov_ratio_1km_250m','R86_R37_cov_ratio_1km_250m'...
+                ,'Re21_1km','Re37_1km','tau_1km'};
+            
+            for ivars_save=1:length(vars_save)
+                LES_struct.([vars_save{ivars_save} '_' rt_str]) = eval(vars_save{ivars_save}); 
+                LES_struct.(['mean_' vars_save{ivars_save} '_' rt_str '_vs_res'])(ires,:) = eval(['MeanNoNan(' vars_save{ivars_save} '(:,:),2);']);
+            end
+            
+            
+%            LES_struct.(['mean_R86_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(R86_1km(:,:),2);
+%            LES_struct.(['mean_R21_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(R21_1km(:,:),2);
+%            LES_struct.(['mean_R37_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(R37_1km(:,:),2);            
+%            LES_struct.(['mean_R86_std_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(R86_std_1km(:,:),2);
+%            LES_struct.(['mean_R21_std_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(R21_std_1km(:,:),2);
+%            LES_struct.(['mean_R37_std_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(R37_std_1km(:,:),2);
+%            LES_struct.(['mean_R86_R21_cov_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(cov_R86_R21_1km(:,:),2);
+%            LES_struct.(['mean_R86_R37_cov_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(cov_R86_R37_1km(:,:),2);
+            
+%            LES_struct.(['mean_H86_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(H86_1km(:,:),2);
+%            LES_struct.(['mean_H21_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(H21_1km(:,:),2);
+%            LES_struct.(['mean_H37_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(H37_1km(:,:),2);
+%            LES_struct.(['mean_R86_R21_Hcov_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(Hcov_R86_R21_1km(:,:),2);                        
+%            LES_struct.(['mean_R86_R37_Hcov_1km_' rt_str '_vs_res'])(ires,:) = MeanNoNan(Hcov_R86_R37_1km(:,:),2);            
+
+%            LES_struct.(['mean_R86_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(R86_1km_250m(:,:),2);
+%            LES_struct.(['mean_R21_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(R21_1km_250m(:,:),2);
+%            LES_struct.(['mean_R37_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(R37_1km_250m(:,:),2);            
+%            LES_struct.(['mean_R86_std_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(R86_std_1km_250m(:,:),2);
+%            LES_struct.(['mean_R21_std_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(R21_std_1km_250m(:,:),2);
+%            LES_struct.(['mean_R37_std_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(R37_std_1km_250m(:,:),2);            
+%            LES_struct.(['mean_R86_R21_cov_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(cov_R86_R21_1km_250m(:,:),2);
+%            LES_struct.(['mean_R86_R37_cov_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(cov_R86_R37_1km_250m(:,:),2);
+            
+%            LES_struct.(['mean_H86_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(H86_1km_250m(:,:),2);
+%            LES_struct.(['mean_H21_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(H21_1km_250m(:,:),2);
+%            LES_struct.(['mean_H37_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(H37_1km_250m(:,:),2);            
+%            LES_struct.(['mean_R86_R21_Hcov_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(Hcov_R86_R21_1km_250m(:,:),2);                        
+%            LES_struct.(['mean_R86_R37_Hcov_1km_250m_' rt_str '_vs_res'])(ires,:) = MeanNoNan(Hcov_R86_R37_1km_250m(:,:),2);                        
+
+
+        
+        end
+        
+          
+            Re21 = squeeze(Re21); 
+            Re37 = squeeze(Re37); 
+            tau = squeeze(tau); 
+            
+            vars_save={'Re21','Re37','tau'};
+            
+
+            
+            for ivars_save=1:length(vars_save)
+                LES_struct.([vars_save{ivars_save} '_' res_str '_' rt_str]) = eval(vars_save{ivars_save}); 
+                LES_struct.(['mean_' vars_save{ivars_save} '_' rt_str '_vs_res'])(ires,:) = eval(['MeanNoNan(' vars_save{ivars_save} '(:,:),2);']);
+            end
+            
+            %Don't need to NaN here since they have alraedy been made NaN
+            %based upon the current resolution retrievals
+            %in the Re21(icloud) = re_read(icloud) stage
+%             if ires==length(res)  %Get the 800m MODIS-like retrievals
+%                 eval(['LES_struct.Re21_800m_' rt_str '(inan_800m)=NaN;']);
+%                 eval(['LES_struct.Re37_800m_' rt_str '(inan_800m)=NaN;']);
+%                 eval(['LES_struct.tau_800m_' rt_str '(inan_800m)=NaN;']);
+%             end
+            
+
+        
+
+%         re(re<lower_re_thresh)=NaN;
+%         re(re>upper_re_thresh)=NaN;
+%         LES_struct.(['mean_' re21_str]) = MeanNoNan(re(:,:),2);
+%       %3.7 um
+%         Re37_str = ['Re37_' var_str];
+%         re = NaN*ones( size(LES_struct.(Re37_str)) );
+%         re(icloud)=LES_struct.(Re37_str)(icloud);        
+%         LES_struct.(['mean_' Re37_str]) = MeanNoNan(re(:,:),2);  
+        
+        %Put all of the values from different resolutions in order in a [nres
+        %nvza] sized array
+%        LES_struct.(['mean_Re21_' rt_str '_vs_res'])(ires,:) = LES_struct.(['mean_' re21_str]);
+%        LES_struct.(['mean_Re37_' rt_str '_vs_res'])(ires,:) = LES_struct.(['mean_' Re37_str]);
+    
+                
+    end  
+    
+
+      
+end
+        
+
+
+% eval(['mean_Re21_3D_' filetag ' = NaN*ones([1 4]);']);
+% eval(['mean_Re21_1D_' filetag ' = NaN*ones([1 4]);']);
+
+
+
+% icloud = eval(['find(CM_100m_3D_' filetag '==1);']);
+% Re21_100m_3D = NaN*ones(size(eval(['Re' wavelength '_100m_3D_' filetag])));
+% Re21_100m_3D(icloud)=eval(['Re21_100m_3D_' filetag '(icloud);']);
+% 
+% icloud = eval(['find(CM_100m_1D_' filetag '==1);']);
+% Re21_100m_1D = NaN*ones(size(eval(['Re21_100m_1D_' filetag])));
+% Re21_100m_1D(icloud)=eval(['Re21_100m_1D_' filetag '(icloud);']);
+% 
+% icloud = eval(['find(CM_400m_3D_' filetag '==1);']);
+% Re21_400m_3D = NaN*ones(size(eval(['Re21_400m_3D_' filetag])));
+% Re21_400m_3D(icloud)=eval(['Re21_400m_3D_' filetag '(icloud);']);
+% 
+% icloud = eval(['find(CM_400m_1D_' filetag '==1);']);
+% Re21_400m_1D = NaN*ones(size(eval(['Re21_400m_1D_' filetag])));
+% Re21_400m_1D(icloud)=eval(['Re21_400m_1D_' filetag '(icloud);']);
+% 
+% icloud = eval(['find(CM_800m_3D_' filetag '==1);']);
+% Re21_800m_3D = NaN*ones(size(eval(['Re21_800m_3D_' filetag])));
+% Re21_800m_3D(icloud)=eval(['Re21_800m_3D_' filetag '(icloud);']);
+% 
+% icloud = eval(['find(CM_800m_1D_' filetag '==1);']);
+% Re21_800m_1D = NaN*ones(size(eval(['Re21_800m_1D_' filetag])));
+% Re21_800m_1D(icloud)=eval(['Re21_800m_1D_' filetag '(icloud);']);
+% 
+% eval(['mean_Re21_3D_' filetag ' = NaN*ones([1 4]);']);
+% eval(['mean_Re21_1D_' filetag ' = NaN*ones([1 4]);']);

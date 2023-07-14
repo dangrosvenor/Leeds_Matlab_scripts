@@ -1,0 +1,184 @@
+function [p_i,q,ppmv_out]=SatVapPress(T,flag,flag2,P,ppmv);
+%gives saturation vapour pressure in Pa
+%usage: SatVapPress(T,flag,flag2,P,ppmv); P in Pa, T in K
+%flag= e.g. 'goff', flag2= 'ice' or 'liq'
+%pressure input only required if want sat mixing ratio in ppmv
+%then set ppmv=1 (optional flag)
+%available methods:
+%ice: 'buck2' 'buck' 'goff' 'marti' 'teten' 'hyland' 'murphy' case 'lem'
+%liq: 'goff' 'bolton' 'roger''buck2' 'buck1' 'wmo' 'hyland' 'sonntag' 'teten', 'mesonh'
+
+
+f=1e6*28.97/18; %conversion between MR and ppmv - use 18 for water vapour and 48 for ozone. Or f=1e6/eps where eps=0.622
+
+
+
+switch lower(flag2)
+    
+case 'ice'
+    
+    switch lower(flag)
+        
+    case 'buck2'
+        
+        p_i = 100.*6.1115 .* exp((23.036 - (T-273)./ 333.7) .*(T-273) ./ (279.82 + (T-273)))  ;
+        
+    case 'buck'
+        
+        p_i = 100.*6.1115 .* exp(22.452 .* (T-273) ./ (272.55+(T-273)));  
+        
+        
+        
+    case 'goff'
+        
+        p_i =  100.*10.^(-9.09718.* (273.16./T - 1) ...                                 
+            - 3.56654 .*log10(273.16./ T) ...
+            + 0.876793 .*(1 - T./ 273.16) ...
+            + log10(6.1071) );
+        
+        
+        
+    case 'marti'
+        
+        p_i = 10.^((-2663.5 ./ T) + 12.537 );   
+        
+    case 'teten'
+        
+        p_i = 100.*10.^(9.5 .*(T-273) ./ (T-273+265.5) + 0.7858  ) ;  
+        
+    case 'hyland'
+        
+        p_i =  exp(-0.56745359e4 ./ T     ...                                            
+            + 0.63925247e1 ...
+            - 0.96778430e-2 .*T ...   
+        + 0.62215701e-6 .*T.^2 ...   
+        + 0.20747825e-8 .*T.^3 ...  
+        - 0.94840240e-12 .*T.^4 ...  
+        + 0.41635019e1 .*log(T) );
+        
+    case 'murphy'
+        
+        p_i = exp(9.554605 - 5722.796./T + 3.5291623.*log(T) - 0.00727374.*T);
+        
+    case 'lem'
+        p_i=3.8./(P/100.*exp(-21.8745584*(T-273.15)./(T-7.66))-6.109).*P*28.97/18;
+        
+    
+        
+    otherwise
+        
+        error('invalid');
+        
+    end
+    
+case 'liq'
+    
+    switch lower(flag)
+        
+        case 'rob'
+            t0=273.16;
+            log10esw=10.79574*(1-t0./T)-5.028*log10(T./t0)+1.50475e-4.*(1-10.^(-8.2369.*(T./t0-1)))+0.42873e-3.*(10.^(4.76955.*(1-t0./T))-1)+2.78614;
+            p_i=10.^(log10esw);
+            
+         case 'c-c'
+            R=287.04;    
+            L=2.5e6;
+            tref=273.16;
+            e_ref = 611.1390;
+            p_i = e_ref * exp(L/R*(1./tref-1./T));
+
+        
+    case 'goff'
+        
+        p_i =  100.*10.^(-7.90298 .*(373.16./T-1)    ...                        
+        + 5.02808 .*log10(373.16./T) ...   
+        - 1.3816e-7 .*(10.^(11.344 .*(1-T./373.16))  -1) ...  
+        + 8.1328e-3 .*(10.^(-3.49149 .*(373.16./T-1))  -1) ...  
+        + log10(1013.246) );
+        
+        
+        
+    case 'bolton'
+        
+        p_i = 100.*6.112 .*exp(17.67 .* (T-273) ./ (T-273+243.5));
+        
+    case 'roger'
+        
+        p_i = 2.53e11 * exp(-5.42e3./(T));
+        
+    case 'buck2'
+        
+        p_i = 100.*6.1121  .*exp((18.678 - (T-273.15)./ 234.5).* (T-273.15) ./ (257.14 + (T-273.15)));
+        
+    case 'buck1'
+        
+        p_i = 100.*6.1121 .*exp(17.502 .*(T-273)./ (240.97 + T-273));
+        
+        
+        
+    case 'wmo'
+        
+        p_i = 100.*10.^( 10.79574 .*(1-273.16./T)        ...                        
+        - 5.02800 .*log10(T./273.16) ...  
+        + 1.50475e-4 .*(1 - 10.*(-8.2969.*(T./273.16-1))) ...
+        + 0.42873e-3 .*(10.*(+4.76955.*(1-273.16./T)) - 1) ...  
+        + 0.78614 );
+        
+    case 'hyland'
+        
+        p_i =  exp(-0.58002206e4 ./ T  ...                                       
+        + 0.13914993e1 ...   
+        - 0.48640239e-1 .* T ... 
+        + 0.41764768e-4 .* T.^2 ...   
+        - 0.14452093e-7 .* T.^3 ...   
+        + 0.65459673e1 .* log(T)); 
+        
+        
+        
+    case 'sonntag'
+        
+        p_i =  100.*exp(-6096.9385 ./ T  ...                          
+        + 16.635794 ...   
+        - 2.711193e-2 .* T ...   
+        + 1.673952e-5 .* T.^2 ...   
+        + 2.433502 .* log(T)); 
+        
+    case 'teten'
+        
+        p_i = 100.*10.^(7.5 .*(T-273) ./ (T-273+237.3) + 0.7858  ) ;  
+        
+    case 'mesonh'
+        RV=461.525;
+		CPV=4*RV;	% 
+		CL=4218;	% 
+		Tt=273.16;
+		LvTt=2.5008e6;
+		LsTt=2.8345e6;
+		esTt=611.4; %Pa
+		
+		
+		LvT=LvTt + (CPV - CL) * (T - Tt);
+		gw  = (CL - CPV) / RV;
+		bw  = LvTt/RV + gw * Tt;
+		alw = log(esTt) + bw/Tt + gw*log(Tt);
+		
+		p_i = exp(alw - bw/T - gw*log(T) );
+        
+        
+    otherwise
+        
+        error('invalid');
+        
+    end
+    
+end 
+
+if exist('ppmv')
+if ppmv==1
+    p_i=f*0.622*p_i./(P-p_i);
+end
+end
+
+ppmv_out = f*0.622*p_i./(P-p_i);
+q = ppmv_out/f;
+

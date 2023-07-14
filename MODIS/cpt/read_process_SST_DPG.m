@@ -1,0 +1,32 @@
+function[]=read_process_SST_DPG()
+% fn='sst.wkmean.1990-present.nc';
+fn='/home/disk/eos15/d.grosvenor/SSTs/sst.wkmean.1990-present.nc';
+%fn='sst.mnmean.nc';
+[SST]=ncread(fn,'sst');
+lat=ncread(fn,'lat');
+lon=ncread(fn,'lon');
+time=ncread(fn,'time');
+%lsmask=ncread('lsmask.nc','mask');
+%icec=ncread('icec.mnmean.nc','icec');
+%timeice=ncread('icec.mnmean.nc','time');
+%save('SST')
+lon(lon>180)=lon(lon>180)-360;
+%% first, we go through and get the times
+
+%addpath ~/research/scripts/ %copied McCoy's dayssince2doy script to /home/disk/eos1/d.grosvenor/matlab/work/peoplesScripts/
+doy=time*NaN;
+YMD=[time time time]*NaN;
+
+for i=1:length(time)
+[doy(i),YMD(i,:),decy(i)]=dayssince2doy(time(i),[1800 1 0]);
+end
+% for i=1:length(timeice)
+% [doyice(i),YMDice(i,:),decyice(i)]=dayssince2doy(timeice(i),[1800 1 0]);
+% end
+%%save('SSTMON')
+
+%DPG - added this - not sure where it originally came from n McCoy's SST2 file??
+time_matlab = time + datenum('01-Jan-1800');
+
+save('/home/disk/eos15/d.grosvenor/SSTs/SST2.mat');
+end

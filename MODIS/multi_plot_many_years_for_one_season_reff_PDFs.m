@@ -1,0 +1,411 @@
+%Load in the timeseries3 data for each year and plot one (or several) month(s) for each
+%year
+%% N.B. The region loaded in is restricted in load_saved_modis_vars and not
+% overridden by their driver script as yet
+
+%% PDF script settings
+% -- For other option setting see inside the loops
+pdf_type_driver='normal';
+%pdf_type_driver='cumulative';
+
+logbin_norm_driver = 0;
+i_plot_norm_driver=1; %Whether to normalise
+i_div_bin_widths_driver=1;  %whether to divide by the bin widths (also normalises)
+
+i_ocean_only_DRIVER = 0; %Flag to restrict to ocen only regions as determined by the cloud mask in
+% ~/amsre_land_mask.mat  This uses whether there was an AMSRE retrieval
+% over the period 2006-2010
+
+
+%% Other settings
+i_ocean_only_SCREEN = 1; %Whether to only include ocean regions.
+iload_DRIVER=1;  %Prevents loading (for testing purposes, e.g. if have alrady loaded)
+ijust_final_plot = 0;  %Flag to tell it to just do the final plot without re-calculating/re-loading, etc.
+
+%latest_or_earliest='latest'; %only required if ploting case 'Latest or earliest day after screening'
+
+
+if ijust_final_plot==0
+    
+%% Set location  - have not implemented this yet - but the idea was to
+% eval these strings - held off because perhaps is more important to
+% exclude land points, etc. first. Also sea-ice. SZA screening will also do
+% some of the work excluding some regions
+        iloc=1;
+        loc_str{iloc} = ['thresh_LAT = [40 90];  thresh_LON = [-180 180]; lon_ticks=[-40:5:10]; lat_ticks=[40:10:90]; %Iceland volcano (Jan 2015)']; iloc=iloc+1;
+        loc_str{iloc} = ['thresh_LAT = [40 90];  thresh_LON = [-180 180]; lon_ticks=[-40:5:10]; lat_ticks=[40:10:90]; %Iceland volcano (Jan 2015)']; iloc=iloc+1;        
+        
+
+%% Set time
+        set_month = {9,10}; %Choose required months
+        set_year = {'y2007_TERRA','y2008_TERRA'}; %
+        
+        set_month = {9}; %Choose required months  - pprob just run for one month at a time for many years for this one
+         %With set_year can put aqua and terra together
+        set_year = {{'y2002_TERRA','y2002_AQUA'},{'y2007_TERRA','y2007_AQUA'}}; %
+        
+        set_month = {9,10}; %Choose required months  - prob just run for one month at a time for many years for this one
+         %With set_year can put aqua and terra together
+        set_year = {{'y2000_TERRA'},{'y2001_TERRA'}}; %
+        years=[2002:2014];
+        for iy=1:length(years)
+           year_cell = {['y' num2str(years(iy)) '_TERRA'],['y' num2str(years(iy)) '_AQUA']};
+           set_year{iy+2} = year_cell; 
+        end
+        
+
+
+%        modis_data_plots={'Number of droplets cell values time mean - specific days'}; 
+%        modis_data_plots={'Latest or earliest day after screening'};
+         modis_data_plots={'Dummy'};   
+        
+%        zero_CF_out_of_range=0;
+%        time_mean_str ='ALL';
+%        cont_dat_choose = 'calipso mid+highCF';
+
+%% Set screening
+        set_screening = {'none','NP + CF_L3, no iceCF allowed + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH with no zeroCF screening + sigCTT +sigW'};
+        set_screening = {'none','NP + CF_L3, no iceCF allowed + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH with no zeroCF screening + sigCTT +sigW'};
+        set_screening = {'none'};
+        
+        set_screening = {'none',...
+            'NP + CF_L3, no iceCF allowed + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH with no zeroCF screening + sigCTT +sigW',...
+            'NP + CF_L3, no iceCF allowed + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH with no zeroCF screening + sigCTT +sigW',...
+            'NP + CF_L3, no iceCF allowed + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH with no zeroCF screening + sigCTT +sigW',...
+            'NP + CF_L3, no iceCF allowed + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH with no zeroCF screening + sigCTT +sigW',...
+            'NP + CF_L3, ice CF allowed + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH with no zeroCF screening + sigCTT +sigW + reff',...
+            'NP + CF_L3, ice CF allowed + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH with no zeroCF screening + sigCTT +sigW + reff',...
+            'NP + CF_L3, ice CF allowed + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH with no zeroCF screening + sigCTT +sigW + reff',...
+            'NP + CF_L3, ice CF allowed + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH with no zeroCF screening + sigCTT +sigW + reff',...
+            };
+        
+        thresh_ndays=100; %threshold no. days 
+        thresh_SZA=[0 90];
+        thresh_SZA=[0 70];
+        thresh_SZA_multi={[0 90],[0 90],[0 90],[0 70],[0 70],[0 90],[0 90],[0 70],[0 70]};
+
+        thresh_CF=[0.8 1.00001];
+        thresh_CF=[0.0 1.00001];     
+        
+        thresh_NP=50;
+        thresh_sensZA=[0 90];    
+        thresh_CTT = [173 273+100]; 
+        thresh_CTT_multi = {[173 273+100],[173 273+100],[268 273+100],[173 273+100],[268 273+100],[173 273+100],[268 273+100],[173 273+100],[268 273+100]};
+
+        thresh_relAZ = [0 180];         
+        thresh_CTH = [-0.01 3.2];
+        thresh_CTH = [-0.01 1e9];
+        
+        thresh_stdW = [0 1e9];
+        thresh_sigCTT = [0 1e9];
+        
+        thresh_reff=[0 30];
+        
+        
+        
+        
+        
+        ifilter_ndays=0;
+        
+        inew_cticks=1;  %If setting to =1 then set iset_min and max below to =0
+        
+        iset_min_clim=0;
+        clim_min=20;
+        iset_max_clim=0;
+%        clim_max=225;
+        clim_max=150;
+        
+%         plot_num_datapoints=1;
+%         inew_cticks=0;
+%         iset_min_clim=1;
+%         clim_min=0;
+%         iset_max_clim=1;
+%         clim_max=15;
+ 
+%          plot_num_datapoints=0;
+%          inew_cticks=0;
+%          iset_min_clim=1;
+%          clim_min=274;
+%          iset_max_clim=1;
+%          clim_max=303;
+
+        
+
+        
+        
+        clear RMSE_DRIVER mean_bias_DRIVER Psave 
+        clear xdat_import ydat_import ydat_import_save
+
+        
+        idat_driver=0;             
+        
+        for iloop_plot=1:length(modis_data_plots)
+            modis_data_plot = modis_data_plots{iloop_plot};
+
+           
+                
+                for iloop_year=1:length(set_year)
+                    icount_plot = 0; %counter for which plot the line belongs to  (different plot of each screening and month)
+                    idat_driver = idat_driver + 1;
+                    
+                    %% Load in the data for the required year
+
+  %Can prevent loading to save time when testing here
+if iload_DRIVER==1
+
+                        i_multi_year_av=0; %flag for load_saved_modis_vars.m
+                        data_type='L3 processed data';
+                        override_loadsave=1;
+                        L3_case = 'override';
+                        savemem=-1;
+                        modis_vars_script_name='modis_var_L3_variables_usual_screening';
+                        
+
+                        clear modis_data_case
+                        modis_data_case_choose= set_year{iloop_year};
+                        s='Y'; 
+                        
+                       %Run the load script 
+                       load_saved_modis_vars_20150130
+                       
+end
+                    
+                     for iscreen_set=1:length(set_screening)
+                %screen_type = set_screening{iscreen_set};  %This needs to
+                %be set after pdf2D_defaults 
+                   
+                          
+                          
+
+            
+                  for iloop_MOD=1:length(set_month)
+                      month_modis = set_month{iloop_MOD}                                                                 
+
+                      icount_plot = icount_plot + 1;
+                      
+
+                        
+%% Now plot
+
+   %Get the data
+                     %Pick out the correct day nunbers of the month in
+                     %question
+                     [days_required_for_mean,time_mean_str] = days_of_month(month_modis); 
+                     ioverride_time_selection=1;
+                     
+                     
+%                     Y_driver = Cloud_Top_Temperature_Day_Mean.timeseries3(:,:,:); var_str_DRIVER='CTT';
+                     Y_driver = Cloud_Effective_Radius_Liquid_Mean.timeseries3(:,:,:);  var_str_DRIVER='reff';  
+                     %var_str_DRIVER is just for the figure name for saving
+                     
+%                      if i_ocean_only_DRIVER == 1
+%                          load('~/amsre_land_mask.mat');
+%                          landmask3D = repmat(amsre_land_mask,[1 1 size(Y_driver,3)]);
+%                          Y_driver(isnan(landmask3D)) = NaN;
+%                      end
+                     
+                     LAT = LAT_MODIS;
+                     LON = LON_MODIS;
+                     LAT_val = thresh_LAT; %set in DRIVER
+                     LON_val = thresh_LON;
+                     
+                     
+% ----- Set various things
+
+          
+         
+%        mod_data_type='AMSRE';
+        gcm_str_select='MODIS';
+        gcm_str='MODIS';
+       
+%        month_amsre = goes_month;
+%        year_amsre = goes_year;
+
+        
+        
+        %--- run the file to set up the defaults
+%        plot_global_maps_defaults   
+         watervap_defaults
+         pdf2D_defaults
+         
+        
+        %--- set some options for these particular plot loops
+%        set_screening = {'none'};
+         screen_type = set_screening{iscreen_set};  %This needs to be set after pdf2D_defaults
+         thresh_SZA = thresh_SZA_multi{iscreen_set}; %Also set up the thresholds for ones that are set up for this
+         thresh_CTT = thresh_CTT_multi{iscreen_set};
+         
+         
+%        modis_data_plot = 'Map of 2D data from outside driver script';
+        i577 = 'MODIS_plot_UW';
+
+        
+        logflag=0;
+        dlogflag=0;
+        
+        
+        
+% -- Options for pdf2D_plot_commands
+         x_axis_vals = 'Dummy data'; %dummy data
+        y_axis_vals = 'General GCM-style';  %Uses Y=Y_driver and the location slelection using the 4D array (+a method)
+        y_axis_vals = 'General y-axis'; %Uses ilat,ilon,itime
+        
+        ylabelstr='';
+        
+%        Ybins = [-0.01 30:10:2500]; ichoose_Ybins=1;
+%        Ybins = [-0.01 10.^[log10(30):0.1:log10(2500)]]; ichoose_Ybins=1;
+        Ybins = [0:0.2:30]; ichoose_Ybins=1;
+        
+        graph = 977; %new 1D PDF from 2D histo data - can choose either axis
+                                %(for watervap)
+                                
+          axis1D = 'y';                                
+                                
+          logbin_norm = logbin_norm_driver;
+          i_plot_norm=i_plot_norm_driver;
+          i_div_bin_widths=i_div_bin_widths_driver;
+          pdf_type = pdf_type_driver;
+                                
+%        gcm_str = gcm_str_last_loaded;        
+
+        
+ % --------- Override flags for 2D PDF --------
+        ioverride_pdf=1;
+        %iocean_only=1;
+        man_choose_plotTimeHeight_graph=1;
+        ioverride_location_selection=1;
+        ioverride_pdf_varchoose = 1;
+
+        % --------- Override flags for watervap --------
+        man_choose_water_graph=1;    %for watervap 
+        
+        %---  Run plot script and save
+        plotTimeHeightVap3
+        close(gcf);
+        waterVapourMay2005
+        close(gcf);
+        
+        %store the PDF data
+         switch pdf_type_driver
+            case 'normal'
+                ydat_import_save{icount_plot}(idat_driver) = ydat_norm; %Use the non-cumulative PDF data
+                xdat_import_save{icount_plot}(idat_driver) = xdat_norm;
+            case 'cumulative'
+                ydat_import_save{icount_plot}(idat_driver) = ydat_cum;
+                xdat_import_save{icount_plot}(idat_driver) = xdat_cum;
+        end
+       
+        labs_import_save{icount_plot}(idat_driver).l = remove_problem_chars(set_year{iloop_year}{1}(1:5));
+        xlab_import_save{icount_plot} = xlab;
+        ylab_import_save{icount_plot} = ylab;
+%        ioverride_savePDF=1;
+%        save_1D_pdfs;
+
+        titlenam_save{icount_plot} = [time_mean_str var_str_DRIVER 'PDFs multiple years ' thresh_str];
+
+        
+                     
+                     
+
+
+                      
+                       if isave_plot==1
+%                          saveas_ps_fig_emf(gcf,[savename],'',0,1);
+                      end
+
+                  end
+
+            end
+        
+            end
+        
+        end
+        
+        
+end %if ijust_final_plot == 0
+           
+        if isave_vals==1
+            fprintf(fid_mtab,'\n');
+            fprintf(fid_Rtab,'\n');
+        end
+
+     
+        
+        if isave_vals==1
+            fclose(fid_mtab);
+            fclose(fid_Rtab);
+        end
+        
+%        save(save_file,'modis_data_plots','set_screening','set_month','set_year','Psave','mean_bias_DRIVER','RMSE_DRIVER')
+
+
+%% ------------------------------
+% ------ plot the combined PDF using case 0 of watervap --------
+% ------------------------------
+
+for icount_plot=1:length(ydat_import_save)
+    
+       
+    ydat_import = ydat_import_save{icount_plot};
+    xdat_import = xdat_import_save{icount_plot};
+
+
+
+    labs_import = labs_import_save{icount_plot}
+    xlab_import = xlab_import_save{icount_plot};
+    ylab_import = ylab_import_save{icount_plot}; 
+    
+    titlenam = titlenam_save{icount_plot}; 
+    
+    
+
+%--- run the file to set up the defaults
+watervap_defaults
+
+%--- set some options for this particular plot
+graph=0; %graph choice in watervap
+xlab='r_e (\mum)';
+ylab = ylab_import;
+xlims=0;
+xlimits=[0 100];
+
+izlim=0;
+zmin=1500;
+zmax=3000;
+
+lor=-1; %1=top-right, 2=top-left 0=auto, 3=lower left, 4=lower right, -1=on the right of plot pane
+nmark=-1; %-1 means that all points have markers. Otherwise only plot the number specified.
+
+
+
+%idate_ticks_fix=1;
+%iaxis_square=0; %switch to make axis square
+
+%istyle=0;
+%       line_pattern(istyle).p= '-';  line_colour(istyle).c=[1 0.7 0.7]; marker_style(istyle).m='o'; line_widths(istyle).l = 2;istyle=istyle+1;
+%        line_pattern(istyle).p= '--'; line_colour(istyle).c=[1 0.7 0.7]; marker_style(istyle).m='^'; line_widths(istyle).l = 2;istyle=istyle+1;
+%        line_pattern(istyle).p= '-';  line_colour(istyle).c=[0 0 1]; marker_style(istyle).m='o'; line_widths(istyle).l = 2;istyle=istyle+1;
+%        line_pattern(istyle).p= '--'; line_colour(istyle).c=[0 0 1]; marker_style(istyle).m='^'; line_widths(istyle).l = 2;istyle=istyle+1;
+%        line_pattern(istyle).p= '-';  line_colour(istyle).c=[1 0 0]; marker_style(istyle).m='o'; line_widths(istyle).l = 2;istyle=istyle+1;
+
+%Make all of the lines quite faint except for 2014 to see if it lookos much
+%different from the other years
+ichoose_styles=1; %flag to say whether we want to specifiy the specific line patterns and colours
+for istyle=1:length(xdat_import)
+       line_pattern(istyle).p= '-';  line_colour(istyle).c=[0.7 0.7 0.7]; marker_style(istyle).m='none'; line_widths(istyle).l = 0.5;
+end
+
+istyle=15;
+line_pattern(istyle).p= '-';  line_colour(istyle).c=[0 0 0]; marker_style(istyle).m='none'; line_widths(istyle).l = 4;
+
+
+
+           
+    
+    %---  Main script to do plots and save
+    DRIVER_lineplot_watervap %saving done in here if set
+end
+
+
+
+

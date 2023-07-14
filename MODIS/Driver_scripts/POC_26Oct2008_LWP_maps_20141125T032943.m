@@ -1,0 +1,177 @@
+% LWP map plots for all times for UM
+isave_plot_driver=0;
+savedir_driver='/home/disk/eos1/d.grosvenor/modis_work/plots/UM/';
+
+
+icoarse = 1; %flag for whether to degrade the UM resolution to that of GOES
+
+time_select = 'ALL';
+time_select = datenum('26-Oct-2008 17:00');
+%time_select = datenum('28-Oct-2008 11:00');
+
+% -- For option setting also see inside the loops
+
+for idat=1:99
+    flag{idat} = 'load_UM';
+end
+
+
+%--- Load and process the data
+dirUM='/home/disk/eos8/d.grosvenor/UM/26thOct_POC/';
+%dirUM='/home/disk/eos1/d.grosvenor/UM/12Nov2008_Boutle/';
+clear fileUM xdat_import ydat_import
+idat=1;
+% %fileUM{idat} = 'xkqkh_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkh) 100cm^{-3}'; pole_lat=70; pole_lon=278; idat=idat+1;
+% %fileUM{idat} = 'xkqkj_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkj) 400cm^{-3}'; pole_lat=70; pole_lon=278; idat=idat+1;
+% %fileUM{idat} = 'xkqkk_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkk) 400cm^{-3} RHcrit=0.7'; pole_lat=70; pole_lon=278; idat=idat+1;
+% fileUM{idat} = 'xkqkl_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkl) 1000cm^{-3} RHcrit=0.7'; pole_lat=70; pole_lon=278; idat=idat+1;
+% %fileUM{idat} = 'xkmph_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkmph)'; pole_lat=70; pole_lon=284; idat=idat+1;
+
+% fileUM{idat} = 'xkqkh_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkh) 100cm^{-3}'; pole_lat=70; pole_lon=278; idat=idat+1;
+% fileUM{idat} = 'xkqkj_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkj) 400cm^{-3}';  pole_lat=70; pole_lon=278;idat=idat+1;
+% fileUM{idat} = 'xkqkk_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkk) 400cm^{-3} RHcrit=0.7'; pole_lat=70; pole_lon=278; idat=idat+1;
+%fileUM{idat} = 'xkqkl_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkl) 1000cm^{-3} RHcrit=0.7'; pole_lat=70; pole_lon=278; idat=idat+1;
+fileUM{idat} = 'xkqko_LWP_RWP_.pp.nc'; labs_import(idat).l = '100cm^{-3} RHcrit=0.7'; pole_lat=70; pole_lon=278; idat=idat+1;
+% fileUM{idat} = 'xkqkq_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkq) 100cm^{-3} No cloud-scheme'; pole_lat=70; pole_lon=278;idat=idat+1;
+%5 fileUM{idat} = 'xkqkr_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkr) 1000cm^{-3} No cloud-scheme';pole_lat=70; pole_lon=278; idat=idat+1;
+% fileUM{idat} = 'xkqkf_qL_qR_.pp.nc.mat'; labs_import(idat).l = '(xkqkf) 1000cm^{-3} Old mphys'; flag{idat}='load_mat'; fileUM_rho{idat} = 'xkqkf_rho_.pp.nc'; pole_lat=70; pole_lon=278; idat=idat+1;
+%fileUM{idat} = 'xkqkw_LWP_RWP_.pp.nc'; labs_import(idat).l = '10cm^{-3} RHcrit=0.8'; pole_lat=70; pole_lon=278; idat=idat+1;
+%fileUM{idat} = 'xkqkv_LWP_RWP_.pp.nc'; labs_import(idat).l = '100cm^{-3} RHcrit=0.8'; pole_lat=70; pole_lon=278; idat=idat+1;
+%fileUM{idat} = 'xkqkx_LWP_RWP_.pp.nc'; labs_import(idat).l = '10cm^{-3} RHcrit=0.7'; pole_lat=70; pole_lon=278; idat=idat+1;
+
+
+for idat=1:length(fileUM)
+    filename = [dirUM fileUM{idat}];
+    
+    %Read in all the times in case we want to use them all
+%    [nc,time_driver,gcm_Plat2D_UM,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM,it,daynum_timeseries3_UM,modisyear_timeseries3_UM,gcm_time_UTC_UM,gcm_time_matlab_UM] = read_UM_file(filename,[],pole_lat,pole_lon);
+    
+    clear vars_in    
+    vars_in.var = 'LWP';
+    vars_in.flag = flag{idat};
+    vars_in.file_lwp = filename;
+    vars_in.file_rho = ''; %filename_rho;
+    vars_in.pole_lat = pole_lat;
+    vars_in.pole_lon = pole_lon;
+    vars_in.time_in = [];
+
+    [lwp,time_matlab,gcm_Plat2D_UM,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM,it,daynum_timeseries3_UM,modisyear_timeseries3_UM,gcm_time_UTC_UM,gcm_time_matlab_UM] = get_LWP_RWP_UM(vars_in);
+   
+    if isstr(time_select)==1 & strcmp(time_select,'ALL')==1
+       time_select = time_matlab; 
+    end
+    
+%    nt_driver=length(time_driver);        
+    for it_driver=1:length(time_select)   %1:nt_driver
+        %--- run the file to set up the defaults
+        plot_global_maps_defaults   
+        
+        %--- set some options for these particular plot loops
+        set_screening = {'none'};
+        modis_data_plot = 'Map of 2D data from outside driver script';
+
+        iset_min_clim=1;
+        clim_min=0;
+        iset_max_clim=1;
+        clim_max=200;
+        
+
+        
+        %Calculate the data to plot
+         %repeat the read-in to get the specific time
+         time = time_select(it_driver);
+%        [nc,time_out,gcm_Plat2D_UM,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM,it,daynum_timeseries3_UM,modisyear_timeseries3_UM,gcm_time_UTC_UM,gcm_time_matlab_UM] = read_UM_file(filename,time,pole_lat,pole_lon);
+
+        vars_in.time_in = time_select(it_driver);
+        [lwp,time_matlab,gcm_Plat2D_UM,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM,it,daynum_timeseries3_UM,modisyear_timeseries3_UM,gcm_time_UTC_UM,gcm_time_matlab_UM] = get_LWP_RWP_UM(vars_in);                
+        
+        dat_modis = 1e3*lwp;
+        
+        if icoarse==1
+            %Coarsen the UM data to approximate the resolutin of GOES
+            N=5;
+            M=3;
+            %See POC_26Oct2008_CF_0pt25deg_PDFs_20141125T032943.m for
+            %derivation of M and N
+            
+            dat_modis = reduce_matrix_subsample_mean(dat_modis,N,M);
+            gcm_Plat2D_UM = reduce_matrix_subsample_mean(gcm_Plat2D_UM,N,M);
+            gcm_Plon2D_UM = reduce_matrix_subsample_mean(gcm_Plon2D_UM,N,M);
+            %Work out the cell edges (as halfway between the centres)
+            [gcm_Plat2D_edges_UM, gcm_Plon2D_edges_UM]=get_edges_lat_lon(gcm_Plat2D_UM,gcm_Plon2D_UM);
+            
+            
+            
+        end
+
+        
+        %Set various things
+
+          %Round to the nearest minute as sometimes get 18:59:59
+        time_str = datestr(round(time*24*60)/24/60,'dd-mmm-yyyy HH:MM'); 
+        titlenam_driver = ['LWP for ' time_str ' ' labs_import(idat).l];
+        units_str_plot = 'g m^{-2}';
+         
+        mod_data_type='AMSRE';
+        gcm_str_select='UM';
+
+       
+        month_amsre = [1:length(time_matlab)];
+        year_amsre = [1:length(time_matlab)];
+
+        
+%        i_dpcolor=1;
+        ifull_swath=0;
+        igcm_screen=0;
+        
+        
+
+        
+        %--- Apply override flags
+        ioverride_plotglobal_thresh=1; %Override most of the options (what to plot, etc.)
+        % iocean_only=1;
+        ioverride_time_selection=0; %Override the times to include
+        ioverride_plotglobal_loc=1; %Override the location of the plot window
+        ioverride_years_time_screen=0; %Override years for screening?
+        
+        %---  Run plot script and save
+        savedir = savedir_driver;
+        plot_global_maps
+        
+        if isave_plot_driver==1
+            saveas_ps_fig_emf(gcf,[savename],'',0,1);
+            close(gcf);
+        end
+        
+    end
+   
+     
+end
+%    xdat_import(idat).x =
+
+
+
+
+
+                            
+
+                            
+                            
+
+                            
+                
+                    
+                    
+                                    
+
+                                    
+                                    
+                                
+
+                          
+                         
+                            
+                            
+                         
+
+        

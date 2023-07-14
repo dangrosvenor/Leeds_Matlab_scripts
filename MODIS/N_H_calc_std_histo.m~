@@ -1,0 +1,31 @@
+N_H_calc_histo %runs the routine to calculate Nd from the joint histogram
+MODIS_N_H_calc %runs the routine to calculate Nd
+
+size_data = size(Cloud_Optical_Thickness_Liquid_Joint_Histogram_vs_Effect_Radius.data);
+Nd_mean4d=repmat(N_histo_mean,[1 1 size_data(1) size_data(2)]);
+W_mean4d=repmat(W_histo_mean,[1 1 size_data(1) size_data(2)]);
+
+F4d2=permute(F,[3 4 1 2]);  %re-arrange so that the next step works
+
+N4d2=permute(N4d,[3 4 1 2]); %N4d are the N values as a funciton of the Reff-Tau histo values
+W4d2=permute(W4d,[3 4 1 2]); %W4d are the N values as a funciton of the Reff-Tau histo values
+
+%then replicated for each lat/lon point
+Npix3d=F4d2(:,:,:); %Number of pixels with particular Reff-Tau values replicated over lat-lon
+
+Nd3d=N4d2(:,:,:);
+W3d=W4d2(:,:,:);
+
+Nd_mean3d = Nd_mean4d(:,:,:);
+W_mean3d = W_mean4d(:,:,:);
+
+Nstd=sqrt ( sum(Npix3d.*(Nd3d - Nd_mean3d).^2 , 3) ./ (totN-1) );
+Nstd(totN==0)=NaN;
+
+Wstd=sqrt ( sum(Npix3d.*(W3d - W_mean3d).^2 , 3) ./ (totN-1) );
+Wstd(totN==0)=NaN;
+
+Nstd_norm=Nstd./N_histo_mean;
+
+
+

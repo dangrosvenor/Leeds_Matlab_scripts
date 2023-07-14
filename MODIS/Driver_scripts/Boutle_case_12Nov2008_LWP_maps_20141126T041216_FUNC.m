@@ -1,0 +1,158 @@
+function []=Boutle_case_12Nov2008_LWP_maps_20141126T041216_FUNC(vars_map)
+
+% LWP map plots for all times for UM
+
+%% Take all the input variables from the var_maps input structure
+names = fieldnames(vars_map);
+for i=1:length(names)
+    eval_str = [names{i} ' = vars_map.' names{i} ';'];
+    eval(eval_str);
+end
+        
+%% Do the plotting
+for idat_UM=1:length(fileUM)
+%     filename = [dirUM fileUM{idat}];
+%     nc = netcdf(filename);
+%     
+%     time=nc{'t'}(:);
+%     nt_driver=length(time);
+%     t0_str=nc{'t'}.time_origin{1};
+%     t0_str2=[t0_str(1:11) ' ' t0_str(13:17)];
+%     time_driver = datenum(t0_str2) + time;
+%     
+%     lon_UM = nc{'x'}(:);
+%     lat_UM = nc{'y'}(:);
+%     [lon2d,lat2d]=meshgrid(lon_UM,lat_UM);
+%     %Convert to normal lat lon from rotated pole coords - make sure the
+%     %rotated pole lat and lon are given correctly above
+%     [lats2D_driver,lons2D_driver]=em2gm(lat2d,lon2d,pole_lat,pole_lon);  %From Annette M - see email for an example of how she uses it
+
+    
+    
+    %------- Calculate the data to plot
+         %read in the UM data for the specific time
+%        time = time_select;
+        
+%         [nc,time_matlab,gcm_Plat2D_UM,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM,it_driver,daynum_timeseries3_UM,modisyear_timeseries3_UM,gcm_time_UTC_UM,gcm_time_matlab_UM] = read_UM_file(filename,time,pole_lat,pole_lon);
+%         %pdf2d will then use nc to get the data
+%         
+%         lwp = 1e3*nc{'LWP'}(it_driver,:,:); %convert to g/m2]
+        
+         vars_in.var = 'LWP';
+         vars_in.flag = flag{idat_UM};
+         vars_in.file_lwp =  [dirUM fileUM{idat_UM}]; 
+%         vars_in.file_rho = [dirUM fileUM_rho{idat_UM}]; %filename_rho;
+         vars_in.pole_lat = pole_lat;
+         vars_in.pole_lon = pole_lon;
+         vars_in.time_in = []; %set to this for all times
+    
+     [lwp,time_matlab,gcm_Plat2D_UM,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM,it_driver,daynum_timeseries3_UM,modisyear_timeseries3_UM,gcm_time_UTC_UM,gcm_time_matlab_UM] = get_LWP_RWP_UM(vars_in);
+
+    if length(time_range)==1
+        time_range(2) = time_range(1);
+    end
+    it_driver_find = find(time_matlab>=time_range(1) & time_matlab<=time_range(2));
+     
+%% select time index here    
+    for it_driver=it_driver_find %22:22 %1:length(time_matlab)  %4:nt_driver
+        %12=23:00 UTC on 12th, 16 = 07:00 on 13th;  22=19:00 on 13th; 
+        %--- run the file to set up the defaults
+        plot_global_maps_defaults  
+        
+        irestrict_domain=irestrict_domain_DRIVER; %whether to restrict the domain or not
+        
+        thresh_LAT = LAT_val_DRIVER;
+        thresh_LON = LON_val_DRIVER;
+        
+        %--- set some options for these particular plot loops
+        set_screening = {'none'};
+        modis_data_plot = 'Map of 2D data from outside driver script';
+
+%         iset_min_clim=1;
+%         clim_min=0;
+%         iset_max_clim=1;
+%         clim_max=300;
+%         
+%         isave_plot=0;
+%         iplot_markers=0;
+        
+        %Calculate the data to plot
+        dat_modis = squeeze(lwp(it_driver,:,:)); %already in g/m2
+        if i_mask_low_LWP==1
+           dat_modis(dat_modis<thresh_LWP_mask)=NaN; 
+        end
+        
+        %Set various things
+        time = time_matlab(it_driver);
+          %Round to the nearest minute as sometimes get 18:59:59
+        time_str = datestr(round(time*24*60)/24/60,'dd-mmm-yyyy HH:MM'); 
+        titlenam_driver = ['LWP for ' time_str ' for ' labs_UM(idat_UM).l ' ' ];
+        units_str_plot = 'g m^{-2}';
+         
+        mod_data_type='AMSRE';
+        gcm_str_select='UM';
+%        daynum_timeseries3_UM = [1:length(time)];
+%        gcm_time_UTC_UM = [1:length(time)];
+        
+%        gcm_Plon2D_UM = lons2D_driver;
+%        gcm_Plat2D_UM = lats2D_driver;                
+                           
+%        [gcm_Plat2D_edges_UM, gcm_Plon2D_edges_UM]=get_edges_lat_lon(lats2D_driver,lons2D_driver);
+
+
+        
+%        i_dpcolor=1;
+        ifull_swath=0;
+        igcm_screen=0;
+        
+        
+
+        
+        %--- Apply override flags
+        ioverride_plotglobal_thresh=1; %Override most of the options (what to plot, etc.)
+        % iocean_only=1;
+        ioverride_time_selection=0; %Override the times to include
+        ioverride_plotglobal_loc=1; %Override the location of the plot window
+        ioverride_years_time_screen=0; %Override years for screening?
+        
+        %---  Run plot script and save
+        plot_global_maps
+        if isave_plot==1
+            saveas_ps_fig_emf(gcf,[savename],'',0,1,0,'',[],0);
+            close(gcf);
+        end
+%         
+%         if imake_anim==1
+%             
+%             if ==1
+%                 mov = avifile('/home/disk/eos1/d.grosvenor/modis_work/plots/MOVIE_LWP_xlhgw.avi','fps',1);
+%             end
+%             
+%             
+%             animfr(jj)=getframe(hh(jj).h);
+%             mov = addframe(mov,animfr(jj));
+%             
+%             
+%         end
+        
+    end
+    
+    if iplot_markers==1
+        
+        lat_mark01 = -20; lon_mark01 = -75;  %The ship
+%        [ilat,ilon] = getind_latlon_quick(gcm_Plat2D_UM,gcm_Plon2D_UM,lat_mark01,lon_mark01,0.1);
+        m_plot(lon_mark01,lat_mark01,'wo','markersize',15,'markerfacecolor','k');
+        
+        lat_mark02 = -20.8543; lon_mark02 = -76.4911; %The location where the UM matches pretty well
+        m_plot(lon_mark02,lat_mark02,'w^','markersize',15,'markerfacecolor','k');        
+        
+        
+        
+    end
+   
+     
+end
+%    xdat_import(idat).x =
+
+
+

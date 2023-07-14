@@ -1,0 +1,318 @@
+%offsets for the location labels:-
+sign_offsetX = [1 -2 1 1 1 1 1 1];  %set these for each point (is in units of grid lengths)
+sign_offsetY = [-1 -1 2 1 1 1 1 1]; 
+
+if exist('LAT')
+    sign_offsetX(length(LAT))=4; %this is usually the AWS
+    sign_offsetY(length(LAT))=0;
+end
+
+label_fontsize=18; %was 13
+just_track=1;
+just_labels=0; %flag to say whether to just print the location labels (and not the flight track).
+i_use_set_labels=1; %use the location labels from watervap...
+i_add_cross_section_line=0;
+i_plot_location_labels=1;
+%ihighlight_sections=0;
+
+marker_type='filled square';
+marker_type='plus sign';
+
+dat_flt = eval(['dat_flt' flight_no ';']);
+if size(dat_flt,2)==15
+    %for flt_19
+    col_temp=6;
+    col_alt=11;
+    col_lat=2;
+    col_lon=3;
+    col_press=4;
+    col_wind=9;
+    col_winddir=10;
+else
+    %for Feb2010 flights
+    col_temp=5;
+    col_alt=12;
+    col_lat=2;
+    col_lon=3;
+    col_press=6;
+    col_wind=9;
+    col_winddir=10;    
+    col_frostpoint_hygro=7;    
+    col_frostpoint_humi=8;
+    col_airspeed=4;
+end
+
+
+
+eval(['X_flt = X_flt' flight_no ';']);
+eval(['Y_flt = Y_flt' flight_no ';']);
+eval(['time_flt = time_flt' flight_no ';']);
+
+clear text %in case there has been a variable named 'text' as this causes trouble when using text command
+np = 100;
+
+if ~exist('manual_set') | manual_set==0
+    iplot_return=1;
+    
+    switch flight_no
+        case '19'
+            time_inds=[time_flt19(1) 20.8];
+        case '100'
+            time_inds=[time_flt100(1) time_flt100(end)];
+            time_inds=[13+40/60 13+52/60];
+            time_inds=[time_flt100(1) 14+0/60];
+
+            iplot_return=0;
+    end
+    
+    
+    scatter_var='Time (UTC)';
+    scatter_var='Altitude (m)';
+    
+    iset_clims_scatter=0;
+    
+    type_of_track = 'line'; %normal line plot
+%    type_of_track = 'scatter_altitude';
+    
+    ihighlight_sections=0; %flag to say whether to highlight some sections of flight path
+
+else
+    clear manual_set
+end
+
+
+%highlight_flight_sections
+
+
+
+    
+%ntot = length(dat_flt19(:,2));
+eval_str=['ntot = findheight(time_flt' flight_no ',time_inds);';];
+eval(eval_str);
+inds = round([ntot(1):(ntot(2)-ntot(1))/np:ntot(2)]);
+
+
+eval_str=['LAT_plot = dat_flt' flight_no '(inds,2);'];
+eval(eval_str);
+eval_str=['LON_plot = dat_flt' flight_no '(inds,3);'];
+eval(eval_str);
+
+ [ilat,ilon] = getind_latlon_quick(lat2d.var,lon2d.var,LAT_plot,LON_plot,0.1);
+ 
+ hold on
+%  x_vals_flight = (ilon-1)*DX;
+%  y_vals_flight = (ilat-1)*DY;
+%  inds_flight = inds;
+
+if iuse_another_domain_for_flight_path_details==1
+    XR = 
+    Xoff = XR - XR2;
+    Xoff = YR - YR2;    
+        
+    xplot_dat = (ilon-1)*DX + Xoff;
+    yplot_dat = (ilat-1)*DY + Yoff;
+else
+    xplot_dat = (ilon-1)*DX;
+    yplot_dat = (ilat-1)*DY;
+end
+
+
+
+if just_labels==0
+    switch type_of_track
+        case 'line'            
+            plot(xplot_dat,yplot_dat,'w-','linewidth',2.5);
+        case 'scatter_altitude'            
+            %already have colorbar limits in clims_terr
+            
+            npoints_scatter=50;
+            npoints_scatter=100;
+            
+            ntot2 = length(time_flt);
+            inds2 = round([ntot(1):(ntot2-ntot(1))/np:ntot2]);
+            
+            switch scatter_var
+                case 'Time (UTC)'
+                    flight_alt_scatter = time_flt(inds2);
+                case 'Altitude (m)'
+                    flight_alt_scatter = dat_flt(inds2,col_alt);
+            end
+            
+            if iset_clims_scatter==1
+                set(gca,'clim',[min(flight_alt_scatter) max(flight_alt_scatter)]);
+            end
+            
+            clims_path = get(gca,'clim');
+            
+
+            
+
+            
+            
+
+
+            flight_alt_scatter = clims_path(1) + (clims_path(2)-clims_path(1)) * (flight_alt_scatter - min(flight_alt_scatter)) ...
+                / (max(flight_alt_scatter) - min(flight_alt_scatter));
+            
+%            scatter((ilon-1)*DX,(ilat-1)*DY,npoints_scatter,flight_alt_scatter,'filled');
+
+%%%           scatter((ilon-1)*DX,(ilat-1)*DY,npoints_scatter*4,flight_alt_scatter,'filled');
+          scatter(X_flt(inds2),Y_flt(inds2),npoints_scatter*1,flight_alt_scatter,'filled');
+           
+    end
+end
+
+
+ if iplot_return==1 & just_labels==0
+     ntot2 = length(time_flt);
+     dn=(ntot2-ntot)/np;
+     inds = round([ntot:dn:ntot2]);
+     
+%     [a b]= findheight(time_flt19,20.4,20.75);
+%     inds=round(a:dn:b); 
+
+     LAT_plot = dat_flt19(inds,2);
+     LON_plot = dat_flt19(inds,3);
+
+     [ilat,ilon] = getind_latlon_quick(lat2d.var,lon2d.var,LAT_plot,LON_plot,0.1);
+
+     hold on
+%      x_vals_flight = [x_vals_flight (ilon-1)*DX];
+%      y_vals_flight = [y_vals_flight (ilat-1)*DY];
+%      inds_flight = [inds_flight inds];
+
+%switch type_of_track
+%    case 'line'
+         plot((ilon-1)*DX,(ilat-1)*DY,'w-','linewidth',2.5);
+%    case 'scatter_altitude'
+%         scatter((ilon-1)*DX,(ilat-1)*DY,50,time_flt19(inds,1));
+%end
+              
+% height_col = dat_flt19(inds,11)/maxALL(dat_flt19(inds,11)); %scale to between 0 and 1
+%      for iplot=1:length(ilon)
+%          plot((ilon(iplot)-1)*DX,(ilat(iplot)-1)*DY,'o','color',[height_col(iplot) height_col(iplot) height_col(iplot)]);
+%      end
+
+ end
+ 
+% dist_flight = cumsum(sqrt(diff(x_vals_flight).^2 + diff(y_vals_flight).^2)); %find distances between each point and the last and sum cumulatively
+ %to get the distance from the start
+% time_dist_flight = time_flt19(inds_flight(2:end)); %ignore the first index as did differences
+ %now have distance vs. time for equally spaced points along the flight path for using to plot e.g. distance vs. a variable to check variabilty
+ 
+ if just_track==1
+     return
+ end
+ 
+ 
+ if i_plot_location_labels==1
+ 
+ %LAT_plot=[-67.2 -67.2 -67.2 -68.0168 lat2d(1).var(140,240) lat2d(1).var(174,290)];  %places during descent plus other locations
+ %LON_plot=[-62 -63 -64 -62.4159 lon2d(1).var(140,240) lon2d(1).var(174,290)];
+ LAT_plot = LAT;
+ LON_plot = LON; %ones left over from watervap...m
+ [ilat,ilon] = getind_latlon_quick(lat2d.var,lon2d.var,LAT_plot,LON_plot,0.1);
+
+ abc='ABCDEFGHIJKLMNOP';
+
+clear labels
+for i=1:length(ilat)
+    if i_use_set_labels==1
+        labels(i,1:length(location_lab(i).l)) = location_lab(i).l;   %EAST side
+    else
+        labels(i,:) = ['' abc(i)];   %EAST side
+    end
+end
+
+%----------------   plotting EAST SIDE POINTS   ---------------------------------------------%
+%plot((ilon-1)*DX,(ilat-1)*DY,'ws','markersize',20);
+%text((ilon-6)*DX,(ilat-1)*DY,labels,'color','k','fontweight','bold');
+
+switch marker_type
+    case 'filled square'
+        text((ilon-1)*DX,(ilat-1)*DY,labels,'color','k','fontweight','bold','HorizontalAlignment','center','VerticalAlignment','middle','BackgroundColor',[.7 .9 .7]);
+    case 'plus sign'
+        for i=1:length(ilat)
+
+%            labels(i,:) = ['o'];
+
+        end
+  
+        label_spacingX = ones([1 length(ilat)])*(timesTH(1).t(pend) - timesTH(1).t(1)) / 55;
+        label_spacingY = ones([1 length(ilat)])*(zz(1).z(end) - zz(1).z(1)) / 55;
+%        text((ilon-5)*DX,(ilat-5)*DY,labels,'color',[0.3 0.3 0.3],'fontsize',13,'fontweight','bold','HorizontalAlignment','center','VerticalAlignment','middle');
+        text(ilon*DX+label_spacingX.*sign_offsetX(1:length(ilat)),ilat*DY+label_spacingY.*sign_offsetY(1:length(ilat)),labels,'color',[0.3 0.3 0.3],'fontsize',label_fontsize,'fontweight','bold','HorizontalAlignment','center','VerticalAlignment','middle');
+        plot((ilon-1)*DX,(ilat-1)*DY,'o','MarkerFaceColor','w','MarkerEdgeColor','k');
+        plot((ilon-1)*DX,(ilat-1)*DY,'b+');
+end
+%text((ilon-1)*DX,(ilat-1)*DY,labels,'color','r','fontweight','bold','HorizontalAlignment','center','BackgroundColor',[.7 .9 .7]); %verical middle is the default
+%--------------------------------------------------------------------------------------------%
+
+LAT_plot=[-67.55 -67.62 -67.55]; %start, middle and end of ascent
+LON_plot=[-68.1 -67.8 -67.5];
+LAT_plot=[-67.55 -68.4]; %start of ascent and point before peninsula where flows come over
+LON_plot=[-68.1 -68.4];
+[ilat,ilon] = getind_latlon_quick(lat2d.var,lon2d.var,LAT_plot,LON_plot,0.1);
+ 
+
+
+clear labels
+for i=1:length(ilat)
+    labels(i,:) = ['W' abc(i)];
+end
+
+%----------------   plotting WEST SIDE POINTS   ---------------------------------------------%
+%plot((ilon-1)*DX,(ilat-1)*DY,'ws','markersize',20); %WEST side
+%text((ilon-6)*DX,(ilat-1)*DY,labels,'color','k','fontweight','bold');
+%--------------------------------------------------------------------------------------------%
+
+
+ end
+
+idraw_AWS=1;
+if idraw_AWS==1
+    LAT_AWS(1).dat = -68.34;  LON_AWS(1).dat =  -69.01;  short_name(1).name = 'Kirk';
+    LAT_AWS(2).dat = -68.09;  LON_AWS(2).dat =  -68.82;  short_name(2).name = 'Dis';
+    LAT_AWS(3).dat = -64.78;  LON_AWS(3).dat =  -64.07;  short_name(3).name = 'Bon';
+    LAT_AWS(4).dat = -74.79;  LON_AWS(4).dat =  -71.49;  short_name(4).name = 'Sky';
+    LAT_AWS(5).dat = -75.91;  LON_AWS(5).dat =  -59.26;  short_name(5).name = 'Lim';
+    LAT_AWS(6).dat = -72.21;  LON_AWS(6).dat =  -60.17;  short_name(6).name = 'But';
+    LAT_AWS(7).dat = -67.01;  LON_AWS(7).dat =  -61.55;  short_name(7).name = 'Lar';
+    
+    % (1) Kirkwood Island - Lat : 68.34S  Long :  69.01W    Elev :   30 M  %wind looks ok
+% (2) Dismal Island - Lat : 68.09S  Long :  68.82W      Elev :   10 M  %bad wind data
+% (3) Bonaparte Point -  Lat : 64.78S  Long :  64.07W   Elev :    8 M  %bad wind data
+% (4) Sky Blu   -   Lat : 74.79S  Long :  71.49W        Elev : 1510 M  %wind looks ok
+% (5) Limbert   -   Lat : 75.91S  Long :  59.26W        Elev :   40 M  %wind looks ok
+% (6) Butler Island  -  Lat : 72.21S  Long :  60.17W    Elev :   91 M  %not sure about wind data - think is ok
+    
+    
+%    [ilat,ilon] = getind_latlon_quick(lat2d.var,lon2d.var,-67.01,-61.55,0.1);
+for iaws=1:length(short_name)
+    [ilat,ilon] = getind_latlon_quick(lat2d.var,lon2d.var,LAT_AWS(iaws).dat,LON_AWS(iaws).dat,0.1);
+
+%----------------   plotting AWS POINTS   ---------------------------------------------%    
+%    plot((ilon-1)*DX,(ilat-1)*DY,'ws','markersize',20);
+%    text((ilon-6)*DX,(ilat-1)*DY,'AWS','color','k','fontweight','bold');
+    
+%        text((ilon-6)*DX,(ilat-1)*DY,short_name(iaws).name,'color','k','fontweight','bold');
+    end
+end
+
+% hline=line([timesTH(1).t(1);timesTH(1).t(pend)],[380 380]);
+% set(hline,'color','k');
+% 
+% hline=line([timesTH(1).t(1);timesTH(1).t(pend)],[280 280]);
+% set(hline,'color','k');
+if exist('LAT') & exist('LON')
+    [ilat,ilon] = getind_latlon_quick(lat2d.var,lon2d.var,LAT,LON,0.1); %restore the original ilat ilon values
+end
+
+if i_add_cross_section_line==1
+    line(x_line,y_line,'color','k','linewidth',2);
+end
+
+
+highlight_flight_sections
+
+ disp('Done plot aircraft path');

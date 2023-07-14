@@ -1,0 +1,32 @@
+%run read_MPACE_met_files.m FIRST!
+
+mpace_dir = '/home/disk/eos1/d.grosvenor/MPACE_ARM_in-situ_cloud_data/arm-iop/0pi-data/mcfarquhar/';
+%mpace_dir = 'C:\Users\Dan\Documents\logbook\UW\MODIS\MPACE ARM in-situ cloud data\arm-iop\0pi-data\mcfarquhar\';
+
+
+NaN_val = 9.99e5;
+
+flight_no_mphys='MPACE_mphys_09Oct_b';
+mpace_mphys_filename = '1009b.txt';
+
+flight_no_mphys='MPACE_mphys_09Oct_a';
+mpace_mphys_filename = '1009a.txt';
+
+
+
+%eval( [ '[dat_flt' flight_no ',time_flt' flight_no '] = read_mpace_met_files_func(mpace_dir,mpace_met_filename,49,NaN_val);' ] );
+
+NaN_val=1e99; %don't think there are NaN values for these??
+
+[mpace_time,mpace_phase,mpace_temp,mpace_height,mpace_cwc,mpace_lwc,mpace_iwc,mpace_rew,mpace_rei,mpace_Nd,mpace_Ni] = read_mpace_mphys_files_func(mpace_dir,mpace_mphys_filename,NaN_val);
+
+dat_flt = eval(['dat_flt' flight_no]);
+
+mpace_lon = interp1(dat_flt(:,1)/3600,dat_flt(:,col_lon),mpace_time);
+mpace_lat = interp1(dat_flt(:,1)/3600,dat_flt(:,col_lat),mpace_time);
+mpace_alt = interp1(dat_flt(:,1)/3600,dat_flt(:,col_alt),mpace_time);
+mpace_press = interp1(dat_flt(:,1)/3600,dat_flt(:,col_press),mpace_time);
+mpace_wind = interp1(dat_flt(:,1)/3600,dat_flt(:,col_wind),mpace_time);
+mpace_winddir = interp1(dat_flt(:,1)/3600,dat_flt(:,col_winddir),mpace_time);
+
+   

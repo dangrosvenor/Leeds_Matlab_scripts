@@ -1,0 +1,135 @@
+function [out]=screen_seaice_MODIS(modis_dat,opts)
+% opts structure needs e.g.,
+% iscreen_seaice=0 or 1
+% iscreen_land = 0 or 1
+% direcs={'aqua'};  years_multi=[2003:2015]; days_multi={[1:365],[1:366],[1:365],[1:365],[1:365],[1:366],[1:365],[1:166 168:365],[1:365],[1:366],[1:365],[1:365],[1:365]}; %,[1:365]};%
+% vars = {'N_time3','N_time3_37','Droplet_Number_Concentration.timeseries3','Droplet_Number_Concentration_37.timeseries3','Cloud_Optical_Thickness_Liquid_Mean.timeseries3',...
+%        'Cloud_Effective_Radius_Liquid_Mean.timeseries3','Cloud_Effective_Radius_37_Liquid_Mean.timeseries3'};
+
+
+
+name_struc='opts'; %The name of the structure
+names = eval(['fieldnames(' name_struc ');']);
+for i=1:length(names)
+    eval_str = [names{i} ' = ' name_struc '.' names{i} ';'];
+    eval(eval_str);
+end
+
+if exist('mask_size')
+mask_size=2;
+
+for iyear_Nd_dataset = 1:length(years_multi)
+    
+    years = years_multi(iyear_Nd_dataset); year_str = num2str(years);
+    %days = days_multi(iyear_Nd_dataset);
+    
+    [date_str,date_num] = date_from_day_of_year_func(modis_dat.daynum_timeseries3,modis_dat.modisyear_timeseries3);
+    %time = datevec(date_num); time=time(:,1:3);
+    %lat=LAT;
+    %lon=LON;
+    
+    if iscreen_seaice==1
+        
+        seaice_str = '';
+        
+        seaice_fileload_1deg_NH = ['/home/disk/eos8/d.grosvenor/sea_ice_data/north/saved_seaice_1deg_' year_str '_all_NHemisphere_2018-07-18.mat'];
+        seaiceNH = load(seaice_fileload_1deg_NH);
+        seaice_fileload_1deg_SH = ['/home/disk/eos8/d.grosvenor/sea_ice_data/south/saved_seaice_1deg_' year_str '_all_SHemisphere_2018-07-18.mat'];
+        seaiceSH = load(seaice_fileload_1deg_SH);
+        
+        seaice_str = '_screened_for_seaice_';
+        
+        
+        
+        %Do the time matching Load these to do the time matching (already loaded in
+        %MODIS* script)
+        %seaice_match_times  %made a function version of this (below)
+        [seaice_time3_NH,seaice_max_time3_NH] = seaice_match_times_FUNC(seaiceNH,modis_dat.Cloud_Fraction_Liquid,modis_dat.modisyear_timeseries3,modis_dat.daynum_timeseries3,1);
+        [seaice_time3_SH,seaice_max_time3_SH] = seaice_match_times_FUNC(seaiceSH,modis_dat.Cloud_Fraction_Liquid,modis_dat.modisyear_timeseries3,modis_dat.daynum_timeseries3,1);
+        %So will now have NaN values in both SH and NH files. Will set the NaNs to zero for
+        %now and then make NaN the places where both were NaN.
+        inanNH = isnan(seaice_time3_NH); seaice_time3_NH(inanNH)=0;
+        inanSH = isnan(seaice_time3_SH); seaice_time3_SH(inanSH)=0;
+        inanNH_max = isnan(seaice_max_time3_NH); seaice_max_time3_NH(inanNH_max)=0;
+        inanSH_max = isnan(seaice_max_time3_SH); seaice_max_time3_SH(inanSH_max)=0;
+        
+        iboth = inanNH & inanSH; %When both are NaN - need to use the logical since they are not just integers
+        iboth_max = inanNH_max & inanSH_max; %When both are NaN - need to use the logical since they are not just integers
+        
+        seaice_time3 = seaice_time3_NH + seaice_time3_SH;
+        seaice_time3(iboth) = NaN;
+        
+        seaice_max_time3 = seaice_max_time3_NH + seaice_max_time3_SH;
+        seaice_max_time3(iboth_max) = NaN;
+        
+        
+        %% Now screen data
+        if iseaice_max_2week==0
+            sea_ice = seaice_time3;
+            seaice_max_2week_str = '';
+        else
+            sea_ice = seaice_max_time3;    %max over 2 week window
+            seaice_max_2week_str = '_2week_max';
+        end
+        %find points where there is any sea-ice using the threshold below
+        sea_ice_thresh = 1e-5;
+        %    sea_ice_thresh = 1e9;
+        isea_high = find(sea_ice>sea_ice_thresh);
+        %    isea_high = find(sea_ice_max>sea_ice_thresh);
+        
+        
+        %Loop through a variable list
+%         N_time3(isea_high)=NaN;
+%         N_time3_37(isea_high)=NaN;
+%         Droplet_Number_Concentration.timeseries3(isea_high)=NaN;
+%         Droplet_Number_Concentration_37.timeseries3(isea_high)=NaN;
+%         Cloud_Optical_Thickness_Liquid_Mean.timeseries3(isea_high)=NaN;
+%         Cloud_Effective_Radius_Liquid_Mean.timeseries3(isea_high)=NaN;
+%         Cloud_Effective_Radius_37_Liquid_Mean.timeseries3(isea_high)=NaN;
+        
+        for ivar=1:length(vars)            
+            eval_str = ['out.' vars{ivar} '=modis_dat.' vars{ivar} ';']; eval(eval_str);
+            eval_str = ['out.' vars{ivar} '(isea_high)=NaN;']; eval(eval_str);
+        end
+        
+        
+    end
+    
+    
+    if iscreen_land==1  %
+        
+        landmask_load= load('/home/disk/eos1/d.grosvenor/amsre_land_mask.mat');
+        %    landmask = repmat(flipdim(landmask_load.amsre_land_mask,1),[1 1 12]);
+        %Smooth out the land mask to make it more aggressive - seemed to be
+        %allowing some small bits of land otherwise.
+        %Also need to do this for the sea ice
+        
+        %Halo adds some a buffer region to the edges, so we don't lose data
+        %when smoothing
+        
+        
+        halo = mask_size*3;
+        
+        fs=fspecial('average',mask_size); %Make the averaging filter
+        landmask_tmp = add_halo(landmask_load.amsre_land_mask,halo);
+        landmask_smooth = filter2(fs,landmask_tmp,'same');
+        landmask_smooth = remove_halo(landmask_smooth,halo);
+        landmask2 = repmat(flipdim(landmask_smooth,1),[1 1 eval(['size(modis_dat.' vars{1} ',3)'])] );
+        
+        
+        %Land mask is zero where there is land and NaN where not - so can just add to the
+        %array to make the non-land regions NaN
+        
+        
+        for ivar=1:length(vars)
+            eval_str = ['out.' vars{ivar} ' = out.' vars{ivar}  '+ landmask2;']; eval(eval_str);
+        end
+        
+        
+        
+    end
+    
+end
+
+
+

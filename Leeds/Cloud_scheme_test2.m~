@@ -1,0 +1,136 @@
+function [cloud_mass_new,T] = Cloud_scheme_test2(qL,qv,T_in,pressure)
+
+%Cloud scheme test
+
+
+%qL = 1e-3; %initial qL  -- should this make a difference, or is it only the qT that is important?
+% qL = 0.4969e-3;
+% qL = 0.0e-3;
+% qL = 0.6055e-3;
+% %qL = 2e-3; %A large value for testing
+% %qL = 0;
+% 
+ rhcrit_lev = 0.8;
+% %rhcrit_lev = 0.999;
+% qt = 6.3e-3;
+% qt = 7e-3; % + 0.2e-2;
+% qt = 7.6055e-3;
+% qv = qt - qL;
+% 
+% T_in = 277;
+% T_in = 282;
+% T_in = 281;
+% T_in = 277;
+% T_in = 280.0141;
+
+qt = qv + qL;
+
+%spressure = 879e2; %Pa
+
+
+r = 287.05;
+repsilon = 0.62198;
+Lv = 0.2501e7;   % Latent heat of vapourization
+Cp = 1005.; %specific heat capacity
+
+lcrcp = Lv/Cp;
+alphL=repsilon*Lv/r;
+
+T_l = T_in - lcrcp*qL;
+qsl = Qsaturation_UM(T_l, pressure/100) 
+qs = Qsaturation_UM(T_in, pressure/100) 
+
+RHtot = qt/qsl
+
+
+Qn = ( RHtot - 1)/(1 - rhcrit_lev)   %replaced qcl_on_bs with Qn as they are not quite the same
+
+%If statement equivalent for Qn
+iqn = find(Qn <= -1.0);
+CFliq(iqn) = 0.0;
+qcl_on_bs(iqn) = 0.0;
+
+iqn = find(Qn > -1.0 & Qn <= 0.0);
+CFliq(iqn) = 0.5 * (1. + Qn(iqn)) .* (1. + Qn(iqn));
+qcl_on_bs (iqn) = (1. + Qn(iqn)).^3 / 6.;
+
+iqn = find(Qn > 0.0 & Qn <= 1.0); 
+CFliq(iqn) = 1. - 0.5 * (1. - Qn(iqn)) .* (1. - Qn(iqn));
+qcl_on_bs(iqn) = Qn(iqn) + (1.-Qn(iqn)).^3 /6.;
+      
+iqn = find(Qn > 1.0);
+CFliq(iqn) = 1.0;
+qcl_on_bs(iqn) = Qn(iqn);
+
+
+   
+%now do the iteration for T adjustment
+
+   iexit=0;
+   T = T_in;
+   alphaL = alphL * qsl / (T_l  * T_l ); %P292.5  (23)  -- For the iteration this forms the first estimate of alpha as in the doc
+      
+% --------------- Start of iteration ---------------------------   
+   for n=1:4   %doc recommenends final use of alpha for N=5 (where the initial alpha above would be N=1 and new one below N=2 for first execution of loop)
+      n
+      
+      aL = 1.0 / (1.0 + (lcrcp * alphaL));  % P292.6 (4, or 24)     
+      bs = (1.0-rhcrit_lev) * aL * qsl;  % P292.14  (17)
+      
+      qc_simple = aL * (qt - qsl)
+      dqwsatdt = dqwsatdt_fun(qs,T_in);
+      dqc_simple2 = 1e3 *(1./(1+Lv/Cp*dqwsatdt) * (qv - qs))      %change in qc value expected using the non-cloud scheme formulation in condensation.F90
+
+
+      % total cloud mass after condensation/evap  
+      cloud_mass_new = qcl_on_bs * bs
+      
+      qLi(n) = 1e3*cloud_mass_new;
+
+      fprintf(1,'Cloud scheme (1): n, alphaL, aL, bs,  Qn, qcl_on_bs, qt, qsl = %f %f %f %f %f %f %f %f\n',n,alphaL,aL, bs,  Qn, qcl_on_bs, qt, qsl); 
+      fprintf(1,'Cloud scheme (2): cloud_init, new, frac, T, T_l, T-T_l = %f %f %f %f %f %f\n', qL, cloud_mass_new, CFliq, T, T_l, T-T_l); 
+
+	 %Update the temperature here since otherwise T = T_L if we didn't start with any exisiting qL
+      T = T_l + lcrcp * cloud_mass_new;  %calculate a new temperature (eqn 22) for next loop - BUT do we need to output this for the actual 
+   					   %model temperature in order to be consistent?? Should be taken care of through the latent heat release of the diagnosed qL
+
+      %now can calculate alphaL_new, which allows the calculation of alpha_n+1, which will be used in the next iteration
+
+      if ( T - T_l  < 1e-6 ) 
+      	iexit = 1;
+        break   %Avoid divide by zero in calc of alphaL_new if cloud_mass_new is very small as then T approx equal to T_l
+      end                           %Exit the iteration loop if T is approx T_l
+
+      alphaL_new = ( Qsaturation_UM(T, pressure/100.) - qsl ) / (T - T_l); %Note that T_l is not updated during the iteration (it is conserved during condensation)
+      % next value of alpha is a weighted average of alphaL_new and the old value
+      alphaL = 0.75*alphaL_new + 0.25*alphaL;
+      
+      dAL(n)=alphaL_new - alphaL;
+
+   %   T = T_l + lcrcp * cloud_mass_new  %calculate a new temperature (eqn 22) for next loop - BUT do we need to output this for the actual 
+   %   					%model temperature in order to be consistent?? Should be taken care of through the latent heat release of the diagnosed qL
+   
+   end
+   
+   % do one final update of cloud_mass_new, but only if didn't exit early to save repetition   
+   if (iexit==0)    
+
+	   aL = 1.0 / (1.0 + (lcrcp * alphaL));  % P292.6 (4, or 24)     
+	   bs = (1.0-rhcrit_lev) * aL * qsl;  % P292.14  (17)
+
+	   % total cloud mass after condensation/evap  
+	   cloud_mass_new = qcl_on_bs * bs;
+       qLi(n+1) = 1e3*cloud_mass_new;
+
+      fprintf(1,'Cloud scheme (1): n, alphaL, aL, bs,  Qn, qcl_on_bs, qt, qsl = %f %f %f %f %f %f %f %f\n',n,alphaL,aL, bs,  Qn, qcl_on_bs, qt, qsl); 
+      fprintf(1,'Cloud scheme (2): cloud_init, new, frac, T, T_l, T-T_l = %f %f %f %f %f %f\n', qL, cloud_mass_new, CFliq, T, T_l, T-T_l); 
+   
+   end
+   
+   dqL_cloud_scheme = 1e3*(cloud_mass_new - qL)    %g/kg
+
+   percentage_diff = 100 - 100*dqL_cloud_scheme./dqc_simple2
+   dAL
+   fprintf(1,'RH_tot=%f RH_tot_L=%f\n\n',qt/qs,qt/qsl);
+   ''
+   

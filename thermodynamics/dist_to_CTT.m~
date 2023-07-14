@@ -1,0 +1,11 @@
+function [distCTT,T_CB] = dist_to_CTT(T,P,RH,CTT)
+
+if RH
+[dist_to_CB,T_CB] = dist_to_LCL(T,P,RH); % in metres
+[moist_ad_1,moist_ad_2] = moist_ad_lapse_rate(T_CB,P);
+%moist_ad_2 is the moist adiabatic temperature without the
+%C-C approximation. Also using temperature varation of L.
+%moist_ad_1 uses the C-C relationship (with T variation of L)
+
+
+distCTT = dist_to_CB + (T_CB - CTT)/moist_ad_2; %in metres

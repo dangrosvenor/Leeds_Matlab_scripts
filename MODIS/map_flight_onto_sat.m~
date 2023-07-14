@@ -1,0 +1,9 @@
+funciton [y] = map_flight_onto_sat(Plat,Plon,X,Y,sat_dat,mpace_lat_mapped,mpace_lon_mapped,box_type)  
+
+switch box_type
+    case 'NxN pixel square';
+        [ilat,ilon,dist_min]=getind_latlon_quick(Plat,Plon,mpace_lat_mapped,mpace_lon_mapped);
+        y = sat_dat(
+    otherwise
+       y = interp2(X,Y,sat_dat,mpace_lon_mapped,mpace_lat_mapped);
+end

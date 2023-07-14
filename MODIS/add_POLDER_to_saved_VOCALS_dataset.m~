@@ -1,0 +1,52 @@
+%Make add PODLER data (in global form) to the VOCALS dataset
+
+%L3file='/home/disk/eos1/d.grosvenor/mat_files_various/CPT/AMSRE_and_MODIS_2006-2010_Aqua.mat';
+L3file='/home/disk/eos8/d.grosvenor/mat_files_various/CPT/AMSRE_and_MODIS_2006-2010_Aqua_with_reff37_etc_for2007_only.mat';
+
+%L3=load(L3_file);
+
+L3 = load(L3file,'Cloud_Fraction_Liquid','daynum_timeseries3','modisyear_timeseries3','daynum_timeseries3');
+
+lat_restrict = [-50 20]; lon_restrict = [-160 -60]; %VOCALS to match L3 data
+
+%L3.MLAT_standard_edges2 = [L3.MLAT+0.5 L3.MLAT(end)-0.5];
+%L3.MLON_standard_edges2 = [L3.MLON-0.5 L3.MLON(end)+0.5];
+
+
+ilat_restrict = find(LAT_edges_POLDER>min(lat_restrict) & LAT_edges_POLDER<=max(lat_restrict));
+ilon_restrict = find(LON_edges_POLDER>=min(lon_restrict) & LON_edges_POLDER<max(lon_restrict));
+
+
+modis_vars = {...
+    'daymean_Par2_CDR',...   
+};
+
+
+
+i=1;
+clear itime_restrict itime_L3
+for itime=1:length(L3.daynum_timeseries3)
+    it = find(modisyear_timeseries3_POLDER==L3.modisyear_timeseries3(itime) & daynum_timeseries3_POLDER==L3.daynum_timeseries3(itime));
+    if length(it)>0
+        itime_restrict(i) = it;
+        itime_L3(i)=itime;
+        i=i+1;
+    end
+end
+
+
+
+
+for ivar=1:length(modis_vars)
+    temp_POLDER = eval(['permute(' modis_vars{ivar} ',[2 3 1]);']);
+    fprintf(1,'Saving var %d of %d \n',ivar,length(modis_vars));
+    eval(['L3.' modis_vars{ivar} ' = NaN*ones(size(L3.Cloud_Fraction_Liquid.timeseries3));']);
+    eval(['L3.' modis_vars{ivar} '(:,:,itime_L3) = flipdim(' modis_vars{ivar} '(ilat_restrict,ilon_restrict,itime_restrict),1);']);        
+    save_var_append(L3file,eval(['L3.' modis_vars{ivar}]),[modis_vars{ivar}]);
+%    save_var_append(L3file,eval([modis_vars{ivar}]),[modis_vars{ivar}]);    
+end
+
+%save_var_append(L3file,L3.MLAT,'LAT');
+%save_var_append(L3file,L3.MLON,'LON');
+
+

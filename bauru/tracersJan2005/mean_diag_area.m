@@ -1,0 +1,1 @@
+area=icediagsALL(idir).i(:,

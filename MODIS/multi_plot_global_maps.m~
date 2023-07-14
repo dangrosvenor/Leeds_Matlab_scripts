@@ -1,0 +1,8 @@
+
+for days_required_for_mean=275:335  
+    time_mean_str
+    plot_global_maps
+    saveas_ps_fig_emf(gcf,[savename]);
+    close(gcf);
+end
+

@@ -1,0 +1,17 @@
+%Streamline_cross_save_data
+
+%run cross section calcualtion for U and do this one:
+U_cross_6th_Jan_6UTC=wrf_dat;
+
+%then for pot and do this one:
+pot_cross_6th_Jan_6UTC=wrf_dat;
+
+XY_pot_cross_data(1).Y_cross=zz(1).z; %so is the same name as in Smith_useful_examples_for_using_formulae.m
+%for calcuating N
+XY_pot_cross_data(1).X_cross=timesTH(1).t(1:pend);
+
+savedir='C:\Documents and Settings\dan\My Documents\WRF\ecmwf_ml_0.5_nudging\streamline_plots_6thJan_6UTC\';
+vars_name=[savedir 'pot_slice_streamline_LAT=67.5_z0=950_str_succ=129.mat']
+save(vars_name,'U_cross_6th_Jan_6UTC','pot_cross_6th_Jan_6UTC','lon_slice','d_line','XY_pot_cross_data')
+
+load(vars_name);

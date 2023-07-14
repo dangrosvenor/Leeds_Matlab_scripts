@@ -1,0 +1,586 @@
+clear savevarname %to make sure that something is set in here (i.e. the case strings are correct).
+
+%N.B. for the monthly mean data for each the AQUA and TERRA files are
+%combined and listed under TERRA only (so just need to select to load the
+%terra files - i.e. savevarname{3} files below
+
+
+switch char(modis_data_case{imod})
+    case 'y2000_TERRA'; %55-366 (launch year) %117-188 & 219-230 not available form LAADS
+%        savevarname{1} = [savedir_var 'timeseries3_data_20110429T143346'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2000_TERRA_20111219T210213.mat'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2000_TERRA_20150131T032521.mat'];  %Added CTT and others (Jan 2015)           
+        savevarname{1} = [savedir_var 'timeseries3_data_y2000_TERRA_20150213T105718.mat'];  %Added QA_means for reff and tau
+        
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2000_TERRA__20111223T031852.mat']; %processed for monthly averages
+        %new monthly files with W and H (but no CTP pressure breakdown)
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2000_TERRA__20120704T151320.mat'];  %monthly means from saved data        
+        
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2000;
+        modis_days = [55:116 119:218 231:366];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];
+        
+    case 'y2001_TERRA'; %%167-183 not available from LAADS
+   
+
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2001_TERRA_20111219T225602.mat'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2001_TERRA_20150131T061431.mat'];   
+        savevarname{1} = [savedir_var 'timeseries3_data_y2001_TERRA_20150213T135832.mat'];  %Added QA_means for reff and tau
+        
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2001_TERRA__20120103T111019.mat']; %Added CTT and others (Jan 2015)  
+        %new monthly files with W and H (but no CTP pressure breakdown)
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2001_TERRA__20120704T152825.mat'];  %monthly means from saved data        
+        
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2001;
+        modis_days = [1:166 184:365];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];   
+        
+    case 'y2002_TERRA'; %%79-88 missing from LAADS web
+   %but Rob has 87 & 88 in his dir?? 105 missing form LAADS web. 199-203 were missing, but have
+   %downloaded. 
+   
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2002_TERRA_20111222T142559.mat'];
+        %savevarname{1} = [savedir_var 'timeseries3_data_y2002_TERRA_20150131T093307.mat'];  %Added CTT and others (Jan 2015)   
+        savevarname{1} = [savedir_var 'timeseries3_data_y2002_TERRA_20150213T173236.mat'];  %Added QA_means for reff and tau
+        
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2002_AQUA_y2002_TERRA_20120104T045646.mat']; %processed for monthly averages
+%new monthly files with W and H (but no CTP pressure breakdown)
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2002_AQUA_y2002_TERRA_20120704T154553.mat'];  %monthly means from saved data        
+        
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2002;
+        modis_days = [1:78 87:104 106:365];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra]; 
+        
+    case 'y2002_AQUA'; %%184-365 as Aqua launched 2002 
+%N.B. monthly mean data is combined AQUA and TERRA - is only loaded for the TERRA
+
+%186 was labelled with a .1 at the end-? 211-217 missing from LADS web. Downloaded 300, which was
+   %missing
+   
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2002_AQUA_20111222T164729.mat'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2002_AQUA_20120103T145000.mat'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2002_AQUA_20150131T125716.mat']; %Added CTT and others (Jan 2015)  
+        savevarname{1} = [savedir_var 'timeseries3_data_y2002_AQUA_20160107T032124.mat']; %Added QA fields for Florent (Jan 2016)          
+        
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2002;
+        modis_days = [184:210 218:365];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];         
+        
+    case 'y2003_AQUA'  
+%N.B. monthly mean data is combined AQUA and TERRA - is only loaded for the
+%TERRA
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2003_AQUA_20120105T155401.mat'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2003_AQUA_20150131T180720.mat']; %Added CTT and others (Jan 2015)  
+        savevarname{1} = [savedir_var 'timeseries3_data_y2003_AQUA_20160107T050718.mat']; %Added CTT and others (Jan 2015)          
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2003;
+        modis_days = [1:365];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];
+        
+        
+ case 'y2003_TERRA'  %351-358 missing form LAADS web - downloaded
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2003_TERRA_20120105T131256.mat'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2003_TERRA_20150131T143746.mat'];        %Added CTT and others (Jan 2015)    
+        savevarname{1} = [savedir_var 'timeseries3_data_y2003_TERRA_20150213T211000.mat'];  %Added QA_means for reff and tau
+                
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2003_AQUA_y2003_TERRA_20120106T034608.mat']; %processed for monthly averages
+        %new monthly files with W and H (but no CTP pressure breakdown)
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2003_AQUA_y2003_TERRA_20120704T160558.mat'];  %monthly means from saved data         
+        
+        %% *** make sure that these are set propertly in each case ***
+        modis_year = 2003;
+        modis_days = [1:365];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];
+        
+    case 'y2004_TERRA'
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2004_TERRA_20111123T184504'];
+%        savevarname{1} = [savedir_var 'timeseries3_y2004_TERRA_20111214T080958.mat']; %with ice&combined CFs        
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2004_TERRA_20150131T213733.mat']; %Added CTT and others (Jan 2015) 
+        savevarname{1} = [savedir_var 'timeseries3_data_y2004_TERRA_20150214T005619.mat'];  %Added QA_means for reff and tau
+                
+        savevarname{2} = [savedir_var 'timeseries3_TProfiles_CTT_CTP_data_y2004_TERRA_20111202T211438.mat']; %CT pressure std dev and temp profiles           
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2004_AQUA_y2004_TERRA_20120106T060003.mat']; %processed for monthly averages
+        %new monthly files with W and H (but no CTP pressure breakdown)
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2004_AQUA_y2004_TERRA_20120704T162546.mat'];  %monthly means from saved data        
+        
+        %% *** make sure that these are set propertly in each case ***
+        modis_year = 2004;
+        modis_days = [1:366];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];
+        
+    case 'y2004_AQUA';
+%N.B. monthly mean data is combined AQUA and TERRA - is only loaded for the TERRA
+
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2004_AQUA_20111028T180537'];
+%        savevarname{1} = [savedir_var 'timeseries3_y2004_AQUA_20111214T103632.mat'];             
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2004_AQUA_20150201T011655.mat'];      %Added CTT and others (Jan 2015)                          
+        savevarname{1} = [savedir_var 'timeseries3_data_y2004_AQUA_20160107T085003.mat'];      %Added CTT and others (Jan 2015)                          
+        
+        savevarname{2} = [savedir_var 'timeseries3_TProfiles_CTT_CTP_data_y2007_AQUA_51_20111202T193620.mat']; %CT pressure std dev and temp profiles           
+        %% *** make sure that these are set propertly in each case ***
+        modis_year = 2004;
+        modis_days = [1:366];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];
+        
+    case 'y2005_TERRA' %days 1-365
+%        savevarname{1} = [savedir_var 'timeseries3_data_20110802T123454'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2005_TERRA_20111214T130947.mat'];               
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2005_TERRA_20150201T045218.mat'];   %Added CTT and others (Jan 2015)                        
+        savevarname{1} = [savedir_var 'timeseries3_data_y2005_TERRA_20150214T044727.mat'];      %Added CTT and others (Jan 2015)                          
+
+        savevarname{2} = [savedir_var 'timeseries3_TProfiles_CTT_CTP_data_y2005_TERRA_20111202T221435.mat']; %CT pressure std dev and temp profiles           
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2005_TERRA_y2005_AQUA_20120106T081628.mat']; %processed for monthly averages
+        %new monthly files with W and H (but no CTP pressure breakdown)
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2005_TERRA_y2005_AQUA_20120704T164516.mat'];  %monthly means from saved data        
+        
+        modis_year = 2005;
+        modis_days = [1:365];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];
+        
+    case 'y2005_AQUA' %days 1-365
+%N.B. monthly mean data is combined AQUA and TERRA - is only loaded for the TERRA
+
+%        savevarname{1} = [savedir_var 'timeseries3_data_20110803T095431'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2005_AQUA_20111214T153910.mat'];                
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2005_AQUA_20150201T082534.mat'];    %Added CTT and others (Jan 2015)           
+        savevarname{1} = [savedir_var 'timeseries3_data_y2005_AQUA_20160107T123140.mat']; %Added QA fields for Florent (Jan 2016)         
+        
+        savevarname{2} = [savedir_var 'timeseries3_TProfiles_CTT_CTP_data_y2005_AQUA_20111202T224547.mat']; %CT pressure std dev and temp profiles           
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2005;
+        modis_days = [1:365];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];
+        
+    case 'y2006_TERRA'; %days 1-365
+%        savevarname{1} = [savedir_var 'timeseries3_data_20110803T131752'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2006_TERRA_20111214T180841.mat'];   
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2006_TERRA_20130809T163918.mat'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2006_TERRA_20150214T082909.mat'];      %Added CTT and others (Jan 2015)                          
+        savevarname{1} = [savedir_var 'timeseries3_data_y2006_AQUA_updated_20160107T161242.mat'];        
+        
+        savevarname{2} = [savedir_var 'timeseries3_TProfiles_CTT_CTP_data_y2006_TERRA_20111202T231547.mat']; %CT pressure std dev and temp profiles           
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2006_TERRA_y2006_AQUA_updated_20120106T103441.mat']; %processed for monthly averages
+        %new monthly files with W and H (but no CTP pressure breakdown)
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2006_TERRA_y2006_AQUA_updated_20120704T170454.mat'];  %monthly means from saved data        
+        
+        %% *** make sure that these are set propertly in each case ***
+        modis_year = 2006;
+        modis_days = [1:365];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];
+        
+    case 'y2006_AQUA_updated'; %days 1-362 coll 5, 363-365 coll 5.1
+        %N.B. monthly mean data is combined AQUA and TERRA - is only loaded
+        %for the TERRA
+        
+%this was re-processed on 21st Nov, 2011 - was an extra file for day 220 in
+%the directory - moved the one that was processed at the earlier date into
+%a sub-directory
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2006_AQUA_updated_20111121T152628'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2006_AQUA_updated_20111214T230849.mat'];
+        savevarname{1} = [savedir_var 'timeseries3_data_y2006_AQUA_updated_20130809T191056.mat'];
+        savevarname{2} = [savedir_var 'timeseries3_TProfiles_CTT_CTP_data_y2006_AQUA_20111202T234653.mat']; %CT pressure std dev and temp profiles           
+        
+        
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2006;
+        modis_days = [1:365];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];
+        
+        
+    case 'y2007_TERRA'
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2007_TERRA20110808T163351'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2007_TERRA_20111127T123134.mat'];  %w/ CT pressures 
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2007_TERRA_20111213T220932.mat'];  %w/ new CFs     
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2007_TERRA_20130809T212802.mat'];  %w/ with MOD35 CFs      
+        savevarname{1} = [savedir_var 'timeseries3_data_y2007_TERRA_20150214T121042.mat'];      %Added CTT and others (Jan 2015)                          
+        
+        savevarname{2} = [savedir_var 'timeseries3_TProfiles_CTT_CTP_data_y2007_TERRA_20111202T190548.mat'];  %w/ CT pressure std dev and temp profiles
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2007_TERRA_y2007_AQUA_20111216T225922.mat']; %processed for monthly averages        
+%new monthly files with W and H (but no CTP pressure breakdown)
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2007_TERRA_y2007_AQUA_20120704T172427.mat'];  %monthly means from saved data        
+        
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2007;
+        modis_days = [1:365];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];      
+        
+    case 'y2007_AQUA'
+%N.B. monthly mean data is combined AQUA and TERRA - is only loaded for the TERRA
+
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2007_AQUA_51_20110810T224915'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2007_AQUA_5.1_20111121T214453.mat'];
+%         savevarname{1} = [savedir_var 'timeseries3_data_y2007_AQUA_51_20111127T173510.mat']; %w/ CT pressures
+%         savevarname{1} = [savedir_var 'timeseries3_data_y2007_AQUA_51_20111214T004003.mat']; %w/ CT pressures
+         savevarname{1} = [savedir_var 'timeseries3_data_y2007_AQUA_51_20130809T235652.mat']; %w/ MOD35 CFs         
+         savevarname{2} = [savedir_var 'timeseries3_TProfiles_CTT_CTP_data_y2007_AQUA_51_20111202T193620.mat']; %CT pressure std dev and temp profiles   
+
+        
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2007;
+        modis_days = [1:365];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];
+        
+    case 'y2008_TERRA'
+        %            savevarname{1} = [savedir_var 'timeseries3_data_y2008_TERRA_20110811T074012'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2008_TERRA_20111027T162350'];
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2008_TERRA_20111127T201102.mat']; %w/ CT pressures
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2008_TERRA_20111214T030717.mat']; %
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2008_TERRA_20130205T175322.mat'];  %Feb2013, with MOD35 cloud fractions
+        savevarname{1} = [savedir_var 'timeseries3_data_y2008_TERRA_20150213T104244.mat'];      %Added CTT and others (Jan 2015)                          
+        
+        savevarname{2} = [savedir_var 'timeseries3_TProfiles_CTT_CTP_data_y2008_TERRA_20111202T200528.mat']; %CT pressure std dev and temp profiles           
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2008_TERRA_y2008_AQUA_20111217T011015.mat'];  %monthly means from saved data
+        %new monthly files with W and H (but no CTP pressure breakdown)
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2008_TERRA_y2008_AQUA_20120704T174400.mat'];  %monthly means from saved data        
+        
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2008;
+        modis_days = [1:355 358:366]; %some missin files
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];    
+        
+    case 'y2008_AQUA'
+        %N.B. monthly mean data is combined AQUA and TERRA - is only loaded
+        %for the TERRA
+        
+%            savevarname{1} = [savedir_var 'timeseries3_data_y2008_AQUA_20111025T151428'];    
+%            savevarname{1} = [savedir_var 'timeseries3_data_y2008_AQUA_20111027T185855'];  
+%            savevarname{1} = [savedir_var 'timeseries3_data_y2008_AQUA_20111127T223441.mat'];  %
+            savevarname{1} = [savedir_var 'timeseries3_data_y2008_AQUA_20130205T204348.mat'];  %w/ CT pressures                                   
+            savevarname{2} = [savedir_var 'timeseries3_TProfiles_CTT_CTP_data_y2008_AQUA_20111202T203815.mat'];  %w/ CT pressures, std dev and temp profiles            
+
+            
+             %% *** make sure that these are set propertly in each case ***
+        modis_year = 2008;
+        modis_days = [1:366];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];    
+        
+        
+            
+ 
+    case 'y2009_TERRA'
+        %savevarname{1} = [savedir_var 'timeseries3_data_y2009_TERRA_20111219T103521.mat'];  %w/ CT pressures
+%        savevarname{1} = [savedir_var 'timeseries3_data_y2009_TERRA_20130813T130143.mat'];  %w/ MOD35 cloud mask
+        savevarname{1} = [savedir_var 'timeseries3_data_y2009_TERRA_20150213T142506.mat'];      %Added CTT and others (Jan 2015)                          
+        
+%        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2009_TERRA_y2009_AQUA_20120106T155215.mat'];  %monthly means from saved data
+        %new monthly files with W and H (but no CTP pressure breakdown)
+        savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2009_TERRA_y2009_AQUA_20120704T180411.mat'];  %monthly means from saved data        
+       
+        
+             %% *** make sure that these are set propertly in each case ***
+        modis_year = 2009;
+        modis_days = [1:365];
+        aqua_terra = {'TERRA'};
+
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra]; 
+        
+    case 'y2009_AQUA'
+%N.B. monthly mean data is combined AQUA and TERRA - is only loaded for the TERRA        
+        %savevarname{1} = [savedir_var 'timeseries3_data_y2009_AQUA_20111222T202309.mat'];  %w/ CT pressures
+        savevarname{1} = [savedir_var 'timeseries3_data_y2009_AQUA_20130813T153802.mat']; %w/ MOD35 cloud mask
+             %% *** make sure that these are set propertly in each case ***
+        modis_year = 2009;
+        modis_days = [1:365];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];         
+        
+
+    case 'y2010_TERRA'
+%            savevarname{1} = [savedir_var 'timeseries3_data_y2010_TERRA_20111219T125738.mat'];  %w/ CT pressures                       
+%            savevarname{1} = [savedir_var 'timeseries3_data_y2010_TERRA_20130813T175547.mat']; %w/ MOD35 cloud mask
+            savevarname{1} = [savedir_var 'timeseries3_data_y2010_TERRA_20150213T181212.mat'];      %Added CTT and others (Jan 2015)
+        
+            savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2010_TERRA_y2010_AQUA_20120106T181128.mat'];  %monthly means from saved data
+            %new monthly files with W and H (but no CTP pressure breakdown)
+            savevarname{3} = [savedir_var 'monthly_mean_timeseries3_data__y2010_TERRA_y2010_AQUA_20120704T182344.mat'];  %monthly means from saved data
+            
+            
+             %% *** make sure that these are set propertly in each case ***
+        modis_year = 2010;
+        modis_days = [1:365];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra]; 
+        
+    case 'y2010_AQUA'
+%            savevarname{1} = [savedir_var 'timeseries3_data_y2010_AQUA_20111219T152136.mat'];  %w/ CT pressures                       
+            savevarname{1} = [savedir_var 'timeseries3_data_y2010_AQUA_20130813T205154.mat'];  %w/ MOD35 cloud mask 
+%N.B. monthly mean data is combined AQUA and TERRA - is only loaded for the TERRA
+            
+             %% *** make sure that these are set propertly in each case ***
+        modis_year = 2010;
+        modis_days = [1:365];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra]; 
+        
+    case 'y2011_TERRA'
+%         savevarname{1} = [savedir_var 'timeseries3_data_y2011_TERRA_20150129T042414.mat'];
+        savevarname{1} = [savedir_var 'timeseries3_data_y2011_TERRA_20150213T220314.mat'];      %Added CTT and others (Jan 2015)                                   
+         
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2010;
+        modis_days = [1:365];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra]; 
+        
+    case 'y2011_AQUA'
+         savevarname{1} = [savedir_var 'timeseries3_data_y2011_AQUA_20150129T131324.mat'];
+         
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2011;
+        modis_days = [1:365];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];  
+        
+ case 'y2012_TERRA'
+%         savevarname{1} = [savedir_var 'timeseries3_data_y2012_TERRA_20150129T170912.mat'];
+        savevarname{1} = [savedir_var 'timeseries3_data_y2012_TERRA_20150214T015839.mat'];      %Added CTT and others (Jan 2015)                                   
+         
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2012;
+        modis_days = [1:366];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];         
+        
+ case 'y2012_AQUA'
+         savevarname{1} = [savedir_var 'timeseries3_data_y2012_AQUA_20150129T210206.mat'];
+         
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2012;
+        modis_days = [1:366];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];  
+        
+ case 'y2013_TERRA'
+%         savevarname{1} = [savedir_var 'timeseries3_data_y2013_TERRA_20150130T004852.mat'];
+        savevarname{1} = [savedir_var 'timeseries3_data_y2013_TERRA_20150214T054943.mat'];      %Added CTT and others (Jan 2015)                                   
+         
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2013;
+        modis_days = [1:365];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra]; 
+        
+ case 'y2013_AQUA'
+         savevarname{1} = [savedir_var 'timeseries3_data_y2013_AQUA_20150130T042237.mat'];
+         
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2013;
+        modis_days = [1:43 45:365];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];      
+        
+ case 'y2014_TERRA'
+%         savevarname{1} = [savedir_var 'timeseries3_data_y2014_TERRA_20150130T075620.mat'];
+        savevarname{1} = [savedir_var 'timeseries3_data_y2014_TERRA_20150214T094034.mat'];      %Added CTT and others (Jan 2015)                                   
+         
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2014;
+        modis_days = [1:365];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra]; 
+        
+        
+ case 'y2014_AQUA'
+         savevarname{1} = [savedir_var 'timeseries3_data_y2014_AQUA_20150130T112546.mat'];
+         
+         %% *** make sure that these are set propertly in each case ***
+        modis_year = 2014;
+        modis_days = [1:365];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];            
+        
+ case 'y2001-2010_AQUA_TERRA'
+     %won't actually use number one - just for MLAT
+     savevarname{1} = [savedir_var 'timeseries3_data_y2010_AQUA_20111219T152136.mat'];  %                             
+     savevarname{3} = [savedir_var 'Nd_PDF_multi_combined_2000-2010.mat'];  %all PDFs combined
+
+             %% *** make sure that these are set propertly in each case ***
+        modis_year = [2000:2010];
+        modis_days = [1];
+        aqua_terra = {'AQUA-TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];   
+        
+case 'AP_Dec_2009_daytime_AQUA'
+     %won't actually use number one - just for MLAT
+     savevarname{1} = [savedir_var 'AP_Dec_2009_daytime_AQUA_L2_data_make mock L3 data_20120217T152348.mat'];  %                             
+     savevarname{3} = [savedir_var 'NOT_USED'];  %
+
+             %% *** make sure that these are set propertly in each case ***
+        modis_year = 2009;
+        modis_days = [1:365];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];    
+        
+    case 'Summer_2004_17days_all_lats_aqua'
+             %won't actually use number one - just for MLAT
+%     savevarname{1} = [savedir_var 'summer_2004_17days_all_lats_aqua_L2_data_make mock L3 data_20120222T170435.mat'];  %   
+     savevarname{1} = [savedir_var 'summer_2004_17days_all_lats_aqua_L2_data_make mock L3 data_20120413T140552.mat'];  %           
+     savevarname{3} = [savedir_var 'NOT_USED'];  %
+
+             %% *** make sure that these are set propertly in each case ***
+        modis_year = 2004;
+        modis_days = [1:593];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];    
+        
+    case 'Summer_2007_Arctic_20W-60E_70-80N_terra'
+                %won't actually use number one - just for MLAT
+                
+%     savevarname{1} = [savedir_var 'Arctic_summerL2_2007_20W-60E_70-80N_terra_L2_data_make mock L3 data_20120229T144957.mat'];  %                             
+%     savevarname{1} = [savedir_var
+%     'Arctic_summerL2_2007_20W-60E_70-80N_terra_L2_data_make mock L3 data_20120409T163217.mat'];  %  
+%     savevarname{1} = [savedir_var 'Arctic_summerL2_2007_20W-60E_70-80N_terra_L2_data_make mock L3 data_20120430T122148.mat'];  %     
+     %savevarname{1} = [savedir_var 'Arctic_summerL2_2007_20W-60E_70-80N_terra_L2_data_make mock L3 data_20120501T134926.mat'];  %     
+%     savevarname{1} = [savedir_var 'Arctic_summerL2_2007_20W-60E_70-80N_terra_L2_data_make mock L3 data_20120521T085526.mat'];  %
+%     savevarname{1} = [savedir_var 'Arctic_summerL2_2007_20W-60E_70-80N_terra_L2_data_make mock L3 data_20120525T110334.mat'];  
+     savevarname{1} = [savedir_var 'Arctic_summerL2_2007_20W-60E_70-80N_terra_L2_data_make mock L3 data_20120712T231421.mat'];  %
+     %Joint L2 file:-
+%    savevarname{1} = [savedir_var 'Arctic_summerL2_2007_20W-60E_70-80N_Joint_5km_files_terra_L2_data_make mock L3 data_20120613T152700.mat'];  
+     
+     %% *** make sure that these are set propertly in each case ***
+        modis_year = 2007;
+        modis_days = [1:405];
+        aqua_terra = {'TERRA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];   
+        
+        
+
+    case 'Summer_2007_Arctic_20W-60E_70-80N_aqua'
+%     savevarname{1} = [savedir_var 'Arctic_summerL2_2007_20W-60E_70-80N_aqua_L2_data_make mock L3 data_20120524T074930.mat'];  %          
+     savevarname{1} = [savedir_var 'Arctic_summerL2_2007_20W-60E_70-80N_aqua_L2_data_make mock L3 data_20120714T020934.mat'];  %               
+
+     
+     savevarname{3} = [savedir_var 'NOT_USED'];  %
+
+             %% *** make sure that these are set propertly in each case ***
+        modis_year = 2007;
+        modis_days = [1:411];
+        aqua_terra = {'AQUA'};
+        
+        modisyear_timeseries3 = [modisyear_timeseries3 modis_year*ones(size(modis_days))];       
+        daynum_timeseries3 = [daynum_timeseries3 modis_days];
+        aqua_terra_timeseries3 = [aqua_terra_timeseries3 aqua_terra];   
+        
+        
+        
+        
+
+        
+        
+        
+    end

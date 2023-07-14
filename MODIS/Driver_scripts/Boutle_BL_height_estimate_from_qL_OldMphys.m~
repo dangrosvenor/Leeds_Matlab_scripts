@@ -1,0 +1,13 @@
+%Estimate the boundary layer height using mean qL profile for Old Mphys run
+
+nc_qL=netcdf('/home/disk/eos8/d.grosvenor/UM/12Nov2008_Boutle/xmmz-n/xmmzn_qL_.pp.nc');
+
+qL_prof = zeros([70 1]);
+
+nt=97;
+for it=1:nt
+    qL = nc_qL{'qL'}(it,:,:,:);
+    qL_prof = qL_prof + meanNoNan(meanNoNan(qL,2),2)/97;        
+end
+
+%Shows that the highest level qL reaches is around

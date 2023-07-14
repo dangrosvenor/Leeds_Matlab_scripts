@@ -1,0 +1,14 @@
+col_time=1;  %seconds from midnight
+col_temp=7;
+col_alt=15;
+%col_radalt=15;
+col_lat=16;
+col_lon=17;
+col_press=5;
+col_Uwind=27;
+col_Vwind=28;
+col_wind=30;
+col_winddir=31;    
+col_frostpoint_hygro=7;    
+col_frostpoint_humi=8;
+col_airspeed=4;

@@ -1,0 +1,80 @@
+function WRFDAT=doWRFMicrophysicsPlot(data,tShift,xShift,yShift,fileNameWRF)
+% This function is to plot out IWC, and N ice from the model and compare 
+% to that measured
+% however, there are some differences in the timing and positioning, so 
+% try shifting t,x,y using the `shift' variables.
+
+% Get LAT,LON,Z,NI=(NG+NS+NI)*rho, IWC=(QG+QS+QI)*rho;
+
+nc=netcdf(fileNameWRF);
+% Times array
+Times=nc{1}(:);
+Times=datenum(str2num(Times(:,1:4)),str2num(Times(:,6:7)),...
+    str2num(Times(:,9:10)),str2num(Times(:,12:13)),str2num(Times(:,15:16)),...ncnclslfalsdfj
+    str2num(Times(:,18:19)))+8.5./24-tShift./24;
+% The times array
+time=1;
+
+p =WRFUserARW(nc,'p',time);
+tc=WRFUserARW(nc,'tc',time);
+Z=WRFUserARW(nc,'Z',time);
+XLON=WRFUserARW(nc,'XLONG',time);
+XLAT=WRFUserARW(nc,'XLAT',time);
+rho_a=p.var.*100./287./(tc.var+273.15);
+clear p tc;
+flag=0;
+WRFDAT.NI=nan.*ones(length(data{1}.MET2_E.TIME),1);
+WRFDAT.IWC=nan.*ones(length(data{1}.MET2_E.TIME),1);
+length(Times)
+for i=1:length(Times)-1
+    i
+    try
+    ind=find(data{1}.MET2_E.TIME>=Times(i) & data{1}.MET2_E.TIME<Times(i+1));
+    catch
+    ind=find(data{1}.MET_E.TIME>=Times(i) & data{1}.MET_E.TIME<Times(i+1));
+      
+    end
+    if(length(ind))
+        % Read in the  two files and interpolate between them
+        % +++++++++++++++++++++++++++++++++++++++++++++++++++  
+        if(flag==1)
+            % Q
+            QI=QI2;
+            NI=NI2;
+        else
+            % Q
+            QI=WRFUserARW(nc,'QICE',i);  QI=QI.var;
+            Q=WRFUserARW(nc,'QSNOW',i);  QI=QI+Q.var;clear Q;
+            Q=WRFUserARW(nc,'QGRAUP',i); QI=QI+Q.var;clear Q;
+            QI=QI.*rho_a;
+            % N
+            NI=WRFUserARW(nc,'QNICE',i); NI=NI.var.*rho_a;
+        end
+        % Q2
+        QI2=WRFUserARW(nc,'QICE',i+1);  QI2=QI2.var;
+        Q=WRFUserARW(nc,'QSNOW',i+1);  QI2=QI2+Q.var;clear Q;
+        Q=WRFUserARW(nc,'QGRAUP',i+1); QI2=QI2+Q.var;clear Q;
+        QI2=QI2.*rho_a;
+        % N
+        NI2=WRFUserARW(nc,'QNICE',i+1); NI2=NI2.var;
+        NI2=NI2.*rho_a;
+        flag=1;
+        % ---------------------------------------------------
+        % Interpolate to the grid
+        try
+        WRFDAT.IWC(ind) = interpn([Times(i) Times(i+1)]',XLON.var(1,:),XLAT.var(:,1),Z.var(:,1,1)',...
+            permute(cat(4,QI,QI2),[4 3 2 1]),data{1}.MET2_E.TIME(ind),...
+            data{1}.MET2_E.Nlon(ind),data{1}.MET2_E.Nlat(ind),data{1}.MET2_E.Nalt(ind));
+        WRFDAT.NI(ind) = interpn([Times(i) Times(i+1)]',XLON.var(1,:),XLAT.var(:,1),Z.var(:,1,1)',...
+            permute(cat(4,NI,NI2),[4 3 2 1]),data{1}.MET2_E.TIME(ind),...
+            data{1}.MET2_E.Nlon(ind),data{1}.MET2_E.Nlat(ind),data{1}.MET2_E.Nalt(ind));
+        catch
+        WRFDAT.IWC(ind) = interpn([Times(i) Times(i+1)]',XLON.var(1,:),XLAT.var(:,1),Z.var(:,1,1)',...
+            permute(cat(4,QI,QI2),[4 3 2 1]),data{1}.MET_E.TIME(ind),...
+            data{1}.MET_E.Nlon(ind),data{1}.MET_E.Nlat(ind),data{1}.MET_E.Nalt(ind));
+        WRFDAT.NI(ind) = interpn([Times(i) Times(i+1)]',XLON.var(1,:),XLAT.var(:,1),Z.var(:,1,1)',...
+            permute(cat(4,NI,NI2),[4 3 2 1]),data{1}.MET_E.TIME(ind),...
+            data{1}.MET_E.Nlon(ind),data{1}.MET_E.Nlat(ind),data{1}.MET_E.Nalt(ind));
+        end
+    end
+end

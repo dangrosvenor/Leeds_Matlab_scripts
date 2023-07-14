@@ -1,0 +1,4 @@
+function val=get_wrf_point_non_tvar(nc,var,time,ilat,ilon)
+
+VAR=nc{var}(time,ilat,:);
+val=VAR(ilon)

@@ -1,0 +1,219 @@
+
+function [adiabatic_lwc,adtemp] = adLWC_PaulLawson_simple ( cb_pa,cb_k,gt_pa )
+%calculates the adiabatic LWC (g/m3) and temperature (degC) during moist adibatic ascent
+%function [adiabatic_lwc,adtemp] = slwc_revb ( cb_pa,cb_k,gt_pa )
+%inputs: cb_pa = cloud base pressure (Pa)
+%        cb_k  = cloud base temperature (K)
+%        gt_pa = pressure at the point we want the LWC for (Pa)
+
+%
+
+%
+%.......................HISTORY.............................
+%
+%     WRITTEN: CA. 1982 BY W. A. COOPER IN HP FORTRAN 4
+%
+%....... CALCULATES TEMPERATURE T AND LIQUID WATER CONTENT FROM
+%..      CLOUD BASE PRESSURE P0 AND TEMPERATURE T0, FOR ADIABATIC
+%..      ASCENT TO THE PRESSURE P.
+%..     ->  INPUT:  CLOUD BASE PRESSURE P0 AND TEMPERATURE T0
+%..                 PRESSURE AT OBSERVATION LEVEL P
+%..     ->  OUTPUT: "ADIABATIC" TEMPERATURE T AND LIQUID WATER CONTENT
+%
+%     MODifIED: November 1989 by Paul Lawson for LAPS/WISP.  Routine
+%               now calculates adiabatic liquid water content
+%               (ADIABATIC_LWC) using cloud base pressure and grid-top
+%               temperature and pressure.  Also calculated are ADJUSTED_LWC,
+%               which adjusts ADIABATIC_LWC using an empirical cloud
+%               water depletion algorithm, and ADJUSTED_SLWC, which is
+%               ADIABATIC_LWC in regions where T < 0 C adjusted
+%               using an empirical algorithm by Marcia Politovich.
+%
+%               Subroutine is now hardwired for stratiform cloud only.
+%               Can be modified to include Cu with input from LAPS main.
+%
+%               revb: ca 12/89 Calculate adiabatic lwc by going from cloud
+%                     base to LAPS grid level instead to cloud top, thus
+%                     helping to better calculate in layer clouds.
+%                     Add TG (grid temperature) to calcualtion.
+%
+%               revc: 2/27/90 Correct error in code.  Zero-out slwc when grid
+%                     temperature (GT) > 0.
+%
+%               J.Z.: 4/7/97 Correct error in code
+%                     Grid temperature should be TG, not GT.
+%
+%
+%     OUTPUTS:  ADIABATIC_LWC
+%               ADJUSTED_LWC
+%               ADJUSTED_SLWC
+%               I_STATUS1 - 1 when -20 < cld_top_temp < 0 for Stratus
+%                           0 Otherwise
+%               I_STATUS2 - 1 when valid input data provided from main
+%
+  eps=0.622;
+  cpd=1.0042E3;
+  cw=4.218E3;
+  rd=287.05;
+  alhv=2.501E6;
+  
+  i_status1=1;
+  i_status2=1;
+%   2 Print *,'ENTER: P-BASE(mb), T-BASE(C), P-TOP, T-TOP, CLD TYPE'
+%  READ(5,*) P0, T0, P, CTT, CTY
+%  if(CTY.ne.0&CTY.ne.1) Go to 2
+%
+%  Hardwire cloud type (CTY) for stratus for now
+%
+  cty=0;
+%
+%.....Convert Pa to mb and Kelvin to Celcius
+%
+  p0 = cb_pa/100.;
+  p  = gt_pa/100.;
+  t0 = cb_k - 273.15;
+  %tg = gt_k - 273.15;   %Dan - removed these as adds confusion
+  %ctt= ct_k - 273.15;
+
+  %  Print *, 'CTT in Sub = ', CTT
+%
+%  Check for valid input data...
+%
+  if(p0 > 1013.| p0 < 50.)
+    i_status2=0;
+    return
+  else
+  end
+%
+%
+  if(t0 > 50.| t0 < -70.)
+    i_status2=0;
+    return
+  else
+  end
+%
+%
+  if(p > 1013.| p < 50.) 
+    i_status2=0;
+    return
+  else
+  end
+%
+%  Set I_STATUS1 = F if 0 < cld top < -20 C (for stratus).
+%
+%  if(tg >= 0.|ctt < -20.) i_status1=0; end   %Dan - removed these as adds confusion
+%
+  tk=t0+273.15;    %cloud base temperature
+  e=vapor(t0);  %vapour pressure in mb (t0 in celsius)
+  r=eps.*e./(p0-e);  %mixing ratio at cloud base
+  cpt=cpd+r.*cw;
+  thetaq=tk.*(1000./(p0-e)).^(rd./cpt).*exp(alhv.*r./(cpt.*tk));
+% 1ST APPROX
+  t1=tk;
+  e=vapor(t1-273.15);
+  rv=eps.*e./(p-e);
+  t1=thetaq./((1000./(p-e)).^(rd./cpt).*exp(alhv.*rv./(cpt.*t1)));
+% SUCCESSIVE APPROXIMATIONS
+   for i=1:10
+    e=vapor(t1-273.15);
+    rv=eps.*e./(p-e);
+    t1=(thetaq./((1000./(p-e)).^(rd./cpt).*exp(alhv.*rv./(cpt.*t1)))+t1)/2.;
+    t=t1-273.15
+%  Print *, P0,T0,P,T,E,RV,THETAQ
+   end
+    
+% GET LWC
+  adtemp = t;
+  e=vapor(t); %vapour pressure during ascent in mb
+  rv=eps.*e./(p-e); %mixing ratio (kg/kg)
+  tw=r-rv;          %cloud base MR - saturated MR during ascent
+  adiabatic_lwc=tw.*p*28.9644./(8.314E7.*t1)*1.e9; % p*100*28.9644/(R*t1) = air density in g/m3 (R=8.3147). 100 comes from *1e9/1e7
+                                                   % so LWC is actually in g/m3 not g/kg! 
+  if(adiabatic_lwc < 0.) adiabatic_lwc=0.; end
+%  Print *, 'Adiabtic LWC = ', ADIABATIC_LWC
+%  if(tg >= 0.)   %Dan - removed as adds confusion
+%
+    adjusted_slwc=0.;                                          % Added 2/27/90
+%
+
+%     if(cty == 0.) 
+%       if(ctt < -20.) 
+%         adjusted_lwc=0.;
+%       elseif(ctt < -15. & ctt >= -20.) 
+%         adjusted_lwc=adiabatic_lwc/8.;
+%       elseif(ctt < -10. & ctt >= -15.) 
+%         adjusted_lwc=adiabatic_lwc/4.;
+%       else
+%         adjusted_lwc=adiabatic_lwc/2.;
+%       end
+%     else
+%       if(ctt < -25.) 
+%         adjusted_lwc=0.;
+%       elseif(ctt < -15.&ctt >= -25.) 
+%         adjusted_lwc=adiabatic_lwc/8.;
+%       elseif(ctt < -10.&ctt >= -15.) 
+%         adjusted_lwc=adiabatic_lwc/4.;
+%       else
+%         adjusted_lwc=adiabatic_lwc/2.;
+%       end
+%     end
+%   else
+%     if(cty == 0.) 
+%       if(ctt < -20.) 
+%         adjusted_lwc=0.;
+%         adjusted_slwc=0.;
+%       elseif(ctt < -15.&ctt >= -20.) 
+%         adjusted_lwc=adiabatic_lwc/8.;
+%         adjusted_slwc=adiabatic_lwc/8.;
+%       elseif(ctt < -10.&ctt >= -15.) 
+%         adjusted_lwc=adiabatic_lwc/4.;
+%         adjusted_slwc=adiabatic_lwc/4.;
+%       else
+%         adjusted_lwc=adiabatic_lwc/2.;
+%         adjusted_slwc=adiabatic_lwc/2.;
+%       end
+%     else
+%       if(ctt < -25.) 
+%         adjusted_lwc=0.;
+%         adjusted_slwc=0.;
+%       elseif(ctt < -15.&ctt >= -25.) 
+%         adjusted_lwc=adiabatic_lwc/8.;
+%         adjusted_slwc=adiabatic_lwc/8.;
+%       elseif(ctt < -10.&ctt >= -15.) 
+%         adjusted_lwc=adiabatic_lwc/4.;
+%         adjusted_slwc=adiabatic_lwc/4.;
+%       else
+%         adjusted_lwc=adiabatic_lwc/2.;
+%         adjusted_slwc=adiabatic_lwc/2.;
+%       end
+%     end
+%   end  %%Dan - removed as adds confusion
+%  Print *,'Adjusted LWC = ', ADJUSTED_LWC
+%  Print *,'Adjusted SLWC = ', ADJUSTED_SLWC
+
+
+
+
+%  FUNCTION TO CALCULATE VAPOR PRESSURE:
+%
+  function vapor=vapor(tfp) %returns vapour pressure in mb
+% INPUT IS IN DEGREES C.  IF GT 0, ASSUMED TO BE DEW POINT.  IF
+% LESS THAN 0, ASSUMED TO BE FROST POINT.
+% ROUTINE CODES GOFF-GRATCH FORMULA
+  tvap=273.16+tfp;
+  if(tfp <= 0.) 
+% THIS IS ICE SATURATION VAPOR PRESSURE
+    if(tvap <= 0) tvap=1E-20; end
+    e=-9.09718.*(273.16./tvap-1.)-3.56654.*log10(273.16./tvap)             ...
+      +0.876793.*(1.-tvap/273.16);
+    vapor=6.1071.*10.^e;
+%    return
+  end
+  
+% THIS IS WATER SATURATION VAPOR PRESSURE
+  if(tvap <= 0) tvap=1E-20; end
+    e=-7.90298*(373.16./tvap-1.)+5.02808.*log10(373.16./tvap)             ...
+      -1.3816E-7.*(10.^(11.344.*(1.-tvap/373.16))-1.)                  ...
+      +8.1328E-3.*(10.^(3.49149.*(1-373.16./tvap))-1);
+    vapor=1013.246.*10.^e;
+  return

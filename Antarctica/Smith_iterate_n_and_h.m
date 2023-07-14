@@ -1,0 +1,93 @@
+%Antarctic Peninsula
+L=0.002;
+H=3000;
+Hmountain=1500;
+
+%Klemp and Durran, 1987, Fig 6.
+% L=0.011/10;
+% H=4300;
+% Hmountain=1200;
+
+%Fig. 4
+% L=0.0139/10;
+% H=3000;
+% Hmountain=1200;
+% 
+% %Fig. 9
+% L=0.011/20;
+% %L=0.0239/20;
+% H=10000;
+% Hmountain=1200;
+% 
+% %Durran (1986) Fig. 1
+% L=0.02/20;
+% %L=0.02/20;
+% H=1000;
+% Hmountain=500;
+% 
+% %Durran (1986) Fig. 11 - 1972 windstorm with inversion removed
+% L=0.0085/20;
+% %L=0.02/20;
+% H=9500;
+% Hmountain=2000;
+% 
+% %Durran (1987) Fig. 1 - single value of N with critical layer (wind direction change) included at different heights
+% L=0.01047/20;
+% H=6200;
+% Hmountain=0.3/L;
+% Hmountain=0.4/L;
+% Hmountain=0.5/L;
+
+%Smith (1980) Fig. 3 - Boulder 1972 windstorm
+% L=0.01/20;
+% %L=0.02/20;
+% H=1000;
+% Hmountain=2000;
+
+
+%h=1/L;
+Hmin=min(HH)/L+Hmountain;
+nmin=Hmin*L/(pi/6);
+
+if Hmountain*L<max(hh)
+    Hmax=interp1(hh,HH,Hmountain*L)/L;
+    nmax=Hmax*L/(pi/6);
+    n=H*L/(pi/6)
+    fprintf(1,'\nMountain smaller than max allowed');
+    if H>Hmax
+        fprintf(1,'\nNo streamline possible - above the max possible streamline altitude of H=%.0f.\n',Hmax);
+        fprintf(1,'\nHmin=%.1f, nmin=%f',Hmin,nmin);
+        fprintf(1,'\nHmax=%.0f, nmax=%f\n',Hmax,nmax);
+        return
+    end
+else
+    n=9;
+    Hmax=max(HH)/L+Hmountain-1/L;
+    nmax=9;
+end
+
+
+
+
+fprintf(1,'\nHmin=%.1f, nmin=%f',Hmin,nmin);
+fprintf(1,'\nHmax=%.0f, nmax=%f\n',Hmax,nmax);
+
+for i=1:10
+
+    if n > max(HH)/(pi/6)
+        fprintf(1,'\nNo streamline possible as are above the max possible streamline altitude of H=%.0f\n',Hmax);
+        return
+    elseif n < min(HH)/(pi/6)
+        fprintf(1,'\nNo streamline possible as are below the min possible streamline altitude of H=%.0f\n',Hmin);
+        return
+    end
+
+
+    h=interp1(HH,hh,n*pi/6)/L;
+    n=(H-Hmountain+h)*L/(pi/6);
+
+end
+
+
+fprintf(1,'\nh=%.1f',h);
+fprintf(1,'\nn=%.0f\n',n);

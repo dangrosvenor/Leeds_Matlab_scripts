@@ -1,0 +1,165 @@
+%read the text format PARASOL data from all the directories
+%Have directories for each year and each day and each one can contain
+%several .txt files to be concatenated. Each datapoint is an reff for an individual
+%lat,lon,time.
+%This just makes and saves a big array of size [length(years_requested) 366 nMAX]
+%which contains a big list of all the datapoints for each day
+%See grid_PARARSOL_CDR for the script that processes this data into a
+%regular lat lon grid (same as MODIS)
+%Have made it so that any datapoint is put into its correct year rather
+%than the year according to the directory. And it removes data with bad
+%dates (the 1949 datapoints)
+
+nc_dir='/home/disk/eos5/d.grosvenor/PARASOL/CDR_L2.v01.01/'; calipso_daynight_label = 'CDR';
+
+
+time_series_type = 'PARASOL';
+
+gcm_time_of_day_select=0;
+
+clear field_names
+
+
+
+years_requested = [2005:2012]; 
+years_calipso_str='';
+
+if max(diff(years_requested)==1)
+    years_calipso_str=[num2str(years_requested(1)) ' to ' num2str(years_requested(end))];
+else
+    for i=1:length(years_requested)
+        years_calipso_str=[years_calipso_str ' ' num2str(years_requested(i))];
+    end
+end
+
+gcm_years_loaded_str = years_calipso_str;
+
+%Make empty arrays to hold all of the data
+%Specify an upper limit for the no. of datapoints each day (globally)
+
+nMAX = 2500;
+
+Par_OrbitNum = NaN*ones([length(years_requested) 366 nMAX]);
+Par_MatlabTime = NaN*ones([length(years_requested) 366 nMAX]);
+Par_Year = NaN*ones([length(years_requested) 366 nMAX]);
+Par_Month = NaN*ones([length(years_requested) 366 nMAX]);
+Par_Day = NaN*ones([length(years_requested) 366 nMAX]);
+Par_Hours = NaN*ones([length(years_requested) 366 nMAX]);
+Par_Mins = NaN*ones([length(years_requested) 366 nMAX]);
+Par_Secs = NaN*ones([length(years_requested) 366 nMAX]);
+Par_LT = NaN*ones([length(years_requested) 366 nMAX]);
+Par_Lat= NaN*ones([length(years_requested) 366 nMAX]);
+Par_Lon = NaN*ones([length(years_requested) 366 nMAX]);
+Par_CDR = NaN*ones([length(years_requested) 366 nMAX]);
+Par_CDRstd = NaN*ones([length(years_requested) 366 nMAX]);
+Par_QI = NaN*ones([length(years_requested) 366 nMAX]);
+
+%this is a count of the 3rd (nMAX) index for storing data for a particular
+%day
+ndata = zeros([length(years_requested) 366]);
+
+
+%% Search through all of the files in the directory to find the ones we
+%% want to process
+%for ifield=1:length(field_names)
+
+for iyear=1:length(years_requested)
+    year_dir_str = [num2str(years_requested(iyear)) '/'];
+
+    files_year = dir([nc_dir year_dir_str '*']);
+
+
+    for idays=3:length(files_year)
+        %now are making idays2 correspond to the day of the year rather
+        %than just the counts of days (in case data starts midway throught
+        %the year)
+%        idays2=idays-2;
+        day_dir_str = [files_year(idays).name '/'];
+        files = dir([nc_dir year_dir_str day_dir_str '*.txt']);
+
+        clear filenames_csat years_csat months_csat iyear_csat
+
+        
+        
+        for i=1:length(files)
+
+            filename = [nc_dir year_dir_str day_dir_str files(i).name];
+
+            fid = fopen(filename,'rt');
+            go=1;
+            count=0;
+            while go==1
+                count=count+1;
+                textline = fgetl(fid);
+                if length(strfind(textline,'DATA'))>0 | count > 10
+                    go=0;
+                end
+            end
+
+            %this reads all the lines from the file
+            dat_tmp = textscan(fid,'%f %f%f%f %f%f%f %f %f %f %f %f','delimiter',':/');
+            
+            fclose(fid);
+
+            for n=1:length(dat_tmp{1})
+                
+                MatlabTime = datenum(dat_tmp{2}(n),dat_tmp{3}(n),dat_tmp{4}(n),dat_tmp{5}(n),dat_tmp{6}(n),dat_tmp{7}(n));
+                MatlabTime_day1 = datenum(dat_tmp{2}(n),1,1);
+                idays2 = floor(MatlabTime - MatlabTime_day1)+1;
+                iyear2 = dat_tmp{2}(n) - years_requested(1) + 1;
+                if iyear2<1
+                    %some of the dates are wrong (years are 1949 or 1950) -
+                    %ignore this data for the time being
+                    continue
+                end
+                
+                ndata(iyear2,idays2)=ndata(iyear2,idays2)+1;
+                n2 = ndata(iyear2,idays2);
+                if n2>nMAX
+                    fprintf(1,'\nn2>NMAX for i=%d,idays2=%d,iyear=%d\n',i,idays2,iyear);
+                end
+                if iyear2>length(years_requested)
+                    fprintf(1,'\iyear2>length(years_requested) for i=%d,idays2=%d,iyear=%d\n',i,idays2,iyear);
+                end
+                
+                Par_OrbitNum(iyear2,idays2,n2) = dat_tmp{1}(n);
+                Par_MatlabTime(iyear2,idays2,n2) = MatlabTime;
+                Par_Year(iyear2,idays2,n2) = dat_tmp{2}(n);
+                Par_Month(iyear2,idays2,n2) = dat_tmp{3}(n);
+                Par_Day(iyear2,idays2,n2) = dat_tmp{4}(n);
+                Par_Hours(iyear2,idays2,n2) = dat_tmp{5}(n);
+                Par_Mins(iyear2,idays2,n2) = dat_tmp{6}(n);
+                Par_Secs(iyear2,idays2,n2) = dat_tmp{7}(n);
+                Par_Lat(iyear2,idays2,n2)  = dat_tmp{8}(n);
+                Par_Lon(iyear2,idays2,n2) = dat_tmp{9}(n);
+                Par_CDR(iyear2,idays2,n2) = dat_tmp{10}(n);
+                Par_CDRstd(iyear2,idays2,n2) = dat_tmp{11}(n);
+                Par_QI(iyear2,idays2,n2) = dat_tmp{12}(n);
+            end
+
+            %Should multiple text files just be concatenated? Yes, each
+            %text file is for one orbit
+
+
+
+
+
+
+        end
+
+    end
+
+end
+
+
+file_save = ['/home/disk/eos5/d.grosvenor/PARASOL/CDR_L2.v01.01/saved_CDR_after_textread_' datestr(now,30) '.mat'];
+save(file_save,'Par_OrbitNum','Par_MatlabTime','Par_Year','Par_Month','Par_Day','Par_Hours','Par_Mins',...
+    'Par_Secs','Par_Lat','Par_Lon','Par_CDR','Par_CDRstd','Par_QI');
+
+
+fprintf(1,'\n Done read PARASOL text data\n');
+%now the data is in a big array of [nyears 366 nMAX]
+%For each day there are a number of datapoints for different locations,
+%etc.
+
+

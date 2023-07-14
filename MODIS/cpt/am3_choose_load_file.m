@@ -1,0 +1,355 @@
+%don't put spaces in am3_dataset as is used in the filename for the saved
+%vars
+
+clear dir
+
+try
+
+if ~exist('ioverride_am3choose') | ioverride_am3choose==0
+    am3_dataset = 'old';
+    am3_dataset = 'AM3new_2deg';
+    %am3_dataset = 'AM3new_0.5deg';
+%    am3_dataset = 'AM3_CLUBB'; %CLUBBv1, 0.5 deg
+    am3_dataset = 'AM3_CLUBBv1_1deg'; %no COSP
+    am3_dataset = 'AM3_CLUBBv1_2deg'; %no COSP     
+%    am3_dataset = 'AM3_100km_20130110';
+    %am3_dataset = 'CAM5_CLUBB_new_1deg';
+    %am3_dataset = 'CAM5_new_1deg';
+    %am3_dataset = 'CAM5_old_2deg';
+end
+
+%have some data on eos5 and some on eos10
+
+
+
+switch am3_dataset
+   
+    case 'AM3_CLUBB'  %CLUBBv1, 0.5 deg - looks like only have 2007 for this
+        %But do have 2006-2010 for 1 deg.
+        % From AM3_CLUBB_50km_noCOSP in ftp dir (July 8th, 2012)
+
+        nc_dir = '/home/disk/eos10/d.grosvenor/CPT/new_output_June2012/AM3_clubb_no_COSP/0.5deg/';
+        nc_dir_grid = nc_dir;
+
+%        nc_grid_file = ['*grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['*atmos_inst.tile' tile_no '.nc'];
+        
+%only have 2007 for CLUBB at present
+         files_multi_grid = dir([nc_dir '2007*grid_spec.tile' tile_no '.nc']);
+         files_multi = dir([nc_dir '2007*atmos_inst.tile' tile_no '.nc']);
+         
+%case 'AM3_CLUBBv1_1deg'   %NOT v1 !! Actually is v2! 
+case 'AM3_CLUBBv2_1deg'  
+% From Feb 19th 2013 files - AM3_CLUBB_100km_noCOSP_20130220
+% So, this is not actually v1 (is v2)
+% There don't seem to be any files on the ftp for v1 for 100km (only 200km
+% and 50km)
+        nc_dir = '/home/disk/eos10/d.grosvenor/CPT/new_output_June2012/AM3_clubb_no_COSP/1deg/';
+        nc_dir_grid = nc_dir;
+
+%        nc_grid_file = ['*grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['*atmos_inst.tile' tile_no '.nc'];
+        
+         files_multi_grid = dir([nc_dir '*grid_spec.tile' tile_no '.nc']);
+         files_multi = dir([nc_dir '*atmos_inst.tile' tile_no '.nc']);  
+         
+case 'AM3_CLUBBv1_2deg'  %CLUBBv1, for 0.5 deg looks like only have 2007 for this
+        %But do have 2006-2010 for 1 deg. And also for 2deg.
+% From July 9th 2012 files - AM3_CLUBB_200km_noCOSP         - so should be
+% v1
+
+        nc_dir = '/home/disk/eos10/d.grosvenor/CPT/new_output_June2012/AM3_clubb_no_COSP/2deg/';
+        nc_dir_grid = nc_dir;
+
+%        nc_grid_file = ['*grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['*atmos_inst.tile' tile_no '.nc'];
+        
+         files_multi_grid = dir([nc_dir '*grid_spec.tile' tile_no '.nc']);
+         files_multi = dir([nc_dir '*atmos_inst.tile' tile_no '.nc']);           
+        
+
+case 'AM3_CLUBBv2_2deg'  %July 15th, 2013 files   
+
+        nc_dir = '/home/disk/eos8/d.grosvenor/CPT/AM3_COSPCLUBB/AM3_CLUBB_200km_COSP_20130715/';
+        nc_dir_grid = nc_dir;
+
+%        nc_grid_file = ['*grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['*atmos_inst.tile' tile_no '.nc'];
+        
+         files_multi_grid = dir([nc_dir '*grid_spec.tile' tile_no '.nc.gz']);
+         files_multi = dir([nc_dir '*atmos_inst.tile' tile_no '.nc.gz']);  
+         
+    case 'AM3_CLUBBv2_50km'
+        nc_dir = '/home/disk/eos8/d.grosvenor/CPT/AM3_COSPCLUBB/AM3_CLUBB_50km_COSP_20130715/';
+        nc_dir_grid = nc_dir;
+
+%        nc_grid_file = ['*grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['*atmos_inst.tile' tile_no '.nc'];
+        
+         files_multi_grid = dir([nc_dir '2007*grid_spec.tile' tile_no '*']);
+         files_multi = dir([nc_dir '2007*atmos_inst.tile' tile_no '*']);  
+
+
+         
+    case 'AM3new_2deg'
+
+        %new files with instantaneous COSP - 2 degree resolution
+        nc_dir = '/home/disk/eos8/d.grosvenor/CPT/AM3/new_output_June2012/';
+        nc_dir_grid = nc_dir;
+
+%        nc_grid_file = ['20060101.grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['20060101.atmos_inst.tile' tile_no '.nc'];
+
+%        nc_grid_file = ['20060701.grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['20060701.atmos_inst.tile' tile_no '.nc'];
+
+%        nc_grid_file = ['20070101.grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['20070101.atmos_inst.tile' tile_no '.nc'];
+
+%        nc_grid_file = ['20070701.grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['20070701.atmos_inst.tile' tile_no '.nc'];
+
+%        nc_grid_file = ['20080101.grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['20080101.atmos_inst.tile' tile_no '.nc'];
+
+%        nc_grid_file = ['20080701.grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['20080701.atmos_inst.tile' tile_no '.nc'];
+
+%        nc_grid_file = ['20090101.grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['20090101.atmos_inst.tile' tile_no '.nc'];
+        
+%          nc_grid_file = ['20090701.grid_spec.tile' tile_no '.nc'];
+%          nc_inst_file = ['20090701.atmos_inst.tile' tile_no '.nc'];
+%         
+%          nc_grid_file = ['20100101.grid_spec.tile' tile_no '.nc'];
+%          nc_inst_file = ['20100101.atmos_inst.tile' tile_no '.nc'];
+%         
+%          nc_grid_file = ['20100701.grid_spec.tile' tile_no '.nc'];
+%          nc_inst_file = ['20100701.atmos_inst.tile' tile_no '.nc'];
+
+%        files_multi_grid = dir([nc_dir '2008*grid_spec.tile' tile_no '.nc']);   
+%        files_multi = dir([nc_dir '2008*atmos_inst.tile' tile_no '.nc']);   
+        
+        files_multi_grid = dir([nc_dir '2010*grid_spec.tile' tile_no '.nc']);   
+        files_multi = dir([nc_dir '2010*atmos_inst.tile' tile_no '.nc']);   
+        
+    case 'AM3new_0.5deg'
+        %0.5 degree res, no COSP
+%         nc_dir = '/home/disk/eos8/d.grosvenor/CPT/AM3/new_output_June2012/0.5_degree/';
+%  nc_dir = '/home/disk/eos5/d.grosvenor/CPT/AM3/new_output_June2012/updated_0.5_wCFADS/';
+   nc_dir = '/home/disk/eos8/d.grosvenor/CPT/AM3_0.5deg_COSP/';
+   
+  nc_dir_grid = nc_dir;
+
+         %
+%        nc_grid_file = ['20070101.grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['20070101.atmos_inst.tile' tile_no '.nc'];
+
+%        nc_grid_file = ['20070701.grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['20070701.atmos_inst.tile' tile_no '.nc'];
+
+%        nc_grid_file = ['20080101.grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['20080101.atmos_inst.tile' tile_no '.nc'];
+
+%        nc_grid_file = ['20080701.grid_spec.tile' tile_no '.nc'];
+%        nc_inst_file = ['20080701.atmos_inst.tile' tile_no '.nc'];
+        
+        
+        files_multi_grid = dir([nc_dir '*grid_spec.tile' tile_no '.*']);   
+        files_multi = dir([nc_dir '*atmos_inst.tile' tile_no '.*']);   
+
+
+        
+  case 'AM3_CLUBB_postDiurnal'   %CLUBBv2, 50km, Jan 2013, 2006-2010 available, no COSP
+        nc_dir = '/home/disk/eos5/d.grosvenor/CPT/AM3/AM3_CLUBB_post_diurnal/50km/';        
+        nc_dir_grid = '/home/disk/eos5/d.grosvenor/CPT/AM3/AM3_CLUBB_post_diurnal/50km/';        
+        %don't have COSP for AM3-CLUBB yet
+        %do one year at a time? Starting with 2008         
+        files_multi_grid = dir([nc_dir '2008*grid_spec.tile' tile_no '.nc']);
+        files_multi = dir([nc_dir '2008*atmos_inst.tile' tile_no '.nc']);
+        
+        ino_dbz_cfads=1; %avoid read in of CloudSat CFADs as not available for these runs   
+
+ case 'AM3_CLUBB_COSP_prepostLWP'  %CLUBBv2 (v3?), 50km, July 2013, 2006-2010 available, COSP
+     %I.e. same as above but with COSP. They may have changed CLUBB since
+     %the original v2 (Jan 2013)
+        nc_dir = '/home/disk/eos8/d.grosvenor/CPT/AM3_COSPCLUBB/AM3_CLUBB_100km_COSP_20130715/';        
+        nc_dir_grid = '/home/disk/eos8/d.grosvenor/CPT/AM3_COSPCLUBB/AM3_CLUBB_100km_COSP_20130715/';        
+        %Now COSP is included into AM3_CLUBB
+        %Trying all years at once, whereas previously did one at a time
+        files_multi_grid = dir([nc_dir '*grid_spec.tile' tile_no '.nc']);
+        files_multi = dir([nc_dir '*atmos_inst.tile' tile_no '.nc']);
+        
+        ino_dbz_cfads=1; %avoid read in of CloudSat CFADs as not available for these runs           
+        
+    case 'AM3_100km_20130110' %AM3 base, 100km, 2006-2010, COSP
+        nc_dir = '/home/disk/eos8/d.grosvenor/CPT/AM3_100km_20130110/';
+        nc_dir_grid = '/home/disk/eos8/d.grosvenor/CPT/AM3_100km_20130110/';
+        %Now COSP is included into AM3_CLUBB
+        %Trying all years at once, whereas previously did one at a time
+        files_multi_grid = dir([nc_dir '*grid_spec.tile' tile_no '.nc']);
+        files_multi = dir([nc_dir '*atmos_inst.tile' tile_no '.nc']);
+        
+        ino_dbz_cfads=1; %avoid read in of CloudSat CFADs as not available for these runs  
+        
+        
+                
+        
+    case 'CAM5_old_1deg'
+         nc_dir = '/home/disk/eos8/d.grosvenor/CPT/CAM5_old/COSP output/';
+%         nc_dir = '/home/disk/eos5/d.grosvenor/CPT/AM3/new_output_June2012/updated_0.5_wCFADS/';
+
+         %
+         nc_inst_file = ['cam5_1degcosp.cam.h0.0001-01.nc'];
+         
+    case 'CAM5_old_2deg'
+         nc_dir = '/home/disk/eos8/d.grosvenor/CPT/CAM5_old/';
+         nc_inst_file = ['cam5_1_17_dat.cam.h1.0001-01-01-00000.nc']; 
+
+    case 'CAM5_CLUBB_new_1deg' % "CLUBBv1"
+        nc_dir = '/home/disk/eos5/d.grosvenor/CPT/CAM5/new_output_2ndJuly_2012/';
+        nc_dir_grid = '/home/disk/eos10/d.grosvenor/CPT/new_output_June2012/CAM5_cosp/';
+        
+      
+        
+%        files_multi = dir([nc_dir 'camclubb*h1.2006*.nc']);  
+%        files_multi = dir([nc_dir 'camclubb*h1.2007*.nc']);          
+        
+        
+        %for the new h1 and h2 format from Pete, we need to open both the h1 file for the usual outputs
+        %and the h2 file for the COSP output. Will assign the usual files to
+        %nc_inst and the COSP ones to nc_grid (since uses nc_inst to get the time,
+        %which the COSP files don't contain)
+        
+        %just 2008
+%        files_multi = dir([nc_dir 'camclubb*h1.2008*.nc']); 
+%        files_multi_grid = dir([nc_dir_grid 'camclubb*h2.2008*.nc']); %have 2007-2010       
+        
+        %all years
+        files_multi = dir([nc_dir 'camclubb*h1.*.nc*']); 
+        files_multi_grid = dir([nc_dir_grid 'camclubb*h2.*.nc*']); %have 2006-2010. Allowing .gz files too                
+        
+    case 'CAM5_new_1deg'
+        nc_dir = '/home/disk/eos5/d.grosvenor/CPT/CAM5/new_output_2ndJuly_2012/';
+        
+%        files_multi = dir([nc_dir 'cam5*h1.2006*.nc']);    
+        files_multi = dir([nc_dir 'cam5*h1.2007*.nc']);      
+        
+        
+    case 'CAM5_new_1deg_COSP'
+        nc_dir = '/home/disk/eos5/d.grosvenor/CPT/CAM5/new_output_2ndJuly_2012/';        
+        nc_dir_grid = '/home/disk/eos10/d.grosvenor/CPT/new_output_June2012/CAM5_cosp/';        
+%for the new h1 and h2 format from Pete, we need to open both the h1 file for the usual outputs 
+%and the h2 file for the COSP output. Will assign the usual files to
+%nc_inst and the COSP ones to nc_grid (since uses nc_inst to get the time,
+%which the COSP files don't contain)
+   
+%        files_multi = dir([nc_dir 'cam5*h1.2008*.nc']); 
+%        files_multi_grid = dir([nc_dir_grid 'cam5*h2.2008*.nc']); %have 2007-2010  
+        
+         files_multi = dir([nc_dir 'cam5*h1*.nc']); 
+        files_multi_grid = dir([nc_dir_grid 'cam5*h2*.nc*']); %have 2007-2010  
+        %allowing it to find .gz files for h2 files (which are 112 GB per year) - will uncompress and recompress
+        %since space is running tight
+        
+ case 'CAMCLUBB_COSP_postDiurnal'
+        nc_dir = '/home/disk/eos5/d.grosvenor/CPT/CAM5/CLUBB_post_diurnal2/';        
+        nc_dir_grid = '/home/disk/eos5/d.grosvenor/CPT/CAM5/CLUBB_post_diurnal2/';        
+%for the new h1 and h2 format from Pete, we need to open both the h1 file for the usual outputs 
+%and the h2 file for the COSP output. Will assign the usual files to
+%nc_inst and the COSP ones to nc_grid (since uses nc_inst to get the time,
+%which the COSP files don't contain)
+        %do one year at a time? Starting with 2008 
+        files_multi = dir([nc_dir 'camclubb*h1.2008*.nc']);  
+        files_multi_grid = dir([nc_dir_grid 'camclubb*h2.2008*.nc']); %have 2006-2010 
+        
+        ino_dbz_cfads=1; %avoid read in of CloudSat CFADs as not available for these runs
+        
+   case 'CAM5_prepostLWP'
+        nc_dir = '/home/disk/eos10/d.grosvenor/CPT/CAM_runs_July2013_prepostLWP/CAM5v2_July2013_prepostLWP_h1s/';        
+%        nc_dir_grid = '/home/disk/eos8/d.grosvenor/CPT/July2013_prepostLWP/CAM5/';    %h2 files  
+        nc_dir_grid = '/home/disk/eos8/d.grosvenor/CPT/CAM5/'; %
+        nc_dir_prepostLWP = '/home/disk/eos5/d.grosvenor/CPT/CAM5/CAM5_prepostLWP2/';    %New pre post LWP from Pete Feb 2014        
+%for the new h1 and h2 format from Pete, we need to open both the h1 file for the usual outputs 
+%and the h2 file for the COSP output. Will assign the usual files to
+%nc_inst and the COSP ones to nc_grid (since uses nc_inst to get the time,
+%which the COSP files don't contain)
+   
+%        files_multi = dir([nc_dir 'cam5*h1.2008*.nc']); 
+%        files_multi_grid = dir([nc_dir_grid 'cam5*h2.2008*.nc']); %have 2007-2010  
+        
+        files_multi = dir([nc_dir 'cam5*h1.*']); 
+        files_multi_grid = dir([nc_dir_grid 'cam5*h2.*']); %have 2006-2010  
+        files_multi_prepostLWP = dir([nc_dir_prepostLWP 'cam5*']); %have 2006-2010          
+        %allowing it to find .gz files for h1 & h2 files - will uncompress and recompress
+        %since space is running tight
+        
+        
+   case 'CAMCLUBBv2_prepostLWP'
+        nc_dir = '/home/disk/eos8/d.grosvenor/CPT/July2013_prepostLWP/CAMCLUBB/h1_files/';    %h1_files    
+        nc_dir_grid = '/home/disk/eos8/d.grosvenor/CPT/July2013_prepostLWP/CAMCLUBB/h2_files/';    %h2 files 
+        nc_dir_prepostLWP = '/home/disk/eos5/d.grosvenor/CPT/CAM5/CLUBB_prepostLWP2/';    %Also h1 files. 
+                            %New pre post LWP from Pete Feb 2014 - think
+                            %that the old ones were not correct and Pete
+                            %updated these
+                            
+%for the new h1 and h2 format from Pete, we need to open both the h1 file for the usual outputs 
+%and the h2 file for the COSP output. Will assign the usual files to
+%nc_inst and the COSP ones to nc_grid (since uses nc_inst to get the time,
+%which the COSP files don't contain)   
+        
+        files_multi = dir([nc_dir 'camclubb*h1.*']); 
+        files_multi_grid = dir([nc_dir_grid 'camclubb*h2.*']); %have 2006-2010  
+        files_multi_prepostLWP = dir([nc_dir_prepostLWP 'camclubb*']); %have 2006-2010
+        %allowing it to find .gz files for h1 & h2 files - will uncompress and recompress
+        %since space is running tight      
+        
+        %one file went missing for the h2 files (_grid), so will delete from the list for the others
+        for idel=1:length(files_multi)
+            if length(strfind(files_multi(idel).name,'2006-04-12-21600'))>0
+                files_multi(idel)=[];
+                break
+            end
+        end
+        for idel=1:length(files_multi_prepostLWP)
+            if length(strfind(files_multi_prepostLWP(idel).name,'2006-04-12-21600'))>0
+                files_multi_prepostLWP(idel)=[];
+                break
+            end
+        end
+        
+    %New output as of July 2015 - test to see if the thin clouds issue has
+    %been addressed. Think that this has uses more timesteps for mphys
+    %(check details).
+    case 'CAMCLUBBv3_July2015'
+        nc_dir = '/home/disk/eos10/d.grosvenor/CPT/output_July2015/CAMCLUBBv3/';
+        nc_dir_grid = '/home/disk/eos10/d.grosvenor/CPT/output_July2015/CAMCLUBBv3/';  
+        nc_dir_prepostLWP = '/home/disk/eos10/d.grosvenor/CPT/output_July2015/CAMCLUBBv3/'; %in the h1 files
+        
+        
+        files_multi = dir([nc_dir 'camclubb*h2.*']);
+        files_multi_grid = dir([nc_dir_grid 'camclubb*h0.*']); %have 2006-2010  
+        files_multi_prepostLWP = dir([nc_dir_prepostLWP 'camclubb*h1*']); %have 2006-2010
+        %allowing it to find .gz files for h1 & h2 files - will uncompress and recompress
+        %since space is running tight      
+                
+        
+end
+
+if exist('nc_grid_file')
+%    nc_grid_file='';
+     nc_grid=netcdf([nc_dir nc_grid_file],'nowrite'); 
+end
+if exist('nc_inst_file')
+    nc_inst=netcdf([nc_dir nc_inst_file],'nowrite');
+end
+
+
+clear ioverride_am3choose
+catch am3_choose_error
+    clear ioverride_am3choose
+    rethrow(am3_choose_error);
+end
+    
+    
+    

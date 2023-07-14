@@ -1,0 +1,10 @@
+savedir_SMOS='/home/disk/eos8/d.grosvenor/SMOS/SMOS_L3_CPDC/plots/';
+
+for itime_SMOS=1:10:363
+    plot_global_maps;
+    savename = [savedir_SMOS 'SMOS_daily_' num2str(itime_SMOS)];
+    
+saveas_ps_fig_emf(gcf,savename,'');
+close(gcf);
+    
+end

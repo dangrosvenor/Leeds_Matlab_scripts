@@ -1,0 +1,94 @@
+comp='laptop';
+comp='uni';
+
+ice_shelf_flag=1; %put on ice shelf?
+
+terrain_plot_type='land/sea'; %jsut land sea seperation lines
+terrain_plot_type='interval';  %terrain intervals
+
+interval=100;
+interval=500;
+
+%linewidth=1.5;
+linewidth=0.75;
+label_conts=0;
+
+switch comp
+	case 'uni'
+	if is_met_em==0
+        terrain = nc{'HGT'}(1,:,:);
+	else
+        terrain = nc{'HGT_M'}(1,:,:);
+	end
+
+end
+    
+  
+
+
+hold on;
+
+%%%clims_terr = get(gca,'clim');
+field_plot=zeros(size(terrain));
+iinds=find(terrain>=1);
+field_plot(iinds)=1;
+
+[ha,hb]=contour(x_grid,y_grid,field_plot,[1 1],'k');
+set(hb,'linewidth',2);
+
+switch terrain_plot_type        
+    case 'interval'
+        max_terr=maxALL(terrain);
+        terr_conts=[interval:interval:interval*floor(max_terr/interval)];
+        [cterr hterr]=contour(x_grid,y_grid,terrain,terr_conts,'k');
+        set(hterr,'linewidth',linewidth);
+        if label_conts==1
+            clabel(cterr,hterr,'color','k','fontsize',8);
+        end
+end
+
+    
+
+%contour(x_grid,y_grid,terrain,[1 1],'k','linewidth',2);
+
+% seaice = nc{'SEAICE'}(time,:,:);
+% landmask = nc{'LANDMASK'}(time,:,:);
+% ice_shelf = landmask - seaice; %land is indicated whenever there is land or sea ice
+%                                 %so if minus the seaice flag then whenever result is one have ice shelf
+%    
+
+
+
+if ice_shelf_flag==1
+
+    ice_shelf = nc{'SNOW'}(time,:,:);
+%    ice_shelf(terrain>=1)=20;
+    
+    iinds2=find(ice_shelf>=20);
+    field_plot(iinds2)=1;
+    
+%    iterr=find(terrain>1);
+%    [terr_i terr_j]=ind2sub(size(ice_shelf),iterr);
+%    ice_
+    %ice_shelf(ice_shelf>10000)=0;
+    
+    
+%    contour(x_grid,y_grid,ice_shelf,[20 20],'k','linewidth',2);
+
+[ha,hb]=contour(x_grid,y_grid,field_plot,[1 1],'k');
+set(hb,'linewidth',2);
+end
+
+
+
+
+%draw on ice shelves - will only work for the original domain
+load('c:/documents and settings/dan/my documents/WRF/ice_shelf_d03','field_plot');
+[ha,hb]=contour(x_grid,y_grid,field_plot,[1 1],'k');  %comment this to not plot ice shelf
+set(hb,'linewidth',2);
+
+
+
+
+%%%caxis(clims_terr); %resest colourscale as sometimes contour causes it to go wrong
+

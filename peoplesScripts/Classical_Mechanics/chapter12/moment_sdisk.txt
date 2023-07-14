@@ -1,0 +1,3 @@
+moment_sdisk.txt: Output from moment_sdisk.m
+>> moment_sdisk
+The integral is 0.250

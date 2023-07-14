@@ -1,0 +1,64 @@
+pole_lat = 55.98;
+pole_lon = 287.39;
+
+file_UM = 'HBT_HIRES_precip_1.nc';
+file_UM = 'rainmeanB.nc';
+
+nc_file = ['/home/disk/eos1/d.grosvenor/UM/China_CSSP/' file_UM]
+nc=netcdf(nc_file);  %Mean hourly rain fort+6 ensemble member
+
+switch file_UM
+    case 'rainmeanB.nc'
+        lsrain=nc{'lsrain'}(:); %Mean hourly precip in kg/m2/s = mm/s
+        lsrain=squeeze(lsrain)*3600; %Convert to mm/hr
+
+    case 'HBT_GLOBAL_precip_1.nc'
+        lsrain=nc{'precip'}(:); %Mean hourly precip in mm/day
+        lsrain=squeeze(lsrain)/24; %Convert to mm/hr
+        
+end
+
+
+
+	
+
+
+time_UM=nc{'t'}(:); %days since 20th July, 2012
+%x_UM=nc{'x'}(:);
+%y_UM=nc{'y'}(:);
+
+lon_UM = nc{'x'}(:);
+lat_UM = nc{'y'}(:);
+[lon2d,lat2d]=meshgrid(lon_UM,lat_UM);
+%Convert to normal lat lon from rotated pole coords - make sure the
+%rotated pole lat and lon are given correctly above
+[gcm_Plat2D_UM,gcm_Plon2D_UM]=em2gm(lat2d,lon2d,pole_lat,pole_lon);
+
+
+%Find indices of 21st July to match Chen paper
+t0=datenum('20-Jul-2012');
+t1=datenum('21-Jul-2012') - t0;
+t2=datenum('22-Jul-2012') - t0;
+
+it21 = find(time_UM>=t1 & time_UM<t2);
+
+LAT_min = 36; LAT_max = 42;
+LON_min = 114; LON_max = 118;
+
+ilat = find(gcm_Plat2D_UM>=LAT_min & gcm_Plat2D_UM < LAT_max & gcm_Plon2D_UM>=LON_min & gcm_Plon2D_UM < LON_max);
+%ilon = find(gcm_Plon2D_UM>=LON_min & gcm_Plon2D_UM < LON_max);
+
+ilat2 = find(gcm_Plat2D_UM>=LAT_min & gcm_Plat2D_UM < LAT_max);
+ilon2 = find(gcm_Plon2D_UM(ilat2)>=LON_min & gcm_Plon2D_UM(ilat2) < LON_max);
+
+
+Y_plot_test = NaN*ones(size(lsrain(it21(10),:,:)));
+Y_plot_test(ilat)=lsrain(it21(10),ilat); %when plotted, the correct region is picked out
+
+
+Y_driver = lsrain(it21,ilat);
+
+
+%Y_driver = lsrain(it21,:,:);
+%sp=12;
+%Y_driver = lsrain(it21,1:sp:end,1:sp:end);

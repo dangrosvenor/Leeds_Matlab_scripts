@@ -1,0 +1,337 @@
+%load full data from multiple GCMs, plot a map, and save it
+
+% ***********************************************************
+%  load_gcm_processed_data  - multiple calls to this
+% ***********************************************************
+% gcm_list_of_saved_variables_select - change this in load_gcm_processed_data
+% to select which file to use to set the variables required
+% ***********************************************************
+% load_gcm_dataset function is called to retrieve individual variables from the save files.
+% ***********************************************************
+% gcm_filename_for_year
+%      is called from there - this gives the filename
+%      paths for the .mat files with the saved data - change here when change
+%      the save filenames (e.g. when adding extra variables etc)
+%      Select the years and models required below.
+% ***********************************************************
+%  load_catfiles_timechunks  - this is where the am3 files to be loaded for
+%                              the chunked data are
+% ***********************************************************
+
+savedir='/home/disk/eos1/d.grosvenor/modis_work/plots/';
+savedir_mplot = [savedir 'CPT/maps/'];
+
+
+% -- Important to set this correctly to avoid loading in data if don't need to --
+iload_files=1; %0 means don't load the files
+% -----------------------------------------------------------------
+
+% ----------  Set what to plot   ------------------------------------
+plot_type_multi_load_GCM_plot_map = 'plot_global';
+%plot_type_multi_load_GCM_plot_map = 'DRIVER plot'; %Make sure that plot_set is set to what is required in 
+   %DRIVER_plot_global_maps.m
+% ------------------------------------------------------------------
+
+filepath_text01 = '~/CF_gcm_mean_biases.txt';
+fid01 = fopen(filepath_text01,'at');
+fprintf(fid01,'\n%s\n',datestr(now,30));
+
+filepath_text02 = '~/CF_gcm_RMSE_biases.txt';
+fid02 = fopen(filepath_text02,'at');
+fprintf(fid02,'\n%s\n',datestr(now,30));
+
+fid_mtab = fid01;
+fid_Rtab = fid02;
+
+%Selects the case in plot_globa_maps
+vars_mplot={...
+    %%%    'LWP GCM (grid-box mean, no CF screening)'...
+    %    'Max Low Cloud Fraction no screening GCM',...
+    %    'Max Mid Cloud Fraction no screening GCM',...
+    %    'Max High Cloud Fraction no screening GCM',...
+%    'Max Low Cloud Fraction no screening GCM bias from satellite'...
+    'Total surface precip rate GCM'...
+    };
+
+
+%  ---- Available runs ---------
+%am3_dataset2 = 'old'; %AM3
+am3_dataset2 = '2deg'; %AM3
+%am3_dataset2 = '0.5deg'; %AM3
+%am3_dataset2 = 'CAMCLUBB';
+%am3_dataset2 = 'AM3CLUBB'; % CLUBBv1, 50km - don't have COSP for this
+%am3_dataset2 = 'CAM5_2deg';
+%am3_dataset2 = 'CAM5_1deg';
+%am3_dataset2 = 'CAM_CLUBB_COSP'; %CAMCLUBBv1 2006-2010 available.
+%am3_dataset2 = 'CAM5_prepostLWP';
+%am3_dataset2 = 'CAMCLUBB_COSP_postDiurnal'; %(CLUBBv2)
+%am3_dataset2 = 'AM3CLUBB_postDiurnal'; %(CLUBBv2, 50km resolution)
+%am3_dataset2 = 'AM3_CLUBBv2_50km'; %CLUBB w/ COSP
+%am3_dataset2 = 'AM3_CLUBBv2_100km'; %CLUBB w/ COSP
+am3_dataset2 = 'AM3_CLUBBv2_200km'; %CLUBB w/ COSP
+%am3_dataset2 = 'AM3_CLUBBv1.9_1deg'; %CLUBBv2?? Not v1 ! at 100km, with no COSP
+am3_dataset2 = 'AM3_CLUBBv1_2deg'; %CLUBBv1
+%am3_dataset2 = 'AM3_100km_20130110'; %AM3-base runs at 100km, with COSP
+%'AM3_CLUBBv2_200km'
+
+% gcm_models_to_load = {...
+%     %    'AM3CLUBB_postDiurnal'...
+%     %    'AM3_CLUBBv2_50km'...
+%     %    'AM3_CLUBBv2_200km'...
+%     %    '0.5deg'...
+%     %    'AM3CLUBB'...
+%     %    'CAM5_1deg'...
+%     %    'CAMCLUBB'...
+%     %'2deg'...
+%     %'AM3_CLUBBv1_2deg'...
+%     % 'AM3_CLUBBv2_200km'...
+%      'CAM5_prepostLWP'...
+%     % 'CAM_CLUBB_COSP'...
+%      'CAMCLUBBv2_prepostLWP'...
+%     %  'AM3_CLUBBv2_50km'...
+%     %  'AM3CLUBB'...
+%     '0.5deg'...
+%     'AM3_100km_20130110'...
+%     }
+
+
+% Usual runs used in paper as of 12th Aug, 2014.
+gcm_models_to_load = {...
+%     'CAM5_prepostLWP'...
+%     'CAM_CLUBB_COSP';...
+     'CAMCLUBBv2_prepostLWP'...
+%     '2deg'...
+%     'AM3_CLUBBv1_2deg';...
+%     'AM3_CLUBBv2_200km';...
+    }
+%Here it is possible to create a cell array of size e.g. 2x2 instead of 1x4
+%- so have to watch out for this and do loop over
+%prod(size(gcm_models_to_load)). But cna still be accessed with linear
+%indices. To avoid this, just add ; after each variable above
+
+
+%Might also want to add
+% 'AM3_CLUBBv2_50km'  -- have 2006-2010 available
+% 'AM3CLUBB'  -- CLUBBv1, but only have 2007
+% '0.5deg' -- base AM3, 2007-2008 only. If don't have 2006-2010 then would
+% have to change the range of the obs. Or set up the script to only select
+% the same years as available for the models.
+% 'AM3_100km_20130110' -- base AM3 at 100km (2006-2010)
+% The above should all have COSP
+
+
+%  times_required = [9:12]; %Terra daytime
+%                times_required = [21:23 0]; %Terra nighttime
+%times_required = [12:15];  %Aqua daytime
+%  
+times_required = [0:3]; %Aqua nighttime
+times_mplot = {...
+    [12:15]...;  %Aqua daytime
+    [0:3]...; %Aqua nighttime
+    }
+
+days_str_mplot = {...
+    'ALL'...,
+    %    'DJF'...,
+    %    'MAM'...,
+    %    'JJA'...,
+    %    'SON'...,
+    }
+
+model_data_for_bias_set = {'COSP_CALIPSO_CF'...,
+    'model_CF'};
+
+
+% *** need to make sure that the plots in plot_global_maps are set up
+% properly to deal with the local time of day screening (e.g.
+% +time_inds_average2) !!!
+
+
+if iload_files == 0
+    gcm_models_to_load = {gcm_str};
+end
+
+
+implot=0; %overall counter for storing values
+for igcm_load=1:prod(size(gcm_models_to_load))
+
+
+
+    am3_dataset2 = gcm_models_to_load{igcm_load};
+
+    code_test = 'new';
+    code_test = 'old';
+    switch code_test
+        case 'new'
+            [gcm_mplot_stored,implot] = gcm_load_and_plot_func_test(gcm_mplot_stored,implot,am3_dataset2,vars_mplot,days_str_mplot,times_mplot,iload_files)
+
+
+        case 'old'
+
+            switch am3_dataset2
+                case 'old';
+                    gcm_savename = 'AM3_old';
+                case '2deg'
+                    gcm_savename = 'AM3_2deg';
+                case '0.5deg'
+                    gcm_savename = 'AM3_0.5deg';
+                otherwise
+                    gcm_savename = am3_dataset2;
+            end
+
+            if iload_files==1
+                ioverride_load_gcm=1;
+
+                load_gcm_process_vars_flag=4;
+                %=0 doesn't load in any of them. =1 loads in the 3D files. =2 loads all
+                %except 3D files to save memory. =3 is like 2, but doesn't have the height
+                %fields and the cloud layer thicknesses to available to load.
+                save_gcm_process_vars_flag=0; %also set the save flag
+
+                cosp_flag=0; %this will get overwritten in load_catfiles_timechunks
+                cosp_flag4D=0;
+                ilwcAPBP=0;
+
+                % ***   select the files (years and GCM type) to load ***
+
+                imod=1;
+                %selects files for load_saved_modis_vars.m & modis_make_monthly_averages_multi_year.m
+                %
+
+                clear gcm_year_cases gcm_model_cases
+
+
+                %      gcm_year_cases{imod} = 'y1990'; gcm_month_cases{imod} = '01'; gcm_model_cases{imod} = 'AM3'; imod=imod+1; %
+                %      gcm_year_cases{imod} = 'y1990'; gcm_model_cases{imod} = 'AM3_with_ice'; imod=imod+1; %
+                %      gcm_data_case{imod} = 'y2000'; gcm_model_case{imod} = 'AM3';imod=imod+1; %
+
+                %       gcm_year_cases{imod} = 'y2001'; gcm_month_cases{imod} = '01'; gcm_model_cases{imod} = 'CAM5'; imod=imod+1; %
+                %       gcm_year_cases{imod} = 'y2001'; gcm_model_cases{imod} = 'CAM5_with_ice'; imod=imod+1; %
+
+                %      gcm_year_cases{imod} = 'y2006'; gcm_month_cases{imod} = '01'; gcm_model_cases{imod} = 'AM3'; imod=imod+1; %
+                %      gcm_year_cases{imod} = 'y2006'; gcm_month_cases{imod} = '07'; gcm_model_cases{imod} = 'AM3'; imod=imod+1; %
+
+                %      gcm_year_cases{imoded} = 'y2007'; gcm_month_cases{imod} = '01'; gcm_model_cases{imod} = 'AM3'; imod=imod+1; %
+                %      gcm_year_cases{imod} = 'y2007'; gcm_month_cases{imod} = '07'; gcm_model_cases{imod} = 'AM3'; imod=imod+1; %
+
+
+
+                filedir_gcm_load = '/home/disk/eos8/d.grosvenor/CPT/saved_processed_gcm_data/';
+
+                %new style of chunkded data (data in time chunks)
+                % ************************************************
+                load_catfiles_timechunks
+                % ************************************************
+                load_gcm_processed_data
+
+                fprintf(fid01,'%s ',gcm_str);
+                fprintf(fid02,'%s ',gcm_str);
+
+            end
+
+            %%now plot and save - could replace with a DRIVER script here
+
+            switch plot_type_multi_load_GCM_plot_map
+                case 'plot_global'
+
+                    for ivar_mplot = 1:length(vars_mplot)
+
+                        for idays_mplot = 1:length(days_str_mplot)
+
+                            for itime_mplot = 1:length(times_mplot)
+
+                                for icf_type_mplot = 1:length(model_data_for_bias_set)
+
+                                    implot=implot+1; %overall counter
+
+                                    mod_data_type='GCM';   gcm_time_of_day_select=2;
+                                    modis_data_plot= vars_mplot{ivar_mplot};
+                                    ioverride_plotglobal_thresh=1;
+
+                                    time_mean_str = days_str_mplot{idays_mplot};
+                                    % --------------------
+                                    days_for_season;  %Selects the required days of the year given time_mean_str
+                                    % --------------------
+                                    times_required = times_mplot{itime_mplot};
+                                    ioverride_time_selection=1;
+
+                                    model_data_for_bias = model_data_for_bias_set{icf_type_mplot};
+
+
+                                    %        proj_type='polar';
+                                    proj_type='global oval'; %select this for anything but polar stereographic
+                                    data_select='specific_modis_data';
+                                    ifilter_ndays=1 %flag for whether to cut out points for which there aren't many days
+                                    icontour=0;
+                                    %time_mean_str = 'ALL';
+                                    noplot=0;
+                                    irestrict_domain=1 %whether to restrict the domain or not (use for regional domains)
+
+                                    ifilter_clhcalipso=1;
+                                    %These are the thresholds for data that we want to INCLUDE
+                                    %I.e. data outside of these will be discounted
+                                    thresh_clh = [-0.01 0.3];
+                                    %                thresh_clh = [0.3 1.01];
+
+                                    sat_data_for_bias = 'CALIPSO';
+                                    %                   sat_data_for_bias = 'MOD35';  %Probably better to use CALISPO since have both day and night data.
+                                    % Despite the issues in high cloud regions - screen for
+                                    % mid+high CALIPSO CF regions (separately for day and
+                                    % night). Or, could do MOD35 for day and CALIPSO for
+                                    % night for the whole region - if only want to
+                                    % concentrate on low cloud then doesn't matter.
+
+                                    iocean_only=1;
+
+
+                                    plot_global_maps
+                                    if exist('mean_bias_gcm')
+                                        gcm_mplot_stored(implot).mean_bias = mean_bias_gcm;
+                                        gcm_mplot_stored(implot).RMSE = RMSE_gcm;
+                                        gcm_mplot_stored(implot).gcm_str = gcm_str;
+                                        gcm_mplot_stored(implot).days = days_str_mplot{idays_mplot};
+                                        gcm_mplot_stored(implot).times = times_mplot{itime_mplot};
+                                        gcm_mplot_stored(implot).cftype = model_data_for_bias_set{icf_type_mplot};
+
+                                        fprintf(fid01,'%f ',gcm_mplot_stored(implot).mean_bias);
+                                        fprintf(fid02,'%f ',gcm_mplot_stored(implot).RMSE);
+                                    end
+
+
+                                    saveas_ps_fig_emf(gcf,[savedir_mplot modis_data_plot '_' gcm_savename '_' time_mean_str],'',0,1);
+                                    close(gcf);
+
+
+                                end
+
+                            end
+
+                        end
+
+                    end
+
+                case 'DRIVER plot'
+                    ioverride_DRIVER=1                   
+
+                    DRIVER_plot_global_maps
+            end
+
+            if iload_files==1
+                %clear the variables for the last gcm from memory
+                eval(['clear *' gcm_str_last_loaded '*']);
+            end
+
+    end  %switch code_test
+
+    fprintf(fid01,'\n');
+    fprintf(fid02,'\n');
+
+
+end  %for loop for models
+
+fclose(fid01);
+fclose(fid02);
+
+
+%fclose(fid_mtab);
+%fclose(fid_Rtab);

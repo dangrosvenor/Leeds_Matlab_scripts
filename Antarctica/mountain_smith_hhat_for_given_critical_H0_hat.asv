@@ -1,0 +1,5 @@
+function y=mountain_smith_hhat_for_given_critical_H0_hat(hhat,H0_hat)
+
+hhat=max([1e
+del_hat = -1/sqrt(2) * sqrt(hhat.^2 + hhat.*sqrt(hhat.^2+4));
+y = hhat - del_hat + acos(hhat./del_hat) - H0_hat;

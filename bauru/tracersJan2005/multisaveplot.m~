@@ -1,0 +1,247 @@
+comp='lacieLap';
+comp='uni';
+comp='database4';
+
+comp_save=comp;
+
+% direc(1).dir='c:/cygwin/home/user/runs/dmidamp_2/';
+% direc(2).dir='c:/cygwin/home/user/runs/damp_ccn960/';
+% %direc(4).dir='c:/documents and settings/tom/my documents/dan/dmi1715_5ppmv/';
+% direc(3).dir='c:/cygwin/home/user/runs/damp_inx10/';
+% direc(4).dir='g:rmuns/500mres/';7
+
+itype='prof';
+itype='timh';
+
+icont_extra=0;
+
+% ****
+idirs=[46:50]; %set to e.g. [1 1] for 2 EMM plots for profiles)
+% ****print
+isavemulti=1;
+
+iformat='ps';
+iformat='emf';
+iformat='png';
+%ieps=1; %flag for postscript output
+
+isamescale2=0; %set this to zero if are doing a series of plots
+subplotting=0; %flag for whether to use subplots instead of new figures
+iabc=1; %flag to label figures (a), (b), etc (along with dirstamp)
+
+if length(idirs)==1
+    isamescale2=0;
+end
+
+idirsemm=[1 2 3]; %set for tim heights
+
+lememm=0; %flag for lem emm comparisons  (set idirs to e.g. [1 1] - length of 2)
+if lememm==1
+    iplotselect=1;
+end
+
+if isamescale2==1 & strmatch(itype,'timh')==1
+    reps=2;
+else
+    reps=1;
+end
+
+
+
+if subplotting==1
+	bigcbar=1; %flag for one big colorbar instead of one for each subplot
+else
+    bigcbar=0; %flag for one big colorbar instead of one for each subplot
+end
+%bigcbar=0; 
+
+
+
+
+savedirname='my documents/temp/';
+%savedirname='my documents/Leeds_MMOCCA/EMM/';
+%savedirname='my documents/logbook/vapour_paper/pics/Mirvette/';
+%savedirname='my documents/logbook/vapour_paper/pics/supersats/'
+%savedirname='my documents/logbook/MMOCCA/pics_CCN_1e-3/';
+%savedirname='my documents/Leeds_MMOCCA/pics_lem_2008/';
+savedirname='Y:\WRF\30thNov_Min\maxtot_profiles/total_water/';
+savedirname='work/Ant_Jan06/';
+clear h
+
+tag='totbelow5_14-22km_14-Feb06';
+%tag='_15.3-18km_29-Feb06';
+tag='_13-22km_06-Mar06';
+tag='_15.3-17km_06-Mar06';
+tag='_0-22km_13-Mar06_24thFebcomp';
+tag='28thMar06_vapour_250m_0cn_dump_1-31_13-22km';
+tag='30thMarch_ccn_profiles';
+tag='30thMarch06-250m5ppmv_1000km_dmi_5ppmv500km_comp_15-19km_dump1-49_noclines';
+tag='pos_vels';
+tag='_29-May06_250mres1000km_0-22km';
+%tag='_NoNvapourPlume';
+tag='250m_rhopert_1-250km';
+%tag='MilesCity';
+
+tag='15-30km_recomp_dump1-39';
+tag='0-30km_recomp';
+tag='CCNcomp_9.96km';
+tag='all_ice_radcomps';
+%tag=['_' num2str(it)];
+tag='zoom';
+tag='Texas_varying_strength2_dump14';
+tag='';
+
+
+
+minVal=9e99;
+maxVal=-9e99;
+
+
+
+iplotselect=0; %flag so that plotcase in plotTimeHeight is chosen from below
+plotcases=[50 50 65 50];
+
+iaxis_lims=1; %flag to say want to limit the axes by values below (automatically done for lememm==1)
+timelims=[20.1 20.35];
+zlims=[0 19]; %scale both plots to these values
+clims=[0 1e8];
+clims=[0 3.2];
+clims=[0 14];
+clims=[0 2.6];
+
+iminovr=0;
+imaxovr=0;
+    
+mincovOvr=0;
+maxcovOvr=2.6;
+%maxcovOvr=100;
+
+xsub=2;
+ysub=1;
+onexlabel=1;
+
+
+isamescale=0; %don't change this from zero
+for irep=1:reps %repeat whole process if 
+    clear h
+    if isamescale2==1 & irep==2; isamescale=1; end
+
+i577s={'vap_3d_vert' , 'vapour'};
+i577s={'vap_3d_vert' , 'vap_3d_vert', 'tot_condensate'};
+%i577s={'vap_3d_vert' , 'potemp'};
+    
+i3ds=[1 0 0 0];
+i2ds=[1 1 1 1];
+
+nsub=0;    
+for iplot=1:length(idirs)
+    
+  %  i577=i577s{iplot};
+  irad=iplot;
+  
+  try
+      i3d=i3ds(iplot);
+      wrap2d=i2ds(iplot);
+  catch
+  end
+  
+  
+    
+    
+    idir=idirs(iplot)
+    nsub=nsub+1;
+    switch itype
+    case 'timh'
+         %wrap_slice;
+'plotting....'
+         plottimeheightvap3; 
+       %  if isamescale2==1 & irep==1 & subplotting==1; close(gcf); end %close figure as will be drawing again
+         if isamescale2==1 & irep==1 & (subplotting==0 | (subplotting==1 & iplot==length(idirs)) ); close(gcf); end %close figure as will be drawing again            
+    case 'prof'
+         waterVapourMay2005;
+    end
+    
+         icolon=findstr(':',savename);
+         savename(icolon)=',';
+
+%'plotted?'
+%pause(18);
+%'pause over'
+         
+
+comp=comp_save;
+    
+    switch comp
+     case 'uni'
+             picname=['c:/documents and settings/login/' savedirname savename '_' num2str(idir) '_2' tag '.' iformat];
+     case 'lacieLap'
+             picname=['c:/documents and settings/g/' savedirname savename '_' num2str(idir) '_' tag '.' iformat];  
+         case 'database4'
+             picname=[savedirname num2str(idir) '_' savename '_' tag '.' iformat];  
+	             
+    end
+     
+
+     
+ 
+ 
+    
+   %  picname=[direcDan(idir).dir 'results/' savename '_' tag '.emf'];
+     set(gcf,'paperpositionmode','auto');
+     
+     if isavemulti==1 & ( (isamescale==1 & subplotting==0) | (isamescale2==0 & subplotting==0) | ( isamescale==1 & subplotting==1 & iplot==length(idirs) ) ...
+             | ( strmatch(itype,'prof')==1 & (subplotting==0 | (subplotting==1 & iplot==length(idirs)) ) )   ...
+             | (subplotting==0 | (subplotting==1 & iplot==length(idirs) ) ) )
+        %print(gcf,picname,'-dmeta');
+
+		switch iformat
+        case 'ps'
+			print(gcf,picname,'-depsc');
+        case 'png'
+            print(hf,picname,'-dpng');
+        case 'emf'
+%			print(gcf,picname,'-dmeta');
+            print(gcf,picname,'-dmeta');
+            figname=['c:/documents and settings/login/' savedirname savename '_' num2str(iplot) '_2' tag '_fig'];
+            %remove brackets as doesn't allow filenames with brackets to be loaded
+            ibrack=findstr(figname,'('); figname(ibrack)=' ';
+            ibrack=findstr(figname,')'); figname(ibrack)=' ';
+
+         %   saveas(gcf,figname,'fig');        
+            
+        
+%            saveas(gcf,['c:/documents and settings/login/' savedirname savename '_' num2str(iplot) '_2' tag '_fig'],'mmat');        
+            
+        end
+     	
+%pause(60); %pause for a while so can draw image - no need for pausing - problem was with isamescale2 not being set to zero so was closing figures before was saving them
+   
+        close(hf);
+
+     end
+   
+   if strmatch(itype,'timh','exact')  
+     if dlogflag==1
+         minVal=min([minVal idlog(conts(1),dlogmin)]);
+         maxVal=max([maxVal idlog(conts(end),dlogmin)]);
+     else
+            minVal=min([minVal conts(1)]);
+            maxVal=max([maxVal conts(end)]);
+     end    
+   end
+   
+ end
+ 
+ if strmatch(itype,'timh','exact')
+     
+     if dlogflag==1
+         fprintf(1,'mincovOvr = dlog(%f,dlogmin);\nmaxcovOvr = dlog(%f,dlogmin);',minVal,maxVal);
+     else
+         fprintf(1,'mincovOvr = %f;\nmaxcovOvr = %f;',minVal,maxVal);
+     end
+ 
+end
+
+end
+         
+isamescale=0; %reset this flag

@@ -1,0 +1,69 @@
+%Loads in the sea-ice data and produces arrays the same size at MODIS data
+%and at same times.
+%Uses Cloud_Fraction_Liquid,modisyear_timeseries3,daynum_timeseries3 for
+%matching
+
+iload_seaice=1;
+
+if iload_seaice==1
+
+%% Combine NH and SH seaice (is only SH in the file)
+%seaice_fileload_1deg_NH = '/home/disk/eos8/d.grosvenor/sea_ice_data/north/saved_seaice_1deg_2007_all_NHemisphere_20150529T103046.mat';
+%seaice_fileload_1deg_NH = '/home/disk/eos8/d.grosvenor/sea_ice_data/north/saved_seaice_1deg_2008_JJA_all_NHemisphere_20161222T222241.mat';
+seaice_fileload_1deg_NH = '/home/disk/eos8/d.grosvenor/sea_ice_data/north/saved_seaice_1deg_2000-2015_all_NHemisphere_20161223T184753.mat';
+seaiceNH = load(seaice_fileload_1deg_NH);
+%seaice_fileload_1deg_SH = '/home/disk/eos8/d.grosvenor/sea_ice_data/south/saved_seaice_1deg_2008_JJA_all_SHemisphere_20161221T095015.mat';
+seaice_fileload_1deg_SH = '/home/disk/eos8/d.grosvenor/sea_ice_data/south/saved_seaice_1deg_2000-2015_all_SHemisphere_20170110T094057.mat';
+seaiceSH = load(seaice_fileload_1deg_SH);
+
+%Do the time matching Load these to do the time matching (already loaded in
+%MODIS* script)
+%load(file01,'modisyear_timeseries3','daynum_timeseries3');
+%seaice_match_times  %made a function version of this (below)
+[seaice_time3_NH,seaice_max_time3_NH] = seaice_match_times_FUNC(seaiceNH,Cloud_Fraction_Liquid,modisyear_timeseries3,daynum_timeseries3);
+[seaice_time3_SH,seaice_max_time3_SH] = seaice_match_times_FUNC(seaiceSH,Cloud_Fraction_Liquid,modisyear_timeseries3,daynum_timeseries3);
+%So will now have NaN values in both SH and NH files. Will set the NaNs to zero for
+%now and then make NaN the places where both were NaN.
+
+end
+
+
+inanNH = isnan(seaice_time3_NH); seaice_time3_NH(inanNH)=0;
+inanSH = isnan(seaice_time3_SH); seaice_time3_SH(inanSH)=0;
+inanNH_max = isnan(seaice_max_time3_NH); seaice_max_time3_NH(inanNH_max)=0;
+inanSH_max = isnan(seaice_max_time3_SH); seaice_max_time3_SH(inanSH_max)=0;
+
+iboth = inanNH & inanSH; %When both are NaN - need to use the logical since they are not just integers
+iboth_max = inanNH_max & inanSH_max; %When both are NaN - need to use the logical since they are not just integers
+
+seaice_time3 = seaice_time3_NH + seaice_time3_SH;
+seaice_time3(iboth) = NaN;
+
+seaice_max_time3 = seaice_max_time3_NH + seaice_max_time3_SH;
+seaice_max_time3(iboth_max) = NaN;
+
+%save(file01,'-APPEND','-V7.3','seaice_time3','seaice_max_time3');
+
+
+%example for screening using the data :-
+iscreen_seaice=0; %set to zero as this is just an example
+if iscreen_seaice==1
+    
+    sea_ice = seaice_time3;
+    %sea_ice = seaice_max_time3;    %max over 2 week window
+    
+    %find points where there is any sea-ice using the threshold below
+    sea_ice_thresh = 1e-5;
+    %    sea_ice_thresh = 1e9;
+    isea_high = find(sea_ice>sea_ice_thresh);
+    %    isea_high = find(sea_ice_max>sea_ice_thresh);
+    Nd_16(isea_high)=NaN;
+    Nd_21(isea_high)=NaN;
+    Nd_37(isea_high)=NaN;
+    re_16(isea_high)=NaN;
+    re_21(isea_high)=NaN;
+    re_37(isea_high)=NaN;
+    tau(isea_high)=NaN;
+    
+end
+

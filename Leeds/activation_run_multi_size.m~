@@ -1,0 +1,110 @@
+plot_case = 'CASIM';
+plot_case = 'CASIM high background';
+plot_case = 'CASIM high background Annette';
+%plot_case = 'Ghan2011';
+%plot_case = 'other tests';
+%plot_case ='CASIM high background multi mode Annette';
+plot_case ='CASIM multi mode tests';
+
+%N_type = 'prescribed number';
+N_type = 'prescribed single aerosol mass';
+N_type = 'prescribed median radius (rd)';
+
+
+switch plot_case
+    case 'CASIM'
+        M_aero0 = 3e-7;  %Gives around 25,000 per cc for f=1, w=0.5 m/s as in aerosol group meeting talk (Feb, 2017)
+        r_single_all = 92e-9; %Value used for CASIM (Adrian's namelist)
+        sig = 1.5; %for UM (but is this log(sig)? Think is just sigma - see lognormal doc in OneNote
+        density = [1777]; %aerosol density. E.g. ammonium sulphate = 1777 kg/m3         
+        
+    case 'CASIM high background'
+        M_aero0 = 4.0981e-8;  %Want to pick out Naer=600, so reduce this to get better fidelity
+        r_single_all = 92e-9; %Value used for CASIM (Adrian's namelist)
+        sig = 1.5; %for UM (but is this log(sig)? Think is just sigma - see lognormal doc in OneNote        
+        density = [1777]; %aerosol density. E.g. ammonium sulphate = 1777 kg/m3
+        
+    case 'CASIM high background Annette'
+        M_aero0 = 4.0981e-8;  %Want to pick out Naer=600, so reduce this to get better fidelity
+        r_single_all = 60e-9; %Value used for CASIM (Adrian's namelist)
+        sig = 1.7; %for UM (but is this log(sig)? Think is just sigma - see lognormal doc in OneNote        
+        density = [1777]; %aerosol density. E.g. ammonium sulphate = 1777 kg/m3    
+    
+    case 'other tests'
+        M_aero0 = 3e-7;  %Gives around 25,000 per cc for f=1 as in aerosol group meeting talk (Feb, 2017)
+        M_aero0 = 3e-8;  %        
+        r_single_all = 50e-9; %Value used for CASIM (Adrian's namelist)
+        sig = 1.5; %for UM (but is this log(sig)? Think is just sigma - see lognormal doc in OneNote
+        density = [1777]; %aerosol density. E.g. ammonium sulphate = 1777 kg/m3         
+
+    case 'Ghan2011'
+        M_aero0 = 8.1e-8;  % Total aerosol mass mixing ratio kg/kg. 8.1e-8 to get 10,000 per cc with rd=50nm as in Ghan (2011)
+        r_single_all = 50e-9;%aerosol radius in m. 50e-9 used in Ghan (2011)
+        sig = 2; %width of lognormal size dist =2 Ghan (2011) (see under Fig. 3)
+        density = [1777]; %aerosol density. E.g. ammonium sulphate = 1777 kg/m3 
+        
+   case 'CASIM high background multi mode Annette'
+        M_aero0 = [2.8 409.81]*1e-10;  %Want to pick out Naer=600, so reduce this to get better fidelity
+        r_single_all = [13 60] *1e-9; %Value used for CASIM (Adrian's namelist)
+        sig = [2.2 1.7]; %for UM (but is this log(sig)? Think is just sigma - see lognormal doc in OneNote      
+        %Annette used 0.55e-8 for accum total mass
+        density = [1777 1777]; %aerosol density. E.g. ammonium sulphate = 1777 kg/m3 
+        N_type = 'prescribed median radius (rd) vary accum';
+        
+     case 'CASIM single mode tests'
+        M_aero0 = 4.0981e-8;  %Want to pick out Naer=600, so reduce this to get better fidelity
+        r_single_all = 92e-9; %Value used for CASIM (Adrian's namelist)
+        sig = 1.7; %for UM (but is this log(sig)? Think is just sigma - see lognormal doc in OneNote        
+        density = [1777]; %aerosol density. E.g. ammonium sulphate = 1777 kg/m3    
+        
+    case 'CASIM multi mode tests'
+        M_aero0 = [2.8 409.81]*1e-10;  %Want to pick out Naer=600, so reduce this to get better fidelity
+        r_single_all = [13 1] *1e-9; %Value used for CASIM (Adrian's namelist)
+        sig = [2.2 2.5]; %for UM (but is this log(sig)? Think is just sigma - see lognormal doc in OneNote      
+        %Annette used 0.55e-8 for accum total mass
+        density = [1777 1777]; %aerosol density. E.g. ammonium sulphate = 1777 kg/m3 
+        N_type = 'prescribed median radius (rd) vary accum';  
+
+end
+
+
+%density = 1710; %Ghan (2011) uses 1.71 g/m3 - need to make sure this is consistent in Nenes etc function...
+% Plus Ghan (2011) says the hygroscopicity is 0.7 - not sure where this
+% fits into Nenes...? 
+
+%Used pre 17th Feb, 2017
+%T = 283; %temperature in K
+%P = 900e2; %pressure in Pa
+
+%Values used in Ghan (2011)
+T = 279; %temperature in K
+P = 1000e2; %pressure in Pa
+
+
+act_routines{1} = 'Abdul';
+%act_routines{2} = 'Nenes';
+%act_routines{1} = 'Nenes consistent with Abdul';  %Uses a slightly different Nenes scheme where the constants, es, etc.
+  % are calculated in the same way as in the Abdul scheme.
+  %this option doesn't make much difference
+
+
+
+%sig=2; %sig=1.5; %sigma seems to have a big impact for Abdul scheme at low sizes
+%M_aero = 5.e-8 * 2;
+%r_single_all=[39] *1e-9; %aerosol radius in m
+
+
+
+
+
+N_aero=1; %dummy value
+        
+% for iab=1:length(r_single_all)
+%     r_single = r_single_all(iab);
+% %    nenes_run_multi
+%     activation_run_multi    
+% end
+
+
+r_single = r_single_all;
+activation_run_multi

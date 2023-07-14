@@ -1,0 +1,86 @@
+%loads cross sections for analysis for the AP paper incarnation of July
+%2013
+
+if ~exist('override_load_cross_section') | override_load_cross_section==0
+
+    save_cross_dir ='/home/disk/eos1/d.grosvenor/matlab/work/Antarctica/Fohn_upstream_work/';
+
+    % Straight line that crosses through jet 2 at 9UTC on 6th Jan as used in
+    % paper as of July 2013
+    % xline = 224.6659  600.0000
+    % y_line = 393.8815  232.3137
+    pot_file = 'Potential_temperature_(K)_cross_section_for_06_Jan_0900_UTC_20130710T111623.mat';
+%    U_file = 'Wind_speed_(m_s^{-1})_cross_section_for_06_Jan_0900_UTC_20130710T104638.mat';
+    U_file = 'Component_horizontal_(UV)_wind_speed_(m_s^{-1})_cross_section_for_06_Jan_0900_UTC_20130808T153849.mat';
+    WindDir_file   = 'Wind_direction_(degrees)_cross_section_for_06_Jan_0900_UTC_20130808T154041.mat';
+    VertWind_file  = 'Vertical_wind_speed_(m_s^{-1})_cross_section_for_06_Jan_0900_UTC_20131005T065832.mat';
+    
+    %12 UTC on 7th, same cross section
+%    pot_file = 'Potential_temperature_(K)_cross_section_for_07_Jan_1200_UTC_20130716T222235.mat';
+%    U_file   = 'Wind_speed_(m_s^{-1})_cross_section_for_07_Jan_1200_UTC_20130716T223642.mat';
+    %0 UTC on 5th Jan, same cross section
+    %pot_file = 'Potential_temperature_(K)_cross_section_for_05_Jan_0000_UTC_20130717T104812.mat';
+    %U_file   = 'Wind_speed_(m_s^{-1})_cross_section_for_05_Jan_0000_UTC_20130717T104340';
+
+    % Straight line that crosses through jet 1 at 9UTC on 6th Jan - to the north of the one 
+    % used in paper as of July 2013 -- used for aircraft comparisons as
+    % close to the flight track 
+
+    pot_file = 'Potential_temperature_(K)_cross_section_for_06_Jan_0900_UTC_20131017T054645.mat';
+%    U_file = 'Wind_speed_(m_s^{-1})_cross_section_for_06_Jan_0900_UTC_20130710T104638.mat';
+    U_file = 'Component_horizontal_(UV)_wind_speed_(m_s^{-1})_cross_section_for_06_Jan_0900_UTC_20131017T055059.mat';
+    WindDir_file   = 'Wind_direction_(degrees)_cross_section_for_06_Jan_0900_UTC_20131017T055305.mat';
+    VertWind_file  = 'Vertical_wind_speed_(m_s^{-1})_cross_section_for_06_Jan_0900_UTC_20131017T062748.mat';
+    
+    
+        
+    pot_filename = [save_cross_dir pot_file];
+    U_filename = [save_cross_dir U_file];
+    WindDir_filename = [save_cross_dir WindDir_file];    
+    VertWind_filename = [save_cross_dir VertWind_file];        
+
+end
+
+load(pot_filename);
+load(U_filename); %this should be the wind component really
+load(WindDir_filename);
+%load(VertWind_filename);
+load(RH_filename);
+
+%% do some calculations of Froude number, etc.
+%average windspeed
+ipos=1; %position in x direction of profile
+zz(1).z = XY_pot_cross_data.Y_cross;
+iz_find=findheight_nearest(zz(1).z,3.7);
+iz_find=findheight_nearest(zz(1).z,2.0); %Just above the mountain height
+iz_1km =findheight_nearest(zz(1).z,1.0); 
+%istart=24; %1.8 km
+istart=22; %1.6 km
+istart=1;
+%iend=29; %2.3 km
+%iend=35; %2.9 km
+iend=iz_find;
+
+%the lower levels may be NaN from the terrain, so remove them (is height
+%above sea-level)
+if ipos==1
+    inan = isnan(Ucomp_cross_AP(istart:iend,ipos));
+    i=find(inan==0);
+    istart = i(1);
+end
+
+%weighted average - BUT zz(1).z is has a regula z grid
+%U_mean = sum(squeeze(zz(1).z(istart+1:iend,ipos))'.*diff(zz(1).z(istart:iend)))./sum(diff(zz(1).z(istart:iend)));
+%so can just do... as includes all the data points
+U_mean = meanNoNan(Ucomp_cross_AP(istart:iend,ipos),1); %Note for both the component and non-component wind speeds
+% the variable is called Ucomp_cross_AP
+WindDir_1km = WindDir_cross_AP(iz_1km,ipos);
+WindDir_2km = WindDir_cross_AP(iend,ipos);
+N_Brunt = calc_N(pot_cross_AP(istart,ipos),pot_cross_AP(iend,ipos),XY_pot_cross_data(1).Y_cross(istart)*1000,XY_pot_cross_data(1).Y_cross(iend)*1000);
+H_AP = 1500; %m
+[F0,Hbar] = calc_Froude(U_mean,N_Brunt,H_AP) %upstream Froude number and non-dimensional mountain height
+RH_1km = RH_cross_AP(iz_1km,ipos);
+RH_2km = RH_cross_AP(iend,ipos);
+
+
+

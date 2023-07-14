@@ -1,0 +1,26 @@
+function [F]=hydrostatic2(p,zarr,pot_arr)
+%solves hydrostatic balance equation in dz/dp form for starting pressure p and height z (m) 
+%and temperature profile pot_arr (in K as function of pressure, zarr)
+
+%M = 28.97*1.67E-27;  %
+R = 8.314472;
+%k = 1.38E-23;
+G = 9.81;
+
+[zarr,I]=unique(zarr); %remove non-unique pressure values
+pot_arr=pot_arr(I);
+
+[zarr,I] = sort(zarr); %sort into order
+pot_arr=pot_arr(I);
+
+T=interp1(zarr,pot_arr,p); %interpolate for temperature for given pressure
+
+T = pot/(1000e2/p);
+
+rho=p*28.97e-3/R/T; %where  28.97e-3 is the molecular weight of air in kg/mol
+%rho=p*M/k/T;
+F=-rho*G;
+F=1/F'; %dz/dp
+'';
+
+

@@ -1,0 +1,41 @@
+%
+file_save = '/home/disk/eos1/d.grosvenor/standard_atmos.mat';
+
+file01 = '/home/disk/eos1/d.grosvenor/standard_atmos.txt';
+fid=fopen(file01,'rt');
+
+for i=1:17
+    tmp=fgetl(fid);
+end
+
+dat = fscanf(fid,'%f',[11 Inf]);
+
+fclose(fid);
+
+SA.z = dat(1,:);
+SA.sig = dat(2,:);
+SA.delta = dat(3,:);
+SA.theta = dat(4,:);
+SA.T = dat(5,:);
+SA.P = dat(6,:);
+SA.rho = dat(7,:);
+SA.a = dat(8,:);
+SA.visc = dat(9,:);
+SA.k_visc = dat(10,:);
+SA.ratio = dat(11,:);
+
+SA.info=['alt is altitude in kilometers '....
+'sigma is density divided by sea-level density.' ...
+'delta is pressure divided by sea-level pressure.'...
+'theta is temperature divided by sea-level temperature.'...
+'temp is temperature in kelvins.'...
+'press is pressure in newtons per square meter.'...
+'dens is density in kilograms per cubic meter.'...
+'a is the speed of sound in meters per second.'...
+'visc is viscosity in 10**(-6) kilograms per meter-second.'...
+'k.visc is kinematic viscosity in square meters per second.'...
+'ratio is 10**(-6) times speed of sound divided by kinematic viscosity (1/m)'];
+
+save(file_save,'SA');
+
+

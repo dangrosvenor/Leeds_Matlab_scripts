@@ -1,0 +1,12 @@
+function [iregion_lin,iregion_lin_edges] = spatial_screening_4D(Plat2D,Plon2D,N3,N4)
+%function [Plat4D,Plon4D,Plat4D_edges,Plon4D_edges] = spatial_screening_4D(Plat2D,Plon2D,N3,N4)
+
+ Plat4D = repmat(Plat2D,[1 1 N3 N4]);
+ Plon4D = repmat(Plon2D,[1 1 N3 N4]);
+        
+ Plat4D_edges = repmat(Plat2D_edges,[1 1 N3 N4]);
+ Plon4D_edges = repmat(Plon2D_edges,[1 1 N3 N4]);
+ 
+ 
+iregion_lin = find(Plat3D>=LAT_val(1) & Plat3D<LAT_val(end) & Plon3D>=LON_val(1) & Plon3D<LON_val(end));
+iregion_lin_edges = find(Plat3D_edges>=LAT_val(1) & Plat3D_edges<LAT_val(end) & Plon3D_edges>=LON_val(1) & Plon3D_edges<LON_val(end));        

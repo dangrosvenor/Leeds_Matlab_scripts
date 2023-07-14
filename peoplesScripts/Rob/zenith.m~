@@ -1,0 +1,66 @@
+
+
+function SOLANG=zenith(doy,TIME,LATin,longitude)
+%  function SOLANG=zenith(doy,TIME,LATin,longitude)
+%  This routine takes the date, time and latitude and
+%  returns the relevant solar zenith angle.
+%
+
+%  TIME      = Universal time (decimal hours)
+%  LATin       = Latitude (degrees north)
+%  longitude = Longitude (degrees east)
+%  SOLANG    = (Solar Zenith Angle)
+%
+%                      A. Collard.  Univ. of Wisconsin
+%
+PI = 3.141592654;
+TWOPI = 2*PI;
+%
+%  The following is an array of the day of year of the first day
+%  of each month (365 day year) minus 1.
+%
+doy_mm=[0,31,59,90,120,151,181,212,243,273,304,334];
+%
+% Calculate the day of year from YYMMDD
+%
+
+%
+%  Calculate the solar declination
+%
+
+longitude=-longitude;
+
+GAM=2.*PI*(doy-1)/365.;
+DEC=0.006918-0.399912*COS(GAM)+0.070257*SIN(GAM)-...
+0.006758*COS(2.*GAM)+0.000907*SIN(2.*GAM)-...
+0.002697*COS(3.*GAM)+0.00148*SIN(3.*GAM);
+%
+%  Calculate the equation of time
+%  True Solar Time = Mean Solar Time + EQNTIM
+%  From "Spherical Astronomy" by W.M. Smart
+%
+SOL_LONG = (doy-80.)*0.017202;
+EQNTIM = -103.9*SIN(SOL_LONG) - 429.6*COS(SOL_LONG) + ...
+596.3*SIN(2.*SOL_LONG) - 2.0*COS(2.*SOL_LONG) + ...
+4.3*SIN(3.*SOL_LONG) + 19.3*COS(3*SOL_LONG) - 12.7*COS(4.*SOL_LONG);
+% Convert to hours
+EQNTIM = EQNTIM/3600.;
+%
+%  Find local time from UT and longitude
+%
+TIM = TIME - longitude/15.;
+%
+%  Calculate solar hour angle
+%
+HANG = (TIM - 12. + eqntim)*TWOPI/24.;
+%
+%  Convert latitude to radians
+%
+LAT = LATin*0.017453293;
+%
+%  Calculate the cosine of the solar zenith angle.
+%
+SOLANG=SIN(DEC)*SIN(LAT)+COS(DEC)*COS(LAT)*COS(HANG);
+solang=(180./pi)*acos(solang);
+
+

@@ -1,0 +1,8 @@
+function y=mountain_Houghton_fun_uXhX(hA,Hc,H0,U0,gd,hB,uB)
+
+cr=uB - sqrt(gd*hX/hB*(hX+hB)/2); %eqn (3.8 of Houghton)
+uX=(cr*(hX-hA)+hA*uA)/hX;
+
+uX-2*
+
+y=Hc-h_crit; %h_crit should be consistent with the actual mountain height Hc (i.e. Hc=h_crit, or Hc-H_crit=0)

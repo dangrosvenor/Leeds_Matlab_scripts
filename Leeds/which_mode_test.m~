@@ -1,0 +1,17 @@
+f=[1 0.99 0.5 0.1 0.01 0.001];
+methods={'UM','Robin','Dan Robin','Dan Robin2','lognormal dN/lnD ratio'}
+
+for im=1:length(methods)
+method = methods{im};
+
+for i=1:length(f)
+    
+  ff= f(i);    
+  [dm1(im,i), dm2(im,i), dn1(im,i), dn2(im,i), dm_ratio_accum(im,i), dn_ratio_accum(im,i),r1_new(im,i),r2_new(im,i),rm(im,i),r_ratio(im,i),,r1(im,i),,r2(im,i)] = which_mode(0.5*4.5e-9, 0.5*ff*3.8e8,method);
+  %N.B. - multiplying the mass andn
+
+
+end
+
+
+end

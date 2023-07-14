@@ -1,0 +1,30 @@
+thresh=[20 30 40 50 60];
+
+%some default flags - some may be overwritten below
+thresh_SZA=60;
+thresh_CF=0.8;
+thresh_NP=50;
+thresh_sensZA=40;
+thresh_sensZA=30;
+thresh_maxSZA=60;
+    
+    
+for ithresh=1:length(thresh)
+    
+    %set the thresholds required and set the flag to override the
+    %thresholds in plot_global_maps.m
+    thresh_sensZA = thresh(ithresh);
+    ioverride_plotglobal_thresh=1;
+    
+    %%%%  MAKE sure the settings are set to do a plot of droplet number
+    %%%%  plot! Could automate this? Quite a few flags to set, though.
+    plot_global_maps
+    
+    
+    
+    ioverride_saveload=1;
+    saveload='save'; % - make sure that the flag is set to save!
+    saveload_various_MODIS 
+    
+end
+    

@@ -1,0 +1,21 @@
+filedir_gcm_load = '/home/disk/eos8/d.grosvenor/CPT/saved_processed_gcm_data/';
+
+switch [gcm_year_case '_' gcm_model_case]
+    case 'y1990_AM3'
+%        loadname_gcm = 'saved_gcm_processed_data_AM3_19900101.atmos_inst.tile5.nc_20120403T161555.mat';
+%        loadname_gcm = 'saved_gcm_processed_data_AM3_19900101.atmos_inst.tile5.nc_20120403T165851.mat';
+%        loadname_gcm = 'saved_gcm_processed_data_AM3_19900101.atmos_inst.tile5.nc_20120404T184111.mat';  
+        loadname_gcm = 'saved_gcm_processed_data_AM3_19900101.atmos_inst.tile5.nc_20120510T174146.mat';          
+        loadname_gcm = 'saved_gcm_processed_data_AM3_19900101.atmos_inst.tile5.nc_20120515T195348.mat';
+        
+    case 'y2001_CAM5'
+%        loadname_gcm = 'saved_gcm_processed_data_cam5_1_17_dat.cam.h1.0001-01-01-00000.nc_20120403T155412.mat';
+%        loadname_gcm = 'saved_gcm_processed_data_CAM5_cam5_1_17_dat.cam.h1.0001-01-01-00000.nc_20120403T170224.mat';
+%        loadname_gcm = 'saved_gcm_processed_data_CAM5_cam5_1_17_dat.cam.h1.0001-01-01-00000.nc_20120404T181423.mat';
+        loadname_gcm = 'saved_gcm_processed_data_CAM5_cam5_1_17_dat.cam.h1.0001-01-01-00000.nc_20120510T172243.mat';        
+loadname_gcm = 'saved_gcm_processed_data_CAM5_cam5_1_17_dat.cam.h1.0001-01-01-00000.nc_20120510T172243.mat';                
+20120515T192941.mat
+        
+end
+
+filename_gcm =[filedir_gcm_load loadname_gcm];

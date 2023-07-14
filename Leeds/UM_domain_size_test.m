@@ -1,0 +1,45 @@
+
+%Orig 600x600 domain
+NX=600;
+NY=600;
+lat_centre = 45; lon_centre = -40;
+
+%Larger 900x900 one - doesn't quite come south enough for the Azores to be far enough in the domain.
+NX=900;
+NY=900;
+lat_centre = 50; lon_centre = -30;
+
+%Extending to the south - 900x1000 one - doesn't quite come south enough for the Azores to be far enough in the domain.
+NX=900;
+NY=1100;
+lat_centre = 45; lon_centre = -35;
+
+x = [1:1:NX]; LX = x(end)-x(1);
+y = [1:1:NY]; LY = y(end)-y(1);
+
+dx=4; %km
+
+dlat=dx/111;
+dlon=dlat;
+
+
+
+lat1d = [ -LY/2*dlat : dlat : LY/2*dlat ];
+lon1d = [ -LX/2*dlon : dlon : LX/2*dlon ];
+
+[lon2d,lat2d] = meshgrid(lon1d,lat1d);
+
+%either of the below seems to work - actually, they both give the same
+%pole_lat!
+pole_lat= lat_centre + 90; if pole_lat > 90; pole_lat = -90 + mod(pole_lat,90); end
+%pole_lat = lat_centre - 90; if pole_lat < -90; pole_lat = mod(pole_lat,90); end
+
+pole_lon = lon_centre;
+
+[gcm_Plat2D_UM,gcm_Plon2D_UM]=em2gm(lat2d,lon2d,pole_lat,pole_lon);
+
+% Run scrip to plot domain
+UM_plot_domain
+
+
+

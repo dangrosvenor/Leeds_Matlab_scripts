@@ -1,0 +1,16 @@
+%xfind=x_line(1);
+%yfind=y_line(1);
+
+%xfind=524.8;
+%yfind=428.6;
+
+xinds = 0:size(lat2d(1).var,2)-1;
+yinds = 0:size(lat2d(1).var,1)-1;
+
+dx_grid = distlatlon(lat2d.var(1,1),lon2d.var(1,1),lat2d.var(1,2),lon2d.var(1,2));     
+dy_grid = distlatlon(lat2d.var(1,1),lon2d.var(1,1),lat2d.var(2,1),lon2d.var(2,1));     
+
+X = xinds*dy_grid;
+Y = yinds*dx_grid;
+
+[lat,lon]=get_lat_lon_wrf_from_xy(lat2d,lon2d,X,Y,xfind,yfind)

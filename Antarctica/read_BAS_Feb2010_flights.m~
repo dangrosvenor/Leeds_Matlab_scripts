@@ -1,0 +1,74 @@
+flight_choose=99;
+%flight_choose=100;
+flight_choose=99;
+flight_choose=[99 100 101 102 104 105 108 113 117 119 120 122 123 129];
+
+if ~exist('comp')
+    comp='uni';
+    comp='laptop';
+    comp='UWchallenger';
+end
+
+switch comp
+    case 'uni'
+        filename='C:\Documents and Settings\dan\My Documents\MATLAB\WRF_toolbox_Dan\XY_latlon.mat';
+    case 'UWchallenger'
+        filename='/home/disk/eos1/d.grosvenor/Ant_flights/WRF_toolbox_Dan/XY_latlon.mat';
+end
+load(filename); %loads LATS LONS X_latlon Y_latlon
+
+flight_dir='Y:\BAS_flights\flight_data_3rd_time_lucky\';
+
+
+
+for iflight=1:length(flight_choose)
+    flight=flight_choose(iflight);
+    
+    flight_str_read = num2str(flight);
+
+%     switch flight
+%         case 99
+%             filename=[flight_dir 'flight99_data.txt'];
+%             [dat_flt99,time_flt99,qv_flt99_fp,qv_flt99_humi,dist_flt99]=read_BAS_Feb2010_flights_func(filename,16);
+%         case 100
+%             filename=[flight_dir 'flight100_data.txt'];
+%             [dat_flt100,time_flt100,qv_flt100_fp,qv_flt100_humi,dist_flt100]=read_BAS_Feb2010_flights_func(filename,16);
+%         case 101
+%             filename=[flight_dir 'flight101_data.txt'];
+%             [dat_flt101,time_flt101,qv_flt101_fp,qv_flt101_humi,dist_flt101]=read_BAS_Feb2010_flights_func(filename,16);
+%         case 102
+%             filename=[flight_dir 'flight102_data.txt'];
+%             [dat_flt102,time_flt102,qv_flt102_fp,qv_flt102_humi,dist_flt102]=read_BAS_Feb2010_flights_func(filename,16);
+%         case 104
+%             filename=[flight_dir 'flight104_data.txt'];
+%             [dat_flt104,time_flt104,qv_flt104_fp,qv_flt104_humi,dist_flt104]=read_BAS_Feb2010_flights_func(filename,16);
+%         case 105
+%             filename=[flight_dir 'flight105_data.txt'];
+%             [dat_flt105,time_flt105,qv_flt105_fp,qv_flt105_humi,dist_flt105]=read_BAS_Feb2010_flights_func(filename,16);
+%          case 122
+            filename=[flight_dir 'flight' flight_str_read '_data.txt']
+            eval(['[dat_flt' flight_str_read ',time_flt' flight_str_read ',qv_flt' flight_str_read '_fp,qv_flt' flight_str_read '_humi,dist_flt' flight_str_read ',X_flt' flight_str_read ',Y_flt' flight_str_read ']=read_BAS_Feb2010_flights_func(filename,16,X_latlon,Y_latlon,LATS,LONS);']);    
+%    end
+
+end
+
+
+%1) time (in milli seconds) 
+%2) lat
+%3) lon, 
+%4) True air speed (m/s)
+%5) Corrected Temperature,  
+%6) Pressure, 
+%7) Frost Point (from frost point Hygrometer), 
+%8) Frost point (from Humicap),  
+%9) Wind speed ,    %a few spikes on flight 102
+%10) Wind directions, 
+%11) Radalt height,  !time then value  %looks a bit wrong on flt 102
+%12) GPS Height, 
+%13) upwelling sw, 
+%14) downwelling sw, 
+%15) Upwelling ir, 
+%16) downwelling ir
+
+
+

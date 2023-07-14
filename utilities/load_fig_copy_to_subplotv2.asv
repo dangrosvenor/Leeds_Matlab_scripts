@@ -1,0 +1,16 @@
+function [hsub_new,Hcb,pos_sub,pos_cb,Hleg] = load_fig_copy_to_subplotv2(hf,fig_dir,fig_load,isub,fontsize,subN,subM)
+
+hf_load = open([fig_dir fig_load]);
+if isnan(clims(
+caxis(clims);
+%title(''); %remove the title
+htit=get(gca,'title');
+set(htit,'string','');
+hs = subplot_spaceplots(subN,subM,isub,'parent',hf);
+%hs = hA(1);
+[hsub_new,Hcb,pos_sub,pos_cb,Hleg]=fig2subplot(hf_load,hs,fontsize);
+temp = increase_font_size_map_figures_func(hsub_new,fontsize,0);
+if length(Hcb)==0
+    Hcb=NaN;  %to avoid an error when trying to pass the handle out of the function
+end
+close(gcf);

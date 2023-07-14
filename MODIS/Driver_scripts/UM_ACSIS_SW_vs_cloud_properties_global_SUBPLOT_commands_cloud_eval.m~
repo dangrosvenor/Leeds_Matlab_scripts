@@ -1,0 +1,173 @@
+    caxis_range = [0 50];    
+
+    subplotting=1; %added this functionality to MODIS_vert_pen_NdError_DRIVER_template_global_map.m
+    xsub=1; ysub=3; %no. rows, columns
+    figure
+
+    %% ----  Model ---------------------------
+    hs01=subplot(xsub,ysub,1);
+    gca = hs01;
+    subtitle_str='UM';
+
+    dat_modis = meanNoNan(low_CF_PD_ALL,3);
+    
+    titlenam_driver = [subtitle_str];    %So, we overestimate Nd due to this error
+    %Plotting Script
+    UM_ACSIS_LWP_global_vs_nest_quick_plot_commands_global
+    MODIS_vert_pen_NdError_DRIVER_template_global_map
+    caxis(caxis_range);
+    gca = hs01;
+    increase_font_size_map_figures
+    %move colorbar down a bit and expand to full width
+    Hc1s = find_peer_colorbars_of_an_axes(gca);
+    %pos2 = get(Hc1s,'position'); %[left bottom width height]
+    %pos_new = pos2; %from increase_font_size_map_figures
+    %pos_new(2)=0.25; pos_new(3)=0.58;
+    %set(Hc1s,'position',pos_new);
+    delete(Hc1s)  %just need one big colorbar
+
+
+    %% ----  MAM ---------------------------
+    hs02=subplot(xsub,ysub,2);
+    gca = hs02;
+    subtitle_str='MAM';
+    iseason = time_match_season_days(days.daynum_timeseries3,subtitle_str);
+    N21_2_season = meanNoNan(N21_2(:,:,iseason),3);
+    N21_dtau_season = meanNoNan(N21_dtau(:,:,iseason),3);
+
+    % Time mean of Nd divided by mean of corrected valeus
+    dat_modis = 100*( N21_2_season./N21_dtau_season - 1 );
+
+    % Time mean of relative values (probably better to use time mean of
+    % absolute values?):-
+    %dat_modis = 100*meanNoNan(N21_2./N21_dtau - 1 , 3); %N.B. N21_dtau is the corrected (i.e. "true" value). N21 is the standard biased product
+    titlenam_driver = ['% error for 2.1\mum ' subtitle_str];    %So, we overestimate Nd due to this error
+    MODIS_vert_pen_NdError_DRIVER_template_global_map
+    caxis(caxis_range);
+    gca = hs02;
+    increase_font_size_map_figures
+    %move colorbar down a bit and expand to full width
+    Hc1s = find_peer_colorbars_of_an_axes(gca);
+    %pos2 = get(Hc1s,'position'); %[left bottom width height]
+    %pos_new = pos2; %from increase_font_size_map_figures
+    %pos_new(2)=0.25; pos_new(3)=0.58;
+    %set(Hc1s,'position',pos_new);
+    delete(Hc1s)  %just need one big colorbar
+
+
+
+    %% ----  JJA ---------------------------
+    hs03=subplot(xsub,ysub,3);
+    gca = hs03;
+    subtitle_str='JJA';
+    iseason = time_match_season_days(days.daynum_timeseries3,subtitle_str);
+    N21_2_season = meanNoNan(N21_2(:,:,iseason),3);
+    N21_dtau_season = meanNoNan(N21_dtau(:,:,iseason),3);
+
+    % Time mean of Nd divided by mean of corrected valeus
+    dat_modis = 100*( N21_2_season./N21_dtau_season - 1 );
+
+    % Time mean of relative values (probably better to use time mean of
+    % absolute values?):-
+    %dat_modis = 100*meanNoNan(N21_2./N21_dtau - 1 , 3); %N.B. N21_dtau is the corrected (i.e. "true" value). N21 is the standard biased product
+    titlenam_driver = ['% error for 2.1\mum ' subtitle_str];    %So, we overestimate Nd due to this error
+    MODIS_vert_pen_NdError_DRIVER_template_global_map
+    caxis(caxis_range);
+    gca = hs03;
+    increase_font_size_map_figures
+    %move colorbar down a bit and expand to full width
+    Hc1s = find_peer_colorbars_of_an_axes(gca);
+    %pos2 = get(Hc1s,'position'); %[left bottom width height]
+    %pos_new = pos2; %from increase_font_size_map_figures
+    %pos_new(2)=0.25; pos_new(3)=0.58;
+    %set(Hc1s,'position',pos_new);
+    delete(Hc1s)  %just need one big colorbar
+
+
+    %% ----  SON ---------------------------
+    hs04=subplot(xsub,ysub,4);
+    gca = hs04;
+    subtitle_str='SON';
+    iseason = time_match_season_days(days.daynum_timeseries3,subtitle_str);
+    N21_2_season = meanNoNan(N21_2(:,:,iseason),3);
+    N21_dtau_season = meanNoNan(N21_dtau(:,:,iseason),3);
+
+    % Time mean of Nd divided by mean of corrected valeus
+    dat_modis = 100*( N21_2_season./N21_dtau_season - 1 );
+
+    % Time mean of relative values (probably better to use time mean of
+    % absolute values?):-
+    %dat_modis = 100*meanNoNan(N21_2./N21_dtau - 1 , 3); %N.B. N21_dtau is the corrected (i.e. "true" value). N21 is the standard biased product
+    titlenam_driver = ['% error for 2.1\mum ' subtitle_str];    %So, we overestimate Nd due to this error
+    MODIS_vert_pen_NdError_DRIVER_template_global_map
+    caxis(caxis_range);
+    gca = hs04;
+    increase_font_size_map_figures
+    %move colorbar down a bit and expand to full width
+    Hc1s = find_peer_colorbars_of_an_axes(gca);
+    %pos2 = get(Hc1s,'position'); %[left bottom width height]
+    %pos_new = pos2; %from increase_font_size_map_figures
+    %pos_new(2)=0.25; pos_new(3)=0.58;
+    %set(Hc1s,'position',pos_new);
+    %delete(Hc1s)  %just need one big colorbar - keep the last one
+
+
+
+
+
+    %make them all bigger - seem to have to increase the height rather than the
+    %width for this
+    new_height=0.35;
+    gca=hs01; pos=get(gca,'position'); pos(4)=new_height; set(gca,'position',pos);
+    gca=hs02; pos=get(gca,'position'); pos(4)=new_height; set(gca,'position',pos);
+    gca=hs03; pos=get(gca,'position'); pos(4)=new_height; set(gca,'position',pos);
+    gca=hs04; pos=get(gca,'position'); pos(4)=new_height; set(gca,'position',pos);
+
+    % Move them all down
+    dZ=-0.12;
+    gca=hs01; pos=get(gca,'position'); pos(2)=pos(2)+dZ;set(gca,'position',pos);
+    gca=hs02; pos=get(gca,'position'); pos(2)=pos(2)+dZ;set(gca,'position',pos);
+    gca=hs03; pos=get(gca,'position'); pos(2)=pos(2)+dZ;set(gca,'position',pos);
+    gca=hs04; pos=get(gca,'position'); pos(2)=pos(2)+dZ;set(gca,'position',pos);
+
+    %adjust the position of the second and 4th plots to reduce space between the
+    %subplots
+    new_xpos=0.42;
+
+    pos=get(hs02,'position');
+    pos_orig=pos;
+    pos(1)=new_xpos;
+    set(hs02,'position',pos);
+
+    pos=get(hs04,'position');
+    pos_orig=pos;
+    pos(1)=new_xpos;
+    set(hs04,'position',pos);
+
+    %move 3 and 4 upwards
+    new_ypos=0.15;
+    gca=hs03;
+    pos=get(gca,'position');
+    pos_new=pos;
+    pos_new(2)=new_ypos;
+    set(gca,'position',pos_new);
+
+    gca=hs04;
+    pos=get(gca,'position');
+    pos_new=pos;
+    pos_new(2)=new_ypos;
+    set(gca,'position',pos_new);
+
+
+    %Make the colorbar wider and move to below the plot
+    pos=get(Hc1s,'position');
+    pos(1)=0.16;
+    pos(2)=0.06;
+    pos(3)=0.5;
+    set(Hc1s,'position',pos);
+
+    %Change the colormap to blue to brown :-
+    hcbar = find_peer_colorbars_of_an_axes(gca);
+    lb_map = lbmap(16,'brownblue');
+    colormap(flipdim(lb_map,1));    
+    set(hcbar,'XaxisLocation','bottom');

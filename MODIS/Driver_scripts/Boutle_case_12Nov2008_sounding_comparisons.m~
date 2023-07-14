@@ -1,0 +1,693 @@
+% Profiles of theta and qv from soundings vs model
+
+savedir='/home/disk/eos1/d.grosvenor/modis_work/plots/UM/';
+
+% day_or_night='all';
+% day_or_night='day 12th Nov';
+% day_or_night='day 12th Nov 04 LST';
+% %day_or_night='day 12th Nov 16 LST';
+% day_or_night='day 13th Nov 04 LST';
+% %day_or_night='day 13th Nov 16 LST';
+
+%For 13th Nov the AMSRE overpass was at 06:30 UTC for the descending
+%and 18:42 for the ascending, so pick 07:00 and 19:00 UM output times.
+
+iplot_amsre=0; %set to zero for Nd - will keep code in for other parameters.
+iplot_modis=0; %whether to include goes/modis Nd PDF
+iplot_sounding=1;
+
+dlat_GOES = 1.0; %Default values - will be overridden if appropriate sat data provided
+dlon_GOES = 1.0;
+
+
+%Soundings are everey 4 hour or so.
+% Could do profiles at say 12am and 12pm LST on 12th and 13th
+
+% Shift to local time (Local Solar Time - so will base this on the time at
+% which the Sun is highest in the sky. On 12th Nov this was at 16:48 for
+% -20, -76 lat lon (centre of the domain). I.e. they are 4hrs 48 mins behind UTC
+time_shift = -(4+48/60) /24; %amount to shift time by for LST (from UTC)
+
+time_tol_DRIVER = 15; %minutes
+
+switch day_or_night
+    case 'day 12th Nov'
+%        time_select = datenum('13-Nov-2008 19:00'); %for UM - set one value or a range
+%        time_select = [datenum('13-Nov-2008 13:00') datenum('13-Nov-2008 21:00')]; %for UM - set one value or a range
+      %Selecting in terms of LST here - shift to UTC
+        time_select = datenum('12-Nov-2008 12:00') - time_shift;   
+    case 'day 12th Nov 04 LST'
+        time_select = datenum('12-Nov-2008 04:00') - time_shift; 
+    case 'day 12th Nov 16 LST'
+        time_select = datenum('12-Nov-2008 16:00') - time_shift;    
+    case 'day 13th Nov 04 LST'
+        time_select = datenum('13-Nov-2008 04:00') - time_shift;    
+    case 'day 13th Nov 16 LST'
+        time_select = datenum('13-Nov-2008 16:00') - time_shift;                     
+    case 'day 13th Nov'
+        time_select = datenum('13-Nov-2008 19:00'); %for UM - set one value or a range
+        time_select = [datenum('13-Nov-2008 13:00') datenum('13-Nov-2008 21:00')]; %for UM - set one value or a range
+        %Selecting in terms of LST here - shift to UTC
+        time_select = datenum('13-Nov-2008 12:00') - time_shift;      
+    case 'all'
+        time_select = [ datenum('31-Aug-2014 00:00')  datenum('05-Sep-2014 21:02') ];
+end
+
+
+
+icoarsen=1;
+
+idat_driver=0;
+clear fileUM xdat_import* ydat_import* line_pattern_DRIVER  line_colour_DRIVER marker_style_DRIVER
+
+
+% Smaller region to account for boundary inflow of LWP and
+% spin-up during adatestr(time_sel+time_shift)dvection.
+%Looks like this mainly affects the south of the domain and to
+%the east (for 26th Oct POC case the east was also affected).
+%Also remove a bit for the boundary itself (around 0.25 deg
+%should be enough).
+LAT_val_DRIVER = [-1e9 1e9]; LON_val_DRIVER = [-1e9 1e9];
+LAT_val_DRIVER = [-20.5 -17.5]; LON_val_DRIVER = [-78.75 -73.25];
+LAT_val_DRIVER = [50.6 79.4]; LON_val_DRIVER = [-40.0 10.0];
+LAT_val_DRIVER = [-20.5 -19.5]; LON_val_DRIVER = [-75.5 -74.5];
+
+
+Ybins_DRIVER = [0:10:290 300:50:950 1000:500:6000];   %need to be replicated in pdf2d_plot_commands
+Ybins_DRIVER = 10.^[0:0.05:log10(6000)]; 
+
+thresh_LWP_DRIVER = 30; %g/m2 threshold to report GOES Nd
+thresh_LWP_DRIVER = 5; %g/m2 threshold to report GOES Nd
+
+
+LAT_val_UM = LAT_val_DRIVER; LON_val_UM = LON_val_DRIVER;
+LAT_val_GOES = LAT_val_DRIVER; LON_val_GOES = LON_val_DRIVER;
+
+
+
+% -- For other option setting see inside the loops
+pdf_type_driver='normal';
+%pdf_type_driver='cumulative';
+
+logbin_norm_driver = 0;
+i_plot_norm_driver=1; %Whether to normalise
+i_div_bin_widths_driver=1;  %whether to divide by the bin widths (also normalises)
+iarea_normalize_driver=1; %This is for the 2D PDFs I think.
+
+%--- Load and process the data
+
+
+
+%% ------------------------------
+% ------ Sounding data --------
+% ------------------------------
+if iplot_sounding==1
+
+idat_driver = idat_driver + 1;
+line_pattern_DRIVER(idat_driver).p= '-';  line_colour_DRIVER(idat_driver).c=[0.6 0.6 0.8]; marker_style_DRIVER(idat_driver).m='none';
+
+% Looks like they did launches every 4 hours or so
+
+sounding_file = '/home/disk/eos15/d.grosvenor/UM/12Nov2008_Boutle/VOCALS_obs_from_IanB/VOCALS2008_soundings_z_v4.2.nc';
+nc=netcdf(sounding_file);
+year_sd = nc{'year'}(:);
+day_sd = nc{'day'}(:);
+month_sd = nc{'month'}(:);
+hour_sd = nc{'hour'}(:);  %UTC
+min_sd = nc{'minute'}(:);
+
+mtime_sd = datenum(year_sd,month_sd,day_sd,hour_sd,min_sd,0);
+time_out = mtime_sd;
+dt_tol = time_tol_DRIVER;
+
+
+if length(time_select)==1
+    itimes_UM = find(abs(time_out-time_select)<dt_tol/60/24); %
+    [minval,itimes_UM] = min(abs(time_out-time_select));
+    minval = minval *24*60; %convert to mins - can check to see how close this is
+    %Round to the nearest minute as sometimes get 18:59:59
+    time_str = datestr(round(time_out(itimes_UM)*24*60)/24/60 + time_shift,'dd-mmm-yyyy HH:MM');
+    time_str2 = datestr(round(time_out(itimes_UM)*24*60)/24/60 + time_shift,'HH:MM');
+    time_sd = time_out(itimes_UM); %UTC time of nearest souding
+else
+    itimesA = find(abs(time_out-time_select(1))<dt_tol/60/24);
+end
+
+ z_sd = nc{'height'}(:); %metres 
+ qv_sd = nc{'q'}(itimes_UM,:); %g/kg
+ T_sd = nc{'T'}(itimes_UM,:); %degC
+ T_sd = T_sd + 273.15; %convert to K
+ P_sd = nc{'pres'}(itimes_UM,:); %hPa
+ P_sd = P_sd*100; %convert to Pa
+% th_sd = potemp(T_sd,P_sd);
+ th_sd = nc{'theta'}(itimes_UM,:);
+ 
+% labs_import(idat_driver).l = ['Sonde ' time_str2 ' LST'];
+ labs_import(idat_driver).l = ['Sonde'];
+ ydat_import(idat_driver).y = z_sd;
+ 
+ xdat_import_th(idat_driver).x = th_sd;
+ xdat_import_qV(idat_driver).x = qv_sd; %already in g/kg
+ 
+ 
+end %  if iplot_sounding==1
+
+
+
+if iplot_amsre==1
+
+%% ------------------------------
+% ------ AMSRE data --------
+% ------------------------------
+idat_driver=idat_driver+1;
+
+line_pattern_DRIVER(idat_driver).p= '-';  line_colour_DRIVER(idat_driver).c=[0 0 1]; marker_style_DRIVER(idat_driver).m='*';
+
+LAT_val = LAT_val_GOES;
+LON_val = LON_val_GOES;
+        
+%------- Calculate the data to plot         
+         
+         % For use later to coarsen the UM data
+         d=abs(diff(gcm_Plat2D_AMSRE,[],1));
+         dlat_AMSRE = meanNoNan(meanNoNan(d,1),1);
+         d=abs(diff(gcm_Plon2D_AMSRE,[],2));
+         dlon_AMSRE = meanNoNan(meanNoNan(d,1),1);
+         
+         %Making a "new" gcm_str to avoid using timeseries3 type data in
+         %pdf2D
+         gcm_Plat2D_AMSRE2 = gcm_Plat2D_AMSRE;
+         gcm_Plat2D_edges_AMSRE2 = gcm_Plat2D_edges_AMSRE;
+         gcm_Plon2D_AMSRE2 = gcm_Plon2D_AMSRE;
+         gcm_Plon2D_edges_AMSRE2 = gcm_Plon2D_edges_AMSRE;
+         %Actually can't really define this it varies over the globe for
+         %ASMRE
+%         gcm_time_matlab_AMSRE2 = datenum(year_amsre,month_amsre,day_amsre); 
+            gcm_time_matlab_AMSRE2 = 0;
+            gcm_time_UTC_AMSRE2 = 0;
+            daynum_timeseries3_AMSRE2 = 1;
+            modisyear_timeseries3_AMSRE2 = 1;
+            
+%            ilat_amsre = find(gcm_Plat2D_AMSRE>LAT_val(1) & gcm_Plat2D_AMSRE<LAT_val(2) & gcm_Plon2D_AMSRE>LON_val(1) & gcm_Plon2D_AMSRE<LON_val(2) )
+         
+         Y_driver = 1e3*squeeze(lwp_amsre(:,:,:,iasc_desc));
+
+% ----- Set various things
+
+          
+         
+%        mod_data_type='AMSRE';
+        gcm_str_select='AMSRE2';
+        gcm_str='AMSRE2';
+       
+%        month_amsre = goes_month;
+%        year_amsre = goes_year;
+
+        
+        
+        %--- run the file to set up the defaults
+%        plot_global_maps_defaults   
+         watervap_defaults
+         pdf2D_defaults
+         
+        
+        %--- set some options for these particular plot loops
+%        set_screening = {'none'};
+%        modis_data_plot = 'Map of 2D data from outside driver script';
+        i577 = 'MODIS_plot_UW';
+
+        iset_min_clim=1;
+        clim_min=0;
+        iset_max_clim=1;
+        clim_max=200;
+        
+        logflag=0;
+        dlogflag=0;
+        
+        isave_plot=0;
+        savedir='/home/disk/eos1/d.grosvenor/modis_work/plots/UM/';
+        
+        
+                        
+
+%        screen_type = 'gcm_screening';
+
+        %                            x_axis_vals = 'LWP+RWP GCM grid-box mean'; %dummy data
+        x_axis_vals = 'Dummy data'; %dummy data
+        y_axis_vals = 'General GCM-style';
+        
+        ylabelstr='LWP (g m^{-2})';
+        
+%        Ybins = [-0.01 30:10:2500]; ichoose_Ybins=1;
+        Ybins = [-0.01 10.^[log10(30):0.1:log10(2500)]]; ichoose_Ybins=1; %bins used for AGU
+        Ybins = [-0.01 10.^[log10(30):0.15:log10(2500)]]; ichoose_Ybins=1;   %Revised wider bins at lower LWP     
+        
+        graph = 977; %new 1D PDF from 2D histo data - can choose either axis
+                                %(for watervap)
+                                
+          axis1D = 'y';                                
+                                
+          logbin_norm = logbin_norm_driver;
+          i_plot_norm = i_plot_norm_driver;
+          i_div_bin_widths=i_div_bin_widths_driver;
+          pdf_type = pdf_type_driver;
+          iarea_normalize = iarea_normalize_driver;
+                                
+%        gcm_str = gcm_str_last_loaded;        
+
+        
+ % --------- Override flags for 2D PDF --------
+        ioverride_pdf=1;
+        %iocean_only=1;
+        man_choose_plotTimeHeight_graph=1;
+        ioverride_location_selection=1;
+        ioverride_pdf_varchoose = 1;
+        datatype = 'gcm_data';        
+
+        % --------- Override flags for watervap --------
+        man_choose_water_graph=1;    %for watervap 
+        
+        %---  Run plot script and save
+        plotTimeHeightVap3
+        close(gcf);
+        waterVapourMay2005
+        close(gcf);
+        
+        %store the PDF data
+         switch pdf_type_driver
+            case 'normal'
+                ydat_import(idat_driver) = ydat_norm; %Use the non-cumulative PDF data
+                xdat_import(idat_driver) = xdat_norm;
+            case 'cumulative'
+                ydat_import(idat_driver) = ydat_cum;
+                xdat_import(idat_driver) = xdat_cum;
+        end
+       
+        labs_import(idat_driver).l = 'AMSRE';
+        xlab_import = xlab;
+        ylab_import = ylab;
+%        ioverride_savePDF=1;
+%        save_1D_pdfs;
+
+end
+
+
+                            
+
+
+%% ------------------------------
+% ------ MODIS data --------
+% ------------------------------
+if iplot_modis==1
+    
+idat_driver=idat_driver+1;
+
+
+LAT_val = LAT_val_GOES;
+LON_val = LON_val_GOES;
+
+
+
+        
+%------- Calculate the data to plot
+         %read in the mockL3 MODIS data (1x1 deg)
+         %CF>80 mock L3 data :-
+         modis_Nd = load('/home/disk/eos8/d.grosvenor/mat_files_various/MODIS_Nd_Iceland_30Aug_10Sep_2014_CF_0.8_meanCTT_173_meanCTH_0.5_3.2km_SZA_65_meanTau10.mat');
+         
+         % For use later to coarsen the UM data
+%          d=diff(gcm_Plat2D_GOES,[],1);
+%          dlat_GOES = meanNoNan(meanNoNan(d,1),1);
+%          d=diff(gcm_Plon2D_GOES,[],2);
+%          dlon_GOES = meanNoNan(meanNoNan(d,1),1);
+%          
+%          sLAT = length(modis_Nd.MLAT);
+%          sLON = length(modis_Nd.MLON);
+%          
+%          gcm_Plat2D_MODIS = repmat(modis_Nd.MLAT,[sLON 1]);
+%          
+%          [lat_out,lon_out] = get_edges_lat_lon(lat,lon)
+
+
+         
+         
+         if icoarsen==99 %don't need to coarsen GOES
+
+             %            dlat_target = dlat_GOES;
+             %            dlon_target = dlon_GOES;
+
+             dlat_target = dlat_AMSRE;
+             dlon_target = dlon_AMSRE;
+
+             %average to the coarser resolution of AMSRE
+
+%              d=diff(gcm_Plat2D_UM,[],1);
+%              dlat_UM = meanNoNan(meanNoNan(d,1),1);
+             N = ceil(abs(dlat_target/dlat_GOES));
+
+
+%             d=diff(gcm_Plon2D_UM,[],2);
+%             dlon_UM = meanNoNan(meanNoNan(d,1),1);
+             M = ceil(abs(dlon_target/dlon_GOES));
+
+
+
+                %Am averaging Reff and Tau here rather than the LWP itself
+                %- hopefully is ok. 
+             goes_Reff = reduce_matrix_subsample_mean(goes_Reff,N,M);
+             goes_Tau = reduce_matrix_subsample_mean(goes_Tau,N,M);    
+             gcm_Plat2D_GOES = reduce_matrix_subsample_mean(gcm_Plat2D_GOES,N,M);
+             gcm_Plon2D_GOES = reduce_matrix_subsample_mean(gcm_Plon2D_GOES,N,M);
+             %Work out the cell edges (as halfway between the centres)
+             [gcm_Plat2D_edges_GOES, gcm_Plon2D_edges_GOES]=get_edges_lat_lon(gcm_Plat2D_GOES,gcm_Plon2D_GOES);
+
+%          else
+%              lwp_UM_n5 = lwp;
+         end
+         
+         
+ 
+ 
+        
+
+    
+
+        
+        %---  Run plot script and save
+        MODIS_Nd_Iceland_DRIVER_template_1D_PDF_with_lat_lon_selection
+        
+        %store the PDF data
+         switch pdf_type_driver
+            case 'normal'
+                ydat_import(idat_driver) = ydat_norm; %Use the non-cumulative PDF data
+                xdat_import(idat_driver) = xdat_norm;
+            case 'cumulative'
+                ydat_import(idat_driver) = ydat_cum;
+                xdat_import(idat_driver) = xdat_cum;
+        end
+       
+        labs_import(idat_driver).l = 'MODIS';
+        xlab_import = xlab;
+        ylab_import = ylab;
+%        ioverride_savePDF=1;
+%        save_1D_pdfs;
+end
+%         %Quick fix to get the linestyles to be the same as without GOES
+%     idat_driver=idat_driver+1;
+%     labs_import(idat_driver).l = ' ';
+%     xdat_import(idat_driver).x=NaN;
+%     ydat_import(idat_driver).y=NaN;    
+% 
+% end
+
+%line_pattern_DRIVER(idat_driver).p= '-';  line_colour_DRIVER(idat_driver).c=[0.6 0.6 0.8]; marker_style_DRIVER(idat_driver).m='o';
+
+
+
+%% ------------------------------
+% ------ UM data --------
+% ------------------------------
+% Select cases from those in UM_case_select_runs
+
+%UM_cases = '12th Nov case, as of May 2016 processing runs PLOTS multi-dirUM';
+UM_cases = 'Iceland_9day_runs_Nov2016';
+%UM_cases = 'Iceland_9day_runs_Nov2016_low_background_only';
+UM_cases = '12th Nov case, as of May 2016';
+UM_cases = '12th Nov case, as of May 2016 adhoc';
+
+
+%% Script to get the UM run details by providing the run set name
+%% Provide the case in UM_case_select_runs
+UM_case_select_RUN  %runs UM_case_select_runs
+
+
+LAT_val = LAT_val_UM;
+LON_val = LON_val_UM;
+%N.B. - the regional screening for this is done in pdf2D_plot_commands
+%(case 'UM LWP')
+
+idat_UM_first = idat_driver+1;
+
+for idat_UM=1:length(fileUM)
+    idat_driver=idat_driver+1;
+    
+   if iscell(dirUM)==1
+        dirUM_i = dirUM{idat_UM};
+    else
+        dirUM_i = dirUM;
+    end
+    
+    line_pattern_DRIVER(idat_driver)=line_patternUM(idat_UM);  line_colour_DRIVER(idat_driver)=line_colourUM(idat_UM); marker_style_DRIVER(idat_driver)=marker_styleUM(idat_UM);    
+    marker_style_DRIVER(idat_driver).m='none'; %Take these out since too many for small subplots
+
+    
+    %Read in all the times in case we want to use them all
+%    [nc,time_driver,gcm_Plat2D_UM,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM,it,daynum_timeseries3_UM,modisyear_timeseries3_UM,gcm_time_UTC_UM,gcm_time_matlab_UM] = read_UM_file(filename,[],pole_lat,pole_lon);
+   
+
+    
+
+
+        
+
+        
+%------- Calculate the data to plot
+         %read in the UM data for the specific time
+        
+         if iplot_sounding==1
+             time = time_sd; %match the time of the sounding rather than the chosen time
+         else
+             time = time_select;
+         end
+        
+%         [nc,time_matlab,gcm_Plat2D_UM,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM,it_driver,daynum_timeseries3_UM,modisyear_timeseries3_UM,gcm_time_UTC_UM,gcm_time_matlab_UM] = read_UM_file(filename,time,pole_lat,pole_lon);
+%         %pdf2d will then use nc to get the data
+%         
+%         lwp = 1e3*nc{'LWP'}(it_driver,:,:); %convert to g/m2]
+        
+%          vars_in.var = 'Nd';
+%          vars_in.flag = flag{idat_UM};
+% %         vars_in.file_Nd =  [dirUM fileUM_Nd{idat_UM}]; 
+%          vars_in.file_lwp =  [dirUM fileUM{idat_UM}];          
+% %         vars_in.file_rho = [dirUM fileUM_rho{idat_UM}]; %filename_rho;
+%          vars_in.pole_lat = pole_lat;
+%          vars_in.pole_lon = pole_lon;
+%          vars_in.time_in = time_select;
+
+         
+        %Read theta
+         vars_in.var = 'th';
+         vars_in.flag = '';
+         vars_in.file_lwp =  [dirUM_i remove_character(fileUM{idat_UM},'VAR_NAME','th_qv')];   %
+%         vars_in.file_rho = [dirUM_i fileUM_rho{idat_UM}]; %filename_rho;
+         vars_in.pole_lat = pole_lat;
+         vars_in.pole_lon = pole_lon;
+         vars_in.time_in = time; %set to [] for all times      
+         vars_in.time_tol = time_tol_DRIVER/60/24; %convert to days
+         
+    
+     [var_UM,time_out,gcm_Plat2D_UM,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM,it_driver,daynum_timeseries3_UM,modisyear_timeseries3_UM,gcm_time_UTC_UM,gcm_time_matlab_UM,z_um,iz_um] = get_LWP_RWP_UM(vars_in);
+     [Y,MO,D,H,M,S]=datevec(time_out(it_driver)+time_shift);          
+     time_str_UM = datestr(datenum(Y,MO,D,H,M,round(S)),'dd-mmm-yyyy'); %since if is 11 mins 59.99 secs datestr rounds down to 11mins...
+     time_str2_UM = datestr(datenum(Y,MO,D,H,M,round(S)),'HH:MM');
+     
+     %find closest profile to the centre of the box
+     LAT = mean(LAT_val_DRIVER);
+     LON = mean(LON_val_DRIVER);
+     [ilat,ilon] = getind_latlon_quick(gcm_Plat2D_UM,gcm_Plon2D_UM,LAT,LON,0.1);
+     theta_UM = var_UM(:,ilat,ilon);
+     
+     %find the whole box region for std dev.
+     iloc = find(gcm_Plat2D_UM>=LAT_val_DRIVER(1) & gcm_Plat2D_UM<=LAT_val_DRIVER(2) & gcm_Plon2D_UM>=LON_val_DRIVER(1) & gcm_Plon2D_UM<=LON_val_DRIVER(2));     
+     %theta_UM_box = meanNoNan(var_UM(:,iloc),2);
+     std_theta_UM = std(var_UM(:,iloc),0,2);     
+     prc10_theta_UM = prctile(var_UM(:,iloc),[10 90],2);
+     
+         %Read qv
+         vars_in.var = 'qV';
+         vars_in.flag = '';
+         vars_in.file_lwp =  [dirUM_i remove_character(fileUM{idat_UM},'VAR_NAME','th_qv')];   %
+%         vars_in.file_rho = [dirUM_i fileUM_rho{idat_UM}]; %filename_rho;
+         vars_in.pole_lat = pole_lat;
+         vars_in.pole_lon = pole_lon;
+         vars_in.time_in = time; %set to [] for all times      
+         vars_in.time_tol = time_tol_DRIVER/60/24; %convert to days
+         
+    
+     [var_UM,time_out,gcm_Plat2D_UM,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM,it_driver,daynum_timeseries3_UM,modisyear_timeseries3_UM,gcm_time_UTC_UM,gcm_time_matlab_UM] = get_LWP_RWP_UM(vars_in);
+     var_UM = var_UM*1e3; %convert to g/kg
+     %Profile in middle
+     qV_UM = var_UM(:,ilat,ilon);
+     
+     %find the whole box region for std dev.
+%     qV_UM_box = meanNoNan(var_UM(:,iloc),2);   
+     std_qV_UM = std(var_UM(:,iloc),0,2);
+     prc10_qV_UM = prctile(var_UM(:,iloc),[10 90],2);     
+            
+       
+     labs_import(idat_driver).l = labs_UM(idat_UM).l;
+     ydat_import(idat_driver).y = z_um;
+          
+     xdat_import_th(idat_driver).x = theta_UM;
+     xdat_import_th_std(idat_driver).x = prc10_theta_UM;
+     xdat_import_qV(idat_driver).x = qV_UM;
+     xdat_import_qV_std(idat_driver).x = prc10_qV_UM;  
+
+
+end
+
+
+
+%% ------------------------------
+% ------ plot the profiles using case 0 of watervap --------
+% ------------------------------
+ylab_import = 'Height (m)';
+
+%--- run the file to set up the defaults
+watervap_defaults
+
+%--- set some options for this particular plot
+graph=0; %graph choice in watervap
+%titlenam = ['Iceland Nd PDFs for LWP.GT.' num2str(thresh_LWP_DRIVER) ' g m^{-2}'];
+titlenam = [time_str_UM ', UM=' time_str2_UM ' LST, Sonde=' time_str2 ' LST'];
+%xlab='Droplet Number Concentration (cm^{-3})';
+
+xlab='Potential temperature (K)';
+xdat_import = xdat_import_th;
+
+ylab = ylab_import;
+xlims=0;
+xlimits=[0 100];
+
+izlim=1;
+zmin=0;
+zmax=3000;
+
+lor=3; %1=top-right, 2=top-left 0=auto, 3=lower left, 4=lower right, -1=on the right of plot pane
+nmark=-1; %-1 means that all points have markers. Otherwise only plot the number specified.
+
+isave_plot=0;
+
+%idate_ticks_fix=1;
+%iaxis_square=0; %switch to make axis square
+ichoose_styles=1;
+
+line_pattern = line_pattern_DRIVER;  line_colour=line_colour_DRIVER; marker_style=marker_style_DRIVER;
+
+
+%---  Main script to do plots and save
+if iover_ride_plot_global==1
+    inew_figure=0;
+    isub_DRIVER = isub_DRIVER + 1;
+    subplotting=1;    
+    nsub=isub_DRIVER;
+%    subplot(Nrows_sub,Ncols_sub,isub_DRIVER);  %Using to tell if want to subplot here    
+end
+DRIVER_lineplot_watervap
+
+%Add on the std dev lines either side of the UM line
+%plot(xdat_import(idat_UM_first).x - xdat_import_th_std(idat_UM_first).x , ydat_import(idat_UM_first).y , 'color', line_colour(idat_UM_first).c, 'linestyle', '-','linewidth',2);
+%plot(xdat_import(idat_UM_first).x + xdat_import_th_std(idat_UM_first).x , ydat_import(idat_UM_first).y , 'color', line_colour(idat_UM_first).c, 'linestyle', '-','linewidth',2);
+plot(xdat_import_th_std(idat_UM_first).x(:,1) , ydat_import(idat_UM_first).y , 'color', line_colour(idat_UM_first).c, 'linestyle', '-','linewidth',2);
+plot(xdat_import_th_std(idat_UM_first).x(:,2) , ydat_import(idat_UM_first).y , 'color', line_colour(idat_UM_first).c, 'linestyle', '-','linewidth',2);
+
+
+%% ------------------------------
+% ------ plot again for qV --------
+% ------------------------------
+ylab_import = 'Height (m)';
+
+%--- run the file to set up the defaults
+watervap_defaults
+
+%--- set some options for this particular plot
+graph=0; %graph choice in watervap
+%titlenam = ['Iceland Nd PDFs for LWP.GT.' num2str(thresh_LWP_DRIVER) ' g m^{-2}'];
+%titlenam = [time_str_UM ' LST'];
+%xlab='Droplet Number Concentration (cm^{-3})';
+
+xlab='qV (g kg^{-1})';
+xdat_import = xdat_import_qV;
+
+ylab = ylab_import;
+xlims=0;
+xlimits=[0 100];
+
+izlim=1;
+zmin=0;
+zmax=3000;
+
+lor=3; %1=top-right, 2=top-left 0=auto, 3=lower left, 4=lower right, -1=on the right of plot pane
+nmark=-1; %-1 means that all points have markers. Otherwise only plot the number specified.
+
+isave_plot=0;
+
+%idate_ticks_fix=1;
+%iaxis_square=0; %switch to make axis square
+ichoose_styles=1;
+
+line_pattern = line_pattern_DRIVER;  line_colour=line_colour_DRIVER; marker_style=marker_style_DRIVER;
+
+
+%---  Main script to do plots and save
+if iover_ride_plot_global==1
+%    isub_DRIVER = isub_DRIVER + 1;
+    nsub=isub_DRIVER + ysub;     
+%    subplot(Nrows_sub,Ncols_sub,isub_DRIVER);  %Using to tell if want to subplot here    
+    subplotting=1;    
+   
+end
+
+DRIVER_lineplot_watervap
+
+
+
+%% save, etc.
+
+%set(gca,'xscale','log');
+%set(gca,'yscale','log');
+%set(gca,'xlim',[2 3500]);
+      
+%Add on the std dev lines either side of the UM line
+%plot(xdat_import(idat_UM_first).x - xdat_import_qV_std(idat_UM_first).x , ydat_import(idat_UM_first).y , 'color', line_colour(idat_UM_first).c, 'linestyle', '-','linewidth',2);
+%plot(xdat_import(idat_UM_first).x + xdat_import_qV_std(idat_UM_first).x , ydat_import(idat_UM_first).y , 'color', line_colour(idat_UM_first).c, 'linestyle', '-','linewidth',2);
+plot(xdat_import_qV_std(idat_UM_first).x(:,1) , ydat_import(idat_UM_first).y , 'color', line_colour(idat_UM_first).c, 'linestyle', '-','linewidth',2);
+plot(dat_import_qV_std(idat_UM_first).x(:,2) , ydat_import(idat_UM_first).y , 'color', line_colour(idat_UM_first).c, 'linestyle', '-','linewidth',2);
+
+        
+        if isave_plot==1
+            saveas_ps_fig_emf(gcf,[savename],'',0,1);
+            close(gcf);
+        end
+   
+     
+
+%    xdat_import(idat).x =
+
+
+
+
+
+
+
+                            
+
+                            
+                            
+
+                            
+                
+                    
+                    
+                                    
+
+                                    
+                                    
+                                
+
+                          
+                         
+                            
+                            
+                         
+
+        

@@ -1,0 +1,12 @@
+%calculate the total number concentrations from the CIP counts
+%using the size dependent sample volume
+
+
+%this is done in cas_sample_volume_and_stats2.m already (
+clear sVol_CIP
+for i=0:61
+    sVol_CIP(i+1,:)=SampleVolumeCIP(TAS_all,i,1)'; %TAS_all is the airspeed in m/s
+    %on the same time base as the CIP counts
+end
+
+sum(CIP_counts_all(:,6:end)./sample_volume_CIP(:,6:end),2),'rx-')

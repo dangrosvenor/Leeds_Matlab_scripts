@@ -1,0 +1,178 @@
+%Pre-process using
+%   UM_quick_plot_global.m
+
+%Add variables to climits are set here too :-
+%   UM_var_defs.m
+
+isave_plot_global_diff=1;
+iplot_wind_arrows=0;
+
+%If want to plot an outline of the nest on the global map
+filename_nest = '/home/disk/eos10/d.grosvenor/UM/12Nov2008_Boutle/u-as103/BC__model_level01_time08.mat';
+nest=load(filename_nest);
+irotated_pole_box=1;
+
+%% File for times for the loop
+um_case='u-at459'; pole_lat=45.0; pole_lon=145.0; run_type = 'umglaa'; %global
+um_case='u-at459'; pole_lat=45.0; pole_lon=145.0; run_type = 'umnsaa';  %nest
+
+var_UM_DRIVER = 'LWP';
+var_UM_DRIVER = 'accum_number_ukca';
+var_UM_DRIVER = 'SW_down_surf';
+var_UM_DRIVER = 'Nd_lwc_weighted_UKCA';
+
+var_UM = var_UM_DRIVER;
+dirUM = ['/home/disk/eos10/d.grosvenor/UM/12Nov2008_Boutle/' um_case];
+filename = [dirUM '/' run_type '_' var_UM '_ALL.mat'];
+load(filename,'time_ALL');
+load(filename,'gcm_Plon2D_UM');
+
+%% Choose times/dates here
+imulti=1;
+date_str = '02-Aug-2016';
+modis_day_of_year = day_of_year_from_date_func(date_str);
+modis_day_of_year_str = num2str(modis_day_of_year);
+
+times_match{imulti} = datenum([date_str  '10:30']); imulti=imulti+1;
+times_match{imulti} = datenum([date_str ' 13:30']); imulti=imulti+1;
+
+
+%% Find the times closest to the MODIS overpasses (approx 10:30 and 13:30
+%% LT) for each location
+
+
+%offset to GMT for local time for each location
+time_map_diff = gcm_Plon2D_UM/15/24; %convert to days
+time_map_diff_ALL = repmat(time_map_diff,[1 1 length(time_ALL)]); %[nlat nlon nT]
+time_map_diff_ALL = permute(time_map_diff_ALL,[3 1 2]); %[nT nlat nlon]
+
+time_map_ALL  = repmat(time_ALL',[1 size(time_map_diff)]) + time_map_diff_ALL; %[nT nlat nlon]
+
+
+
+
+clear arr_out inds
+
+for it_global_diff=1:length(times_match)
+    tdiffs =  abs( time_map_ALL - times_match{it_global_diff} );
+
+    %end
+
+    %for it_global_diff=1:1 %length(time_ALL)
+
+    time_round = time_ALL(it_global_diff); %this gets put on the plots
+    time_format_str = 'UTC';
+
+    scrsz=get(0,'ScreenSize');
+    posit=[9 60 scrsz(3) scrsz(4)];
+    figure('position',posit);
+
+
+%% Nest - time match data and average
+    var_UM = var_UM_DRIVER;
+
+    um_case='u-at459'; pole_lat=45.0; pole_lon=145.0; run_type = 'umnsaa'; %nest
+    %um_case='u-at459'; pole_lat=45.0; pole_lon=145.0; run_type = 'umglaa'; %global
+    dirUM = ['/home/disk/eos10/d.grosvenor/UM/12Nov2008_Boutle/' um_case];
+    filename = [dirUM '/' run_type '_' var_UM '_ALL.mat'];
+
+    if it_global_diff==1
+        dat_nest = load(filename)
+    end
+
+    for it=1:length(eval(['dat_nest.' var_UM '_ALL']))
+        dat_ALL(it,:,:) = eval(['dat_nest.' var_UM '_ALL{it};']);
+    end
+
+    [inds(it_global_diff,:,:),arr_out(it_global_diff,:,:)] = min_column_inds(tdiffs, dat_ALL);
+
+
+%% global run - could add this for averaging for comparison to MODIS
+
+    iplot_global=0;
+    if iplot_global==1
+        subplot(1,3,1);
+        var_UM = var_UM_DRIVER;
+
+        um_case='u-at459'; pole_lat=45.0; pole_lon=145.0; run_type = 'umglaa'; %global
+        dirUM = ['/home/disk/eos10/d.grosvenor/UM/12Nov2008_Boutle/' um_case];
+        filename = [dirUM '/' run_type '_' var_UM '_ALL.mat'];
+
+        if it_global_diff==1
+            dat_global = load(filename)
+        end
+
+        dat_modis = eval(['dat_global.' var_UM '_ALL{it_global_diff};']);
+        dat_modis_global = dat_modis;
+        gcm_Plat2D_edges_UM = dat_global.gcm_Plat2D_edges_UM;
+        gcm_Plat2D_UM = dat_global.gcm_Plat2D_UM;
+        gcm_Plon2D_edges_UM = dat_global.gcm_Plon2D_edges_UM;
+        gcm_Plon2D_UM = dat_global.gcm_Plon2D_UM;
+
+
+        %run plotting script
+        UM_ACSIS_LWP_global_vs_nest_quick_plot_commands
+
+    end
+
+
+end
+
+
+for i=1:1
+
+%% Plot MODIS
+    subplot(1,3,1);
+    modis_file = ['/home/disk/eos10/d.grosvenor/MOD_L2/NAtlantic/01Aug2016/1deg/' modis_day_of_year_str '_home_disk_eos10_d.grosvenor_MOD_L2_NAtlantic_01Aug2016_1deg_.mat']; %combined Aqua and Terra for 1st Aug
+    load_modis = load(modis_file);
+    
+    [gcm_Plon2D_UM,gcm_Plat2D_UM] = meshgrid(load_modis.MLON,load_modis.MLAT);                     
+    [gcm_Plon2D_edges_UM,gcm_Plat2D_edges_UM] = get_edges_lat_lon(gcm_Plon2D_UM,gcm_Plat2D_UM);
+    
+    dat_modis = load_modis.Nd37_combined;    
+    dat_modis_MODIS = dat_modis;
+
+    %run plotting script
+    UM_ACSIS_LWP_global_vs_nest_quick_plot_commands
+
+    
+%% Plot nest   
+    subplot(1,3,2);
+    %    dat_modis = eval(['dat_nest.' var_UM '_ALL{it_global_diff};']);
+    dat_modis = meanNoNan(arr_out,1);
+    dat_modis_nest = dat_modis;
+    gcm_Plat2D_edges_UM = dat_nest.gcm_Plat2D_edges_UM;
+    gcm_Plat2D_UM = dat_nest.gcm_Plat2D_UM;
+    gcm_Plon2D_edges_UM = dat_nest.gcm_Plon2D_edges_UM;
+    gcm_Plon2D_UM = dat_nest.gcm_Plon2D_UM;
+
+
+
+    %run plotting script
+    UM_ACSIS_LWP_global_vs_nest_quick_plot_commands    
+
+
+%% Diff
+    subplot(1,3,3);
+    var_UM = [var_UM_DRIVER ' diff'];
+
+    dat_modis = dat_modis_nest - dat_modis_MODIS;
+
+    %run plotting script
+    UM_ACSIS_LWP_global_vs_nest_quick_plot_commands
+
+
+%% Save
+    savename=['/home/disk/eos1/d.grosvenor/modis_work/ACSIS/model_vs_MODIS_Nd_plots/' num2str(it_global_diff,'%02d') '_global_' titlenam_driver];
+
+    if isave_plot_global_diff==1
+        clear opts
+        %        opts.iplot_png=1;
+        opts.iplot_eps=1;
+        saveas_ps_fig_emf(gcf,[savename],'',0,1,0,'',[],0,opts);
+        close(gcf);
+    end
+
+
+
+end

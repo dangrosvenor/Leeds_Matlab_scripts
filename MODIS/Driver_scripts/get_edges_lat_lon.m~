@@ -1,0 +1,59 @@
+function [lat3,lon3] = get_edges_lat_lon(lat,lon)
+%Returns the edges for a 2D lat lon grid - assumes same spacing at the
+%edges
+       
+lat3=NaN*ones([size(lat,1)+1 size(lat,2)+1]);
+lon3=NaN*ones([size(lat,1)+1 size(lat,2)+1]);
+
+%Do latitude first
+        %Find the mid-points of the cell centres - these will be the edges
+        %for the central part of the grid
+        lat2 = 0.5*( lat(1:end-1,:)+lat(2:end,:) );
+        lat2 = 0.5*( lat2(:,1:end-1)+ lat2(:,2:end) );
+        %Put in the central part
+        lat3(2:end-1,2:end-1)=lat2;
+        %Add the top edge
+        dlat = diff(lat(1:2,1:end-1));
+        lat3(1,2:end-1) = lat3(2,2:end-1) - dlat;        
+        %Add the bottom edge
+        dlat = diff(lat(1:2,1:end-1));
+        lat3(end,2:end-1) = lat3(end-1,2:end-1) + dlat;  
+        
+        %Now we have defined the full size in the row direction, but not in
+        %the column direction
+        
+        %Add the left edge
+        dlat = diff(lat3(:,2:3),[],2);
+        lat3(:,1) = lat3(:,2) - dlat;
+        
+        %Add the right edge
+        dlat = diff(lat3(:,end-2:end-1),[],2);
+        lat3(:,end) = lat3(:,end-1) + dlat;  
+        
+        
+%Do longitude now
+        %Find the mid-points of the cell centres - these will be the edges
+        %for the central part of the grid
+        lon2 = 0.5*( lon(1:end-1,:)+lon(2:end,:) );
+        lon2 = 0.5*( lon2(:,1:end-1)+ lon2(:,2:end) );
+        %Put in the central part
+        lon3(2:end-1,2:end-1)=lon2;
+        %Add the top edge
+        dlon = diff(lat(1:2,1:end-1));
+        lat3(1,2:end-1) = lat3(2,2:end-1) - dlat;        
+        %Add the bottom edge
+        dlat = diff(lat(1:2,1:end-1));
+        lat3(end,2:end-1) = lat3(end-1,2:end-1) + dlat;  
+        
+        %Now we have defined the full size in the row direction, but not in
+        %the column direction
+        
+        %Add the left edge
+        dlat = diff(lat3(:,2:3),[],2);
+        lat3(:,1) = lat3(:,2) - dlat;
+        
+        %Add the right edge
+        dlat = diff(lat3(:,end-2:end-1),[],2);
+        lat3(:,end) = lat3(:,end-1) + dlat; 
+        
+      

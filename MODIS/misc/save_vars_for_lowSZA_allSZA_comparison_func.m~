@@ -1,0 +1,15 @@
+function save_vars_for_lowSZA_allSZA_comparison_func(save_file,var_data,var_name,data_tag,app_str)
+%function to save some variables for a comparison between <65 deg SZA data (new L3) and data at
+%all SZA (as for normal L3)
+
+var_name2 = [var_name data_tag];
+%copy the data into a variable with the desired name
+eval([var_name2 '=var_data;']);
+
+eval(['save(''' save_file ''',''' var_name2  ''',''-V7.3''' app_str]);
+
+    
+
+
+
+

@@ -1,0 +1,102 @@
+function [nccn] = abdul_func(var_in)
+% Inputs into var_in structure (e..g var_in.N_aero, etc.) :-
+% N_aero - total number conc of aerosl
+% sig - width of size dist, deafult = 2
+% Dg - median diameter of aerosol size dist
+% w - updraft speed in m/s (N.B. - later converted to cm/s for Nenes)
+% density - aerosol density. E.g. ammonium sulphate = 1777 kg/m3 (default)
+% T - temperature in K. Default = 283 K
+
+%Convert all of the variable names in the input structure to actual names
+%for ease of use
+name_struc='var_in'; %The name of the structure
+names = eval(['fieldnames(' name_struc ');']);
+for i=1:length(names)
+    eval_str = [names{i} ' = ' name_struc '.' names{i} ';'];
+    eval(eval_str);
+end
+
+if ~exist('sig')
+    sig = 2; %Lognormal distribution width
+end
+if ~exist('T')
+    T=283; %Temperature in K
+end
+if ~exist('density')
+    density=1777;
+end
+
+
+rd = Dg/2; %convert diameter to radius       
+        
+% air mass properties
+Tc = T - 273.15;
+%p = 90000;       % Pa
+p=P; %the air pressure input to the function
+
+% constants
+Mw = 0.18015e-1;  % Molecular weight of water  [kg mol-1]
+zetasa = 0.8e-1;  % Surface tension at solution-air interface
+Ru = 8.314472;    % Universal gas constant
+Rd = 287.05;      % gas constant for dry air
+Rv =  461.5;      % gas constant for water vapour
+eps = 1.6077;     % (Rv/Rd) = Ma/Mw (ratio of molecular masses of air and water)
+rhow = 997.0;     % water density
+g = 9.8;          % gravitational acceleration ms-2
+Lv = 0.2501e7;    % Latent heat of vapourization
+cp = 1005.0;
+Dv = 0.226e-4;    % diffusivity of water vapour in air
+ka = 0.243e-1;    % thermal conductivity of air
+
+% aerosol properties
+nmodes = 1;   % number of modes
+vantHoff = [3.0,3.0]; %no. ions of salt that dissociate?
+massMole = [132.0e-3,132.0e-3];
+
+
+
+
+    for n=1:length(w)
+        Ak=2.0*Mw*zetasa/(Ru*T*rhow);
+        alpha=g*(Lv/(eps*cp*T)-1)/(T*Rd);
+        % Original UM formulation :-
+          es=(100.0*6.1121)*exp((18.678-Tc/(234.5))*Tc/(257.14+Tc));
+        % Using Buck2 saturation scheme of SatVapPress
+%          es=SatVapPress(T,'buck2','liq'); %saturation vapour pressure of liquid in Pa
+        gamma = eps*p/es + Lv.^2/(Rv*T.^2*cp); %Eqn. (A8) of Ghan (2011) (eps=Ma/Mw; Rv = R/Mw)
+          %gamma* is in Eqn. 25 of Ghan (2011)
+        bigG=1.0/(rhow*(Rv*T/(es*Dv)+Lv*(Lv/(Rv*T)-1)/(ka*T)));
+        zeta=(2.0/3.0)*Ak*(w(n)*alpha/bigG).^0.5; %Eqn. (36) of Ghan (2011)
+        rsmax2=0.0;
+
+        s_cr = zeros([1 nmodes]);
+        for i=1:length(nmodes)
+            Bk=vantHoff(i)*Mw*dens_aero(i)/(massMole(i)*rhow);
+            s_cr(i)=(2.0/sqrt(Bk))*(Ak/(3.0*rd(i))).^1.5;
+            eta=(w(n)*alpha/bigG).^1.5/(2.0*pi*rhow*gamma*N_aero(i)); %Eqn. (35) of Ghan (2011)
+               %Ghan states:- eta = 2*(alpha*w/bigG).^(3/2) / (gamma_start * N)
+               % gamma_star = 4*pi*rhoW*gamma/rho_air
+               % which amounts to the same thing, but assumes rho_air=1
+               
+            rhoA =    
+             
+            f1=0.5*exp(2.5*(log(sig(i))).^2); %Eqn. (38) of Ghan (2011)
+            f2=1.0+0.25*log(sig(i));          %Eqn. (39) of Ghan (2011)
+            rsmax2=rsmax2+(f1*(zeta/eta).^1.5+f2*(s_cr(i)*s_cr(i)/(eta+3.0*zeta)).^.75)/(s_cr(i)*s_cr(i)); % reciporacol of Eqn. (37) of Ghan (2011)
+
+        end
+
+        smax=sqrt(1.0/rsmax2);
+        for i=1:length(nmodes)
+            error_func=1.0-erf(2.0*log(s_cr(i)/smax)/(3.0*sqrt(2.0)*log(sig(i))));
+            nccn(n,i)=0.5*N_aero(i)*error_func;
+
+            % Make sure we don't activate too many...
+            nccn(n,i)=min([nccn(n,i) 0.999*N_aero(i)]);
+        end
+
+    end
+    
+
+
+

@@ -1,0 +1,178 @@
+clear filename
+
+%fields for station data are:
+%1)Year
+%2)Month
+%3)Day
+%4)Hour
+%5)ID
+%6)Latitude
+%7)Longitude
+%8)Pressure (mb)
+%9)Wind dir
+%10)Wind speed (knots - 1 knot = 0.5144444 m/s)
+%11)Temp (degC)
+%12)Dew point temp (degC)
+
+% 
+% Stat.  - station identifier (generally 89xxx for Antarctic stations, eg Halley is 89022)
+% YY     - Year (2 figures)
+% MM     - Month
+% DD     - Day (of month)
+% HH     - Hours (24 h clock, GMT)
+% Latitu - Latitude
+% Longitu- Longitude
+% P(sta) - Surface pressure at the station. Not reported by ships.
+% P(red) - Surface pressure reduced to mean sea level. Warning! Some stations (eg Vostok) may report reduced to 700 hPa to confuse you.
+% P(tnd) - Pressure tendency
+% Dir    - Wind direction
+% Spd    - Wind speed (Note: in knots. Previously erroneously stated to be in m/s.)
+% Tempe  - Temperature [oC]
+% Dew T  - Dew temperature
+% HR%    - relative humidity (in %)
+% H_vis  - Horizontal visibility (in m)
+% WW     - Present weather
+% ww     - ?past weather?
+% CC%    - Total cloud cover in octas (previously erroneously stated to be in %)
+% ClL    - Low cloud (types, not %: see a WMO manual)
+% ClM    - Medium cloud (ditto)
+% ClH    - High cloud (ditto)
+% CBase  - Cloud base
+
+%add onto the end of AWS data so can use the same plotting routines
+idat=8;
+ALT_AWS(idat).dat = 13; %height in metres (according to http://www.antarctica.ac.uk/met/stations/manned_stations.html)
+aws_name(idat).name='Esperanza';filename(idat).name='C:\Documents and Settings\dan\My Documents\logbook\Antarctica\Esperanza_station_data_01-09Jan2006.txt';
+num_cols_aws(idat)=12;
+
+idat=9;
+ALT_AWS(idat).dat = 0; %is actually 16m but have put as zero as only have PRED pressure data (pressure reduced to msl)
+aws_name(idat).name='Bellingshausen';filename(idat).name='C:\Documents and Settings\dan\My Documents\logbook\Antarctica\Bellinghausen_station_data_01-09Jan2006.txt';
+num_cols_aws(idat)=13;
+
+idat=10;
+ALT_AWS(idat).dat = 198; %height in metres (according to http://www.antarctica.ac.uk/met/stations/manned_stations.html)
+aws_name(idat).name='Marambio';filename(idat).name='C:\Documents and Settings\dan\My Documents\logbook\Antarctica\Marambio_station_data_01-09Jan2006.txt';
+num_cols_aws(idat)=13; 
+
+idat=11;
+ALT_AWS(idat).dat = 11; %height in metres (according to http://www.antarctica.ac.uk/met/stations/manned_stations.html)
+aws_name(idat).name='Faraday';filename(idat).name='C:\Documents and Settings\dan\My Documents\logbook\Antarctica\Faraday_station_data_01-09Jan2006_full.txt';
+num_cols_aws(idat)=13; 
+
+idat=12;
+ALT_AWS(idat).dat = 0; %height in metres (according to http://www.antarctica.ac.uk/met/stations/manned_stations.html)
+aws_name(idat).name='Butler';filename(idat).name='C:\Documents and Settings\dan\My Documents\logbook\Antarctica\Butler_station_data_01-09Jan2006_full.txt';
+num_cols_aws(idat)=13; 
+
+idat=13;
+ALT_AWS(idat).dat = 16; %height in metres (according to http://www.antarctica.ac.uk/met/stations/manned_stations.html)
+aws_name(idat).name='Rothera';filename(idat).name='C:\Documents and Settings\dan\My Documents\logbook\Antarctica\Rothera_station_data_01-09Jan2006_full.txt';
+num_cols_aws(idat)=13; 
+
+idat=14;
+ALT_AWS(idat).dat = 10; %height in metres (according to http://www.antarctica.ac.uk/met/stations/manned_stations.html)
+aws_name(idat).name='O''Higgins';filename(idat).name='C:\Documents and Settings\dan\My Documents\logbook\Antarctica\OHiggins_station_data_01-09Jan2006_full.txt';
+num_cols_aws(idat)=13; 
+
+idat=15;
+ALT_AWS(idat).dat = 8; %height in metres (according to http://www.antarctica.ac.uk/met/stations/manned_stations.html)
+aws_name(idat).name='Palmer';filename(idat).name='C:\Documents and Settings\dan\My Documents\logbook\Antarctica\Palmer_station_data_01-09Jan2006_full.txt';
+num_cols_aws(idat)=13; 
+
+idat=16;
+ALT_AWS(idat).dat = 10; %height in metres (according to http://www.antarctica.ac.uk/met/stations/manned_stations.html)
+aws_name(idat).name='Frei';filename(idat).name='C:\Documents and Settings\dan\My Documents\logbook\Antarctica\Frei_station_data_01-09Jan2006_full.txt';
+num_cols_aws(idat)=13; 
+
+idat=17;
+ALT_AWS(idat).dat = 6; %height in metres (according to http://www.antarctica.ac.uk/met/stations/manned_stations.html)
+aws_name(idat).name='Orcadas';filename(idat).name='C:\Documents and Settings\dan\My Documents\logbook\Antarctica\Orcadas_station_data_01-09Jan2006_full.txt';
+num_cols_aws(idat)=13; 
+
+idat=18;
+ALT_AWS(idat).dat = 3; %height in metres (according to http://www.antarctica.ac.uk/met/stations/manned_stations.html)
+aws_name(idat).name='Grytviken';filename(idat).name='C:\Documents and Settings\dan\My Documents\logbook\Antarctica\Grytviken_station_data_01-09Jan2006_full.txt';
+num_cols_aws(idat)=13; 
+
+idat=19;
+ALT_AWS(idat).dat = 4; %height in metres (according to http://www.antarctica.ac.uk/met/stations/manned_stations.html)
+aws_name(idat).name='San Martin';filename(idat).name='C:\Documents and Settings\dan\My Documents\logbook\Antarctica\SanMartin_station_data_01-09Jan2006_full.txt';
+num_cols_aws(idat)=13; 
+
+
+for i=8:length(filename)
+
+    fid=fopen(filename(i).name,'rt');
+    station_text=fgetl(fid);
+    %    station_text2=fgetl(fid);
+
+    station_dat = [];
+
+    go=1;
+    while go==1
+
+        [stationdat_temp,count]=fscanf(fid,'%f'); %reads in until hits some text (or if have reached the end of the file)
+        if count>0
+            station_dat = [station_dat; stationdat_temp]; %add the data to a 1D vector
+        end
+        
+        [text,count]=fscanf(fid,'%s',[1 1]); %try to read in text in case have 'null'
+        if count>0
+            station_dat = [station_dat; NaN]; %null data flag
+        end
+
+        if count==0  %if doesn't read any text then must have reached end as previous read reads in all numbers until reaching text
+            go=0;
+        end
+
+    end
+
+
+
+
+    num_cols=num_cols_aws(i);
+    station_dat=reshape(fliplr(station_dat),[num_cols length(station_dat)/num_cols]);
+
+    station_dat=fliplr(station_dat); %data is written in reverse time order so flip it here
+
+    
+    LAT_AWS(i).dat = station_dat(6,1);  
+    LON_AWS(i).dat = station_dat(7,1);
+    
+    if i==18  %not in the station data file for Grytviken
+        LAT_AWS(i) = -54.3;
+        LON_AWS = -36.5;
+    end
+    
+    AWStime_wis(i).dat = station_dat(3,:)+station_dat(4,:)/24; %time in days
+%put in the same order as for AWS data    
+    AWSdat_wis(i).dat(3,:) = station_dat(11,:); %temp    
+    
+    if length(find(isnan(station_dat(8,:))==0))<=3   %if there is no data in PSTA use PRED 
+        AWSdat_wis(i).dat(4,:) = station_dat(13,:);  %pressure - PRED - pressure reduced to mean sea leve
+        ALT_AWS(i).dat = 0; %as are using PRED - so need to use z=0 for the interpolation for comparison to model results
+    else
+        AWSdat_wis(i).dat(4,:) = station_dat(8,:);  %pressure - PSTA - station pressure
+    end
+    AWSdat_wis(i).dat(5,:) = station_dat(10,:)*0.5144444; %speed - convert from knots to m/s
+    AWSdat_wis(i).dat(6,:) = station_dat(9,:);  %direction
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+'done read of station data'
+
+
+

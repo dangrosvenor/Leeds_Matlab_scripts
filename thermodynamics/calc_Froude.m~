@@ -1,0 +1,7 @@
+function [F,Hbar]=calc_Froude(U,N,H)
+%function [F,Hbar]=calc_Froude(U,N,H)
+%Calculates the upstream Froude number, F. Hbar is the dimensionless mountain
+%height (=1/F). A high Hbar (suggests blocking in the lower levels.
+
+F = U ./ (N.*H);
+Hbar = 1./F;

@@ -1,0 +1,68 @@
+function [dSW_f,dSW_W,dSW_N] = SW_partitioning(f0,W0,N0,f1,W1,N1,SW_in,A_clear)
+% Nd in cm3
+% W in g/m2
+% SW_in in W/m2
+% N.B. making assumptions about cloud temperature and pressure in
+% albedo_cloudy_func_Seinfeld function
+
+N0 = N0*1e6; N1=N1*1e6; %convert to per m3
+W0 = W0/1e3; W1=W1/1e3; %convert to kg/m2
+
+df = f1-f0;
+dW = W1-W0;
+dN = N1-N0;
+
+%% dSW due to change in f (cloud fraction - all else constant)
+[Ac,tau] = albedo_cloudy_func_Seinfeld(W0,N0);
+
+dSW_f = SW_in .* (Ac - A_clear).* df;
+
+
+%% Need this for the dSW_W and dSW_N
+[dAc_dtau] = albedo_cloudy_func_Seinfeld_dA_dtau(tau);
+
+%% dSW due to change in W (LWP - all else constant)
+[dtau_dW] = calc_dtau_dW(tau,W0);
+dAc_dW = dAc_dtau .* dtau_dW;
+
+dSW_W = SW_in .* f0 .* dAc_dW .* dW;
+
+%% dSW due to change in Nd (all else constant)
+[dtau_dN] = calc_dtau_dN(tau,N0);
+dAc_dN = dAc_dtau .* dtau_dN;
+
+dSW_N = SW_in .* f0 .* dAc_dN .* dN;
+
+function [Ac,tau] = albedo_cloudy_func_Seinfeld(W,Nm3)
+%W in kg/m2, N in per m3
+
+k=0.8;
+Q=2;
+rhow=1000;
+
+CTT = 278;
+P=850*1e2; %Convert to Pa. Using constant pressure here. Could vary according to the pressure also? Although
+%the pressure dependence is not very strong
+Parr=ones(size(CTT))*P; %
+[cw]=adlwcgm2_just_robs(CTT,Parr) * 1e-3;  % kg/m4
+
+B = 2*sqrt(10)*rhow.^2*cw.^(0.5).*(5/9).^(5/2) ./ (k.*pi.*Q.^3);
+tau = (Nm3.*W.^(5/2)./B).^(1/3);
+
+Ac = tau ./(tau+7.7); % (Eqn. 24.38 of Seinfeld and Pandis)
+
+function [dAc_dtau] = albedo_cloudy_func_Seinfeld_dA_dtau(tau)
+
+tau7 = 1 ./ (tau+7.7);
+^dAc_dtau = tau7 .* ( 1 - tau .* tau7 );
+dAc_dtau = tau7 .* ( 1 - tau .* tau7 );
+
+function [dtau_dW] = calc_dtau_dW(tau,W)
+
+dtau_dW = 5/6 .* tau./W;
+
+function [dtau_dN] = calc_dtau_dN(tau,N)
+
+dtau_dN = 1/3 .* tau./N;
+
+

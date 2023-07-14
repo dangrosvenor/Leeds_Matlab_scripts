@@ -1,0 +1,197 @@
+%finds the streamlines that made it over the ridge and then
+%2D interpolates values along the streamlines - e.g. terrain
+
+icalc_terrain=1; %set to zero to just choose the streamlines without doing the time consuming calculation of the 
+%terrain that each ones 'sees'
+
+icoarse=0; %flag to only do np points along streamline to save time
+np=100;
+
+str_pos='1';
+str_pos='2';
+str_pos='3';
+str_pos='4';
+str_pos='5';
+str_pos='6';
+str_pos='7';
+str_pos='8';
+str_pos='9';
+str_pos='10';
+str_pos='9';
+
+switch  str_pos
+    case '1'
+        %streamline 1
+        xaim=447e3;
+        yaim=343e3;
+        tol=2e3;
+        
+    case '2'
+        %main jet streamline 
+        xaim=430e3;
+        yaim=306e3;
+        tol=2e3; %
+        
+    case '3'
+        %non-jet position
+        xaim=435e3;
+        yaim=330e3;
+        tol=2e3; 
+
+    case '4' %z0=650 main jet possible passing streamlines test
+        xaim=420e3;
+        yaim=320e3;
+        tol=4e3;
+        
+    case '5' %z0=600 main jet possible passing streamlines test
+        xaim=420e3;
+        yaim=320e3;
+        tol=2e3;                
+
+    case '6'
+        xaim=420e3;
+        yaim=318e3;
+        tol=2e3;
+        
+    case '7'
+        xaim=420e3;
+        yaim=320e3;
+        tol=2e3; 
+    
+    case '8' %streamlines at 67.5 LAT for z0=1050m (14th June, 2010)
+        xaim=460e3;
+        yaim=338e3;
+        tol=1e3; 
+    
+   case '9' %streamlines at 68.1 LAT for z0=950m (14th June, 2010)
+        xaim=420e3;
+        yaim=285e3;
+        tol=1e3;   
+   case '10' %streamlines at 68.6 LAT for z0=1050m (14th June, 2010)
+        xaim=420e3;
+        yaim=233e3;
+        tol=1e3;   
+   case '11' %streamlines at 68.6 LAT for z0=1200m (14th June, 2010)
+       %only for the case where d_perp = 400. Trying to see if there is
+       %strong flow only above the higher parts as the low parts are too low
+       %for Smith theory - perhaps just plot the low level wind spees
+       %on a terrain contour plot?
+        xaim=367e3;
+        yaim=237e3;
+        tol=1e3;   
+        
+   case '12' %streamlines at 68.6 LAT for z0=950m (14th June, 2010)
+       %only for the case where d_perp = 400. Trying to see if a low z0
+       %streamline approximately follows the potential temp lines       
+        xaim=410e3;
+        yaim=233e3;
+        tol=1e3;        
+
+  case '13' %streamlines at 68.6 LAT for z0=950m (14th June, 2010)
+       %only for the case where d_perp = 400. Trying to see if a low z0
+       %streamline approximately follows the potential temp lines       
+        xaim=446e3;
+        yaim=304e3;
+        tol=1e3;      
+        
+end
+
+clear over_flag
+for i=1:length(STREAM_z0)
+%    if STREAM_z0{i}(end,1)>550e3 & STREAM_z0{i}(end,2)<375e3
+        iarea = find(STREAM_z0{i}(:,1)>xaim-tol & STREAM_z0{i}(:,1)<xaim+tol & ...
+            STREAM_z0{i}(:,2)>yaim-tol & STREAM_z0{i}(:,2)<yaim+tol);
+        if length(iarea)>=1
+            over_flag(i)=1;  
+        else
+            over_flag(i)=0;
+        end
+%    else
+%        over_flag(i)=0;
+%    end
+end
+
+str_succ=find(over_flag==1);
+
+%str_succ=152;
+
+if icalc_terrain==1
+
+    terr = nc{'HGT'}(1,:);
+
+    clear dat_stream
+    
+        
+    for i=1:length(str_succ)
+        istr = str_succ(i);
+        
+        inan=isnan(STREAM_z0{istr}(:,1));
+        inan=find(inan==0);
+        L_stream=inan(end);
+            
+
+        if icoarse==0
+            inds=1:L_stream;
+        else
+            dn=L_stream/np;
+            inds=round(1:dn:L_stream);
+        end
+
+        dat_stream(i).inds=inds;
+        
+        jj=0;
+        for j=inds
+            jj=jj+1;
+            %N.B. ordering the 2D grids as (lat,lon) or (y,x) is correct as in Matlab the first index is
+            %row number and so (1,:) should be the first row of the data, i.e. all the x values for y=1
+            dat_stream(i).terr(jj) = interp2(x_grid*1e3,y_grid*1e3,squeeze(terr),STREAM_z0{istr}(j,1),STREAM_z0{istr}(j,2));
+            dat_stream(i).terr_fine(jj) = interp2(x_grid*1e3,y_grid*1e3,squeeze(terr_fine),STREAM_z0{istr}(j,1),STREAM_z0{istr}(j,2));            
+            dat_stream(i).lat(jj) = interp2(x_grid*1e3,y_grid*1e3,squeeze(lat2d.var),STREAM_z0{istr}(j,1),STREAM_z0{istr}(j,2));
+            dat_stream(i).lon(jj) = interp2(x_grid*1e3,y_grid*1e3,squeeze(lon2d.var),STREAM_z0{istr}(j,1),STREAM_z0{istr}(j,2));
+        end
+    end
+
+    figure
+    iplot_stream=1;
+    for i=1:length(dat_stream)
+        figure
+        plot(dat_stream(i).lon,dat_stream(i).terr,'bx');
+        hold on
+
+        if iplot_stream==1
+            plot(dat_stream(i).lon,STREAM_z0{str_succ(i)}(dat_stream(i).inds,3),'rx-')
+        end
+        
+            grid
+            set(gca,'xlim',[-70 -63]);
+            xlabel('Longitude');
+            ylabel('Height (m)');
+
+    end
+
+    grid
+    set(gca,'xlim',[-70 -63]);
+    xlabel('Longitude');
+    ylabel('Height (m)');
+
+
+
+    isave=1;
+    if isave==1
+        titlenam=['Topography underneath streamline starting at height ' num2str(zstart) ' m for streamline position ' str_pos];
+        title(titlenam);
+
+        savedir='C:\Documents and Settings\dan\My Documents\WRF\ecmwf_ml_0.5_nudging\streamline_plots_6thJan_6UTC\';
+        savename = [savedir titlenam];
+
+
+        print(gcf,[savename '.emf'],'-dmeta');
+        saveas(gcf,savename,'fig');
+
+
+    end
+
+
+end
+
+disp('Finished choose streamline');

@@ -1,0 +1,34 @@
+%changes the font size for the labels around a map and moves the colorbar
+%to compensate
+
+if ~exist('fsize_colorbar')
+    fsize_colorbar = 20;
+end
+
+%change the fontsize of the colorbar (and title)
+set(gca,'fontsize',fsize_colorbar);
+
+%change the size of the font for the lat lon labels.
+h = findobj(gca,'Type','text');
+set(h,'Fontsize',fsize_co);
+
+%get the handle to the colorbar
+Hc1s = find_peer_colorbars_of_an_axes(gca);
+
+if length(Hc1s)==1
+pos2 = get(Hc1s,'position'); %position of colorbar   %[left bottom width height]
+pos = get(gca,'position'); %position of main axis
+dsiz = 0.8; %Fraction to reduce the size of the figure by
+dY = pos(4)*dsiz*0.15; %fraction of the size of the main y-axis upwards by
+set(gca,'position',[pos(1) pos(2) pos(3)*dsiz pos(4)*dsiz + dY]);
+
+%move the colorbar down slightly too
+set(Hc1s,'position',[pos(1) pos2(2)-dY*0.3 pos(3)*dsiz pos2(4)]);
+
+set(Hc1s,'xaxislocation','bottom');
+
+end
+
+if inew_cticks==1
+    set(hc,'xtick',x_cbar_vals); %reset the tick marks to those requested as they go wrong for some reason?
+end

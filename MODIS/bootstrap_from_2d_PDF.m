@@ -1,0 +1,56 @@
+try
+
+    if exist('ioverride_bootstrap') & ioverride_bootstrap==1
+        xvars_boot={'Nd from grid vals timeseries3'};
+        y_axis_vals='Mean SZA timeseries3';
+    end
+
+
+
+for idat_multi_boot=1:length(xvars_boot)
+
+    ioverride_pdf_varchoose=1; %override the defaults
+    ioverride_pdf=1;
+    nXpdf=1000;
+    x_axis_vals = xvars_boot{idat_multi};
+    man_choose_plotTimeHeight_graph=1;
+    logflag=0;
+    dlogflag=0;
+    noplot=1; %flag to say to just do the calculations and not to plot
+    plotTimeHeightVap3
+    %            close(gcf);
+    
+    sX=size(qh,1)-1;
+    pdf_2d = NaN*ones([1 sX max(NX_vals)]);
+    for i=1:sX
+        pdf_1d = expand_PDF(mid_Xbins,qh(i,1:end-1));
+        pdf_2d(1,i,1:length(pdf_1d)) = pdf_1d;        
+    end
+
+    [boot_out,boot_out_std]=bootstrap_array(pdf_2d,2000,[2.5 5 7.5 10 20 30 50 70 80 90 92.5 95 97.5]);
+    [boot_out,boot_out_std]=bootstrap_array(pdf_2d,2000,[2.5 5 7.5 10 100/3/2 20 30 50 70 80 100-100/3/2 90 92.5 95 97.5]);    
+    boot_out=squeeze(boot_out);
+    %boot_out_std is the std of each bootstrap pdf (i.e. more like the 67%
+    %error for a gaussian, cf the 90% error used for err_bootstrap)
+    
+     err_bootstrap=(boot_out(:,14)-boot_out(:,2))/2;  
+     err_bootstrap_67=(boot_out(:,11)-boot_out(:,5))/2;       
+     Perr_bootstrap = 100* err_bootstrap./X_mean;
+
+
+
+end
+
+
+clear ioverride_bootstrap
+
+catch bootstrap_ERROR    
+    clear ioverride_bootstrap
+    rethrow(ioverride_bootstrap);    
+end
+    
+    
+    
+    
+        
+   

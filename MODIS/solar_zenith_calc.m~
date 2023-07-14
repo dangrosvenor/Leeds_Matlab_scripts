@@ -1,0 +1,15 @@
+function solar_zenith = solar_zenith_calc(lat,lon,time)
+
+
+for i1=1:length(lat(:))
+   time_mod = datestr(stime(i1));
+   location.latitude = lat(i1);
+   location.longitude = lon(i1);
+   location.altitude = 0;
+   sun = sun_position(time_mod,location);
+   solar_zenith(i1) = sun.azimuth;
+end
+
+solar_zenith = reshape(solar_zenith,size(lat));
+   
+   

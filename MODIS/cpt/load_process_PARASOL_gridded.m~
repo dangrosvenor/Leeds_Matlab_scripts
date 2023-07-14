@@ -1,0 +1,218 @@
+% loads gridded Parasol data. At this stage it is in the format
+% [day lat lon overpass] Overpass is the dimension of the possible
+% overpasses for a location in one day (max was 4 for POLDER)
+% Also does some processing - calculating
+% the mean, etc.
+% Think that 2005-2012 is available.
+
+loaddir_PAR = '/home/disk/eos5/d.grosvenor/PARASOL/CDR_L2.v01.01/';
+
+
+%Think that selecting multiple years is only useful for creating overall
+%means, rather than loading in all the data at once.
+years_requested = [2005:2012]; 
+%years_requested = [2007:2010]; %2007-2010 matches with the MODIS Arctic study
+%years_requested = [2006:2007]; %
+%years_requested = [2007:2008]; 
+%years_requested = [2010]; 
+years_parasol_str=''; %created below
+
+ioverall_mean=0; %set to one to do the average over all of the orbits and for all of the years
+%to save memory. daymean_*** is then the mean from all years [day lat lon]
+%set to =2 to output the ALL arrays
+
+
+
+clear vars_PAR
+ivar=1;
+%vars_PAR{ivar} = 'Par2_OrbitNum'; ivar=ivar+1;
+vars_PAR{ivar} = 'Par2_MatlabTime'; ivar=ivar+1;
+%vars_PAR{ivar} = 'Par2_Year'; ivar=ivar+1;
+%vars_PAR{ivar} = 'Par2_Month'; ivar=ivar+1;
+%vars_PAR{ivar} = 'Par2_Day'; ivar=ivar+1;
+%vars_PAR{ivar} = 'Par2_Hours'; ivar=ivar+1;
+%vars_PAR{ivar} = 'Par2_Mins'; ivar=ivar+1;
+%vars_PAR{ivar} = 'Par2_Secs'; ivar=ivar+1;
+%vars_PAR{ivar} = 'Par2_LT'; ivar=ivar+1;
+%vars_PAR{ivar} = 'Par2_Lat'; ivar=ivar+1;
+%vars_PAR{ivar} = 'Par2_Lon'; ivar=ivar+1;
+vars_PAR{ivar} = 'Par2_CDR'; ivar=ivar+1;
+%vars_PAR{ivar} = 'Par2_CDRstd'; ivar=ivar+1;
+%vars_PAR{ivar} = 'Par2_QI'; ivar=ivar+1;
+
+
+
+if max(diff(years_requested)==1)
+    years_parasol_str=[num2str(years_requested(1)) ' to ' num2str(years_requested(end))];
+else
+    for i=1:length(years_requested)
+        years_parasol_str=[years_parasol_str ' ' num2str(years_requested(i))];
+    end
+end
+
+
+%get the indicies within the 180*360 grid for the nearest lat, lon
+%MODIS grid - cell centres
+MLAT_POLDER = [-89.5:1:89.5];
+MLON_POLDER = [-179.5:1:179.5];
+
+ms=0;
+
+inds = [1:366];
+%%year loop
+Nyears = length(years_requested);
+for iyear=1:Nyears
+    
+    year_str = num2str(years_requested(iyear));
+    
+    saved_files = dir([loaddir_PAR 'saved_CDR_processed_' year_str '_*.mat']);
+                
+                %find the most recent version
+                %list of the modification dates in Matlab datenum format
+                file_times = [saved_files.datenum];
+                [times_sorted,isort] = sort(file_times);
+                %pick the last one (latest file)
+                load_file = [loaddir_PAR saved_files(isort(end)).name];
+                
+                
+                for ivar=1:length(vars_PAR)
+                    if iyear==1
+                        if ioverall_mean==2
+                            eval_str = [vars_PAR{ivar} '_ALL=NaN*ones([Nyears*366 180 360 4]);']; eval(eval_str);
+                        end
+                        eval_str=['sum_' vars_PAR{ivar} ' = zeros([180 360]);']; eval(eval_str);
+                        eval_str=['sum2_' vars_PAR{ivar} ' = zeros([366 180 360]);']; eval(eval_str);
+                        eval_str=['ntot2_' vars_PAR{ivar} ' = zeros([366 180 360]);']; eval(eval_str);                        
+                        eval_str=['ntot_' vars_PAR{ivar} ' = zeros([180 360]);']; eval(eval_str);
+                        eval_str=['Norbit_mean_' vars_PAR{ivar} ' = zeros([366 180 360]);']; eval(eval_str);
+                        eval_str=['orbit_mean_' vars_PAR{ivar} ' = zeros([366 180 360]);']; eval(eval_str);                        
+                    end
+                    %load in the data for the year
+                   eval_str = ['tmp=load(load_file,''' vars_PAR{ivar} ''');']; eval(eval_str);
+                   eval_str = ['tmp=tmp(1).' vars_PAR{ivar} ';']; eval(eval_str);
+                   %size = [time lat lon orbit]
+                   stmp=size(tmp);
+                   
+                   ms = max([ms stmp(4)]);
+                   if ioverall_mean==2
+                       eval_str = [vars_PAR{ivar} '_ALL(inds,:,:,1:stmp(4)) = tmp;']; eval(eval_str);
+                   end
+                   
+                   %sum over the 'orbit' dimension
+                   [sum_tmp,N1] = meanNoNan(tmp,4,'sum'); 
+                   
+                   %set NaNs to zero for now - will set positions with
+                   %ntot_CDR==0 to NaN at the end
+                   sum_tmp(isnan(sum_tmp))=0;
+                   
+                   %sum2 will become the average for all time and lat/lon
+                   %over all years and orbits (size=[time lat lon])
+                   %Add the contribution from this year now to the sum and
+                   %no. datapoints.
+                   eval_str=['sum2_' vars_PAR{ivar} ' = sum2_' vars_PAR{ivar} ' + squeeze(sum_tmp);']; eval(eval_str);
+                   eval_str=['ntot2_' vars_PAR{ivar} ' = ntot2_' vars_PAR{ivar} ' + squeeze(N1);']; eval(eval_str);
+
+                   %these will be the means over the orbit dimension for
+                   %the current year, size=[time lat lon]
+                   
+                   %calculate the orbit mean for this year - will treat
+                   %these as individual datapoints
+                   sum_tmp_orbit_mean = squeeze(sum_tmp)./ N1;
+                   %set no data values to zero
+                   sum_tmp_orbit_mean(N1==0)=0;
+                   eval_str=['orbit_mean_' vars_PAR{ivar} ' = orbit_mean_' vars_PAR{ivar} ' + sum_tmp_orbit_mean;']; eval(eval_str);
+                   %will remove points with no data later - N1 tell us
+                   %where there was none - won't increment Norbit_mean for
+                   %these points                   
+
+                   %increment the counter for number of years with data,
+                   %but only where we had data
+                   eval_str=['Norbit_mean_' vars_PAR{ivar} '(N1>0) = Norbit_mean_' vars_PAR{ivar} ' (N1>0) + 1;']; eval(eval_str);
+                   
+                   %sum over the time dimension for the overall [lat lon]
+                   %average
+                   Ntot = sum(N1,1);
+                   [sum_tmp,N2] = meanNoNan(sum_tmp,1,'sum');
+                                      
+                   eval_str=['sum_' vars_PAR{ivar} ' = sum_' vars_PAR{ivar} ' + squeeze(sum_tmp);']; eval(eval_str);
+                   eval_str=['ntot_' vars_PAR{ivar} ' = ntot_' vars_PAR{ivar} ' + squeeze(Ntot);']; eval(eval_str);
+                end
+                
+                daynum_timeseries3_POLDER(inds) = [1:366];
+                modisyear_timeseries3_POLDER(inds) = years_requested(iyear);
+                
+                inds=inds+366;
+    
+end %for iyear=1:Nyears
+
+for ivar=1:length(vars_PAR)
+%set the sum values to NaN when we had no non-mean contributions   
+
+    eval_str=['sum_' vars_PAR{ivar} '(ntot_' vars_PAR{ivar} '==0) = NaN;']; eval(eval_str);
+    eval_str=['sum2_' vars_PAR{ivar} '(ntot2_' vars_PAR{ivar} '==0) = NaN;']; eval(eval_str);    
+    eval_str=['mean_' vars_PAR{ivar} ' = sum_' vars_PAR{ivar} './ ntot_' vars_PAR{ivar} ';']; eval(eval_str); 
+    
+    eval_str=['orbit_mean_' vars_PAR{ivar} '(Norbit_mean_' vars_PAR{ivar} '==0) = NaN;']; eval(eval_str);
+    eval_str=['orbit_mean_' vars_PAR{ivar} ' = orbit_mean_' vars_PAR{ivar} './ Norbit_mean_' vars_PAR{ivar} ';']; eval(eval_str);
+    
+    
+    %make a mean for each day and location for all of the years
+    if ioverall_mean==2
+        sarr = eval(['size(' vars_PAR{ivar} '_ALL);']);
+        %        eval_str=['daymean_' vars_PAR{ivar} ' = meanNoNan(' vars_PAR{ivar} '_ALL,4);']; eval(eval_str);
+        N = zeros*ones([sarr(1) sarr(2) sarr(3)]);
+        eval_str=['daymeanALL_' vars_PAR{ivar} ' = zeros*ones([sarr(1) sarr(2) sarr(3)]);']; eval(eval_str);
+        
+        %average over the orbits
+        for iorbit=1:sarr(4)
+            tmp = eval([vars_PAR{ivar} '_ALL(:,:,:,iorbit);']);
+            inan = find(isnan(tmp)==1);
+            tmp(inan)=0;
+            N = N + 1;
+            N(inan) = N(inan) - 1;
+            eval_str=['daymeanALL_' vars_PAR{ivar} '= daymeanALL_' vars_PAR{ivar} ' + tmp;']; eval(eval_str);
+        end
+        %divide by the number of points and set the datapoints with no data to NaN
+        eval_str=['daymeanALL_' vars_PAR{ivar} '= daymeanALL_' vars_PAR{ivar} ' ./N;']; eval(eval_str);
+        eval_str=['daymeanALL_' vars_PAR{ivar} '(find(N==0)) = NaN;']; eval(eval_str);
+
+    elseif ioverall_mean==0
+        eval_str=['daymean_' vars_PAR{ivar} ' = sum2_' vars_PAR{ivar} './ ntot2_' vars_PAR{ivar} ';']; eval(eval_str);
+        daynum_timeseries3_POLDER = daynum_timeseries3_POLDER(1:366);
+        modisyear_timeseries3_POLDER = modisyear_timeseries3_POLDER(1:366);
+        
+    elseif ioverall_mean==1           
+        eval_str=['daymean_' vars_PAR{ivar} ' = orbit_mean_' vars_PAR{ivar} ';']; eval(eval_str);
+    end
+    
+end %for ivar
+
+gcm_str = 'POLDER';
+LAT = MLAT_POLDER;
+LON = MLON_POLDER;
+
+gcm_time_UTC_POLDER = 0;
+
+LAT_edges_POLDER = [LAT-0.5 LAT(end)+0.5];
+LON_edges_POLDER = [LON-0.5 LON(end)+0.5];
+
+[gcm_Plon2D_edges_POLDER,gcm_Plat2D_edges_POLDER] = meshgrid(LON_edges_POLDER,LAT_edges_POLDER);
+[gcm_Plon2D_POLDER,gcm_Plat2D_POLDER] = meshgrid(LON,LAT);
+
+
+
+gcm_str_select = 'POLDER';
+gcm_years_loaded_str = years_parasol_str;
+am3_dataset='';
+
+% if exist('daynum_timeseries3_MODIS')
+%    for ivar=1:length(vars_PAR)
+%        %make the PODLER and MODIS days coincident
+%        
+%    end        
+% end
+
+
+
+
+

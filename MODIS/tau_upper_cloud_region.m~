@@ -1,0 +1,43 @@
+function tau = tau_upper_level(H,f_ad,z_lwc_max,k,Q,CTT)
+
+
+%constants
+k=0.88;
+Q=2;
+
+% Droplet conc (m^-3)
+N = 50e6;
+
+f_ad = 0.7; %Fraction of adiabaticity of clouds
+
+% fraction of cloud depth from bottom where reach max LWC
+z_lwc_max=0.95;
+
+%Total cloud depth (inc. ramp down at top)
+H=200;
+%Cloud temp to use for condensation rate
+CTT=275;
+Parr=850*1e2; %Convert to Pa. Using constant pressure here. Could vary according to the pressure also? Although
+%the pressure dependence is not very strong
+
+cw = adlwcgm2_just_robs(CTT,Parr) * 1e-3;
+
+Lmax = f_ad.*cw.*H*z_lwc_max; %calculate the max LWC
+
+%% Now ramp down LWC and Nd linearlly from Lmax to zero from z_lwc_max to H
+dz = 0.05; %metres
+% z goes from top downwards; z=0 is the top
+z = [0:dz:300*(1-z_lwc_max)];
+nz=length(z);
+N2 = [0:N/(nz-1):N];
+L2 = [0:Lmax/(nz-1):Lmax];
+
+beta = extinction_func_N_L(N2,L2,k,Q); 
+
+tau = dz.* trapz(beta)
+    
+
+
+
+
+

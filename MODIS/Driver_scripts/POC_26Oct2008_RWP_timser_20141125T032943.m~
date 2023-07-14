@@ -1,0 +1,82 @@
+% Timeseries plot for UM
+
+%--- run the file to set up the defaults
+watervap_defaults
+
+%--- set some options for this particular plot
+graph=0; %graph choice in watervap
+titlenam = 'RWP timeseries';
+xlab='Time (UTC)';
+ylab='Rain Water Path (g m^{-2})';
+xlims=0;
+xlimits=[0 100];
+
+izlim=0;
+zmin=1500;
+zmax=3000;
+
+lor=4; %1=top-right, 2=top-left 0=auto, 3=lower left, 4=lower right, -1=on the right of plot pane
+nmark=-1; %-1 means that all points have markers. Otherwise only plot the number specified.
+
+isave_plot=0;
+
+idate_ticks_fix=1;
+iaxis_square=0; %switch to make axis square
+
+
+%--- Load and process the data
+dirUM='/home/disk/eos1/d.grosvenor/UM/26thOct_POC/';
+clear fileUM xdat_import ydat_import
+idat=1;
+fileUM{idat} = 'xkqkh_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkh) 100cm^{-3}'; idat=idat+1;
+fileUM{idat} = 'xkqkj_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkj) 400cm^{-3}'; idat=idat+1;
+fileUM{idat} = 'xkqkk_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkk) 400cm^{-3} RHcrit=0.7'; idat=idat+1;
+fileUM{idat} = 'xkqkl_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkl) 1000cm^{-3} RHcrit=0.7'; idat=idat+1;
+fileUM{idat} = 'xkqko_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqko) 100cm^{-3} RHcrit=0.7'; idat=idat+1;
+fileUM{idat} = 'xkqkq_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkq) 100cm^{-3} No cloud-scheme'; idat=idat+1;
+fileUM{idat} = 'xkqkr_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkr) 1000cm^{-3} No cloud-scheme'; idat=idat+1;
+fileUM{idat} = 'xkqkr_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkr) 1000cm^{-3} No cloud-scheme'; idat=idat+1;
+fileUM{idat} = 'xkqkr_LWP_RWP_.pp.nc'; labs_import(idat).l = '(xkqkr) 1000cm^{-3} No cloud-scheme'; idat=idat+1;
+
+for idat=1:length(fileUM)
+    filename = [dirUM fileUM{idat}];
+    nc = netcdf(filename);
+    rwp=nc{'RWP'}(:);
+    rwp=squeeze(rwp);
+    ydat_import(idat).y = 1e3*meanNoNan(rwp(:,:),2);
+
+    time=nc{'t'}(:);
+    t0_str=nc{'t'}.time_origin{1};
+    t0_str2=[t0_str(1:11) ' ' t0_str(13:17)];
+    xdat_import(idat).x = datenum(t0_str2) + time;        
+end
+%    xdat_import(idat).x =
+
+
+
+%---  Main script to do plots and save
+DRIVER_lineplot_watervap
+
+
+                            
+
+                            
+                            
+
+                            
+                
+                    
+                    
+                                    
+
+                                    
+                                    
+                                
+
+                          
+                         
+                            
+                            
+                         
+
+        

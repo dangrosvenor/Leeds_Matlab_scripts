@@ -1,0 +1,24 @@
+%load in the cross sections taken along the streamlines
+file_dir='C:\Documents and Settings\dan\My Documents\WRF\ecmwf_ml_0.5_nudging\streamline_plots_6thJan_6UTC\';
+
+file_case=1;
+switch file_case
+    case 1 %LAT=67.5, most northern streamline
+        file='pot_slice_streamline_LAT=67.5_z0=950_str_succ=129.mat';
+    case 2 %LAT=68.1
+        file='pot_slice_streamline_LAT=68.1_z0=950_str_succ=149.mat';
+    case 3 %LAT=68.6
+        file='pot_slice_streamline_LAT=68.6_z0=1200_str_succ=145.mat';
+        
+end
+
+filename=[file_dir file];
+whos('-file',filename)
+load(filename);
+
+for i=1:size(pot_cross_6th_Jan_6UTC,2)
+    inan=isnan(pot_cross_6th_Jan_6UTC(:,i));
+    iterr=find(inan==0);
+    terr_cross(i)=
+
+disp('Loaded cross section data');

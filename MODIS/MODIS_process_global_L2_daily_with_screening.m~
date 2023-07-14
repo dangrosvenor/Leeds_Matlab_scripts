@@ -1,0 +1,550 @@
+%This is generally called from MODIS_multi_DAY_processL3L2.m
+
+%N.B. - this is run in a loop one day at a time
+% daynum is set by daynum_timeseries3(iday_all_L2L3) = days_L2L3(iday_L2L3);
+
+% Screening done in modisL3_screening_timeseries3
+
+%% put the names of the variables we want to extract into the cell
+%% structure modis_var
+
+% switch multiL2L3_case
+%     case 'load processed L2 and concatenate'
+% %        modisyear_timeseries3(day_range_catL2)=years(iyear_L2L3);
+%     otherwise
+%         %keep the other in MODIS_multi_day_processL3L2
+%         modisyear_timeseries3(iday_all_L2L3)=years(iyear_L2L3);
+% end
+% 
+% daynum_timeseries3(iday_all_L2L3) = days_L2L3(iday_L2L3);
+
+if ~exist('make_mockL3_variables_script_name')
+    make_mockL3_variables_script_name='make_mockL3_variables';
+end
+
+switch multiL2L3_case
+    case 'load, average and save'
+        save_or_load = 'load_special2'; %set this to also create Droplet_Number_Concentration, etc
+        %, which is the Nd calculated from L2 tau and Re (as opposed to using the
+        %L3 mean tau and Re). Should also consider calculating an Nd based on the
+        %L3 tau and Re from individual swaths instead of using the mean tau and Re
+        %averaged over many swaths.
+        %
+%        save_or_load = 'load';
+        
+    case {'load L3 and concatenate'}
+        save_or_load = 'load_special';
+%        save_or_load = 'load';
+        
+    case {'load processed L2 and concatenate'}
+        save_or_load = 'load';
+
+end
+
+
+% -------------Varibles to load are selected in this script ---------------
+    eval(make_mockL3_variables_script_name);
+% -------------------------------------------------------------------------
+
+switch multiL2L3_case
+    case 'load, average and save'
+
+        %% load in select variables - only those required for screening
+        %this loads the variables into a structure
+        load(L2L3_load_file,'Cloud_Fraction_Liquid_Pixel_Counts');
+        %extract the actual structure
+        %Npixels = [Npixels.Cloud_Fraction_Liquid_Pixel_Counts.timeseries3];
+
+%        load(L2L3_load_file,'MLAT');   load(L2L3_load_file,'MLON');
+        load(L2L3_load_file,'Cloud_Fraction_Liquid');
+        load(L2L3_load_file,'Cloud_Fraction_Liquid_Pixel_Counts2');        
+        load(L2L3_load_file,'Total_pixels');              
+        load(L2L3_load_file,'Cloud_Fraction_Combined');
+        load(L2L3_load_file,'Solar_Zenith_Mean');
+        load(L2L3_load_file,'Sensor_Zenith_Mean');
+        load(L2L3_load_file,'Cloud_Top_Temperature_Day_Mean');
+        load(L2L3_load_file,'Cloud_Top_Temperature_Day_Minimum');
+        load(L2L3_load_file,'Solar_Azimuth_Mean');
+        load(L2L3_load_file,'Sensor_Azimuth_Mean');
+        load(L2L3_load_file,'Cloud_Water_Path_Liquid_Standard_Deviation');
+        load(L2L3_load_file,'Cloud_Water_Path_Liquid');        
+        load(L2L3_load_file,'Cloud_Optical_Thickness_Liquid_Minimum');
+        load(L2L3_load_file,'Cloud_Optical_Thickness_Liquid_Mean');        
+        
+        stdW_time3 = Cloud_Water_Path_Liquid_Standard_Deviation.timeseries3;
+        %Relative azimuth is defined as zero when the sensor is looking
+            %into the Sun - as if there as no scattering (just
+%             %transmission). Backscatter is then at 180 degrees. So do the
+%             difference of sensor and solar and subtract 180 so that if
+%             the difference is 180 (forward scatter) then will get relAZ=0
+
+        Relative_Azimuth_Mean.timeseries3=(Sensor_Azimuth_Mean.timeseries3-Solar_Azimuth_Mean.timeseries3-180);
+        Relative_Azimuth_Mean.timeseries3=abs(Relative_Azimuth_Mean.timeseries3);
+%         i180=find(Relative_Azimuth_Mean.timeseries3>180);
+%         Relative_Azimuth_Mean.timeseries3(i180)=360-Relative_Azimuth_Mean.timeseries3(i180);
+        
+        if exist('Cloud_Water_Path_Liquid') & isnan(maxALL(Cloud_Water_Path_Liquid.timeseries3))==0
+            homog_time3_W = (Cloud_Water_Path_Liquid.timeseries3./Cloud_Water_Path_Liquid_Standard_Deviation.timeseries3).^2;
+%            homog_time3 = homog_time3_W; ihomog=1;
+            homog_cutoff = 1000;
+            homog_time3_W(homog_time3_W>homog_cutoff) = homog_cutoff;
+            homog_time3 = homog_time3_W;
+        end
+       
+
+        siz = size(Cloud_Fraction_Liquid.timeseries3);
+              
+     
+        %replicate for all the orbits of the day
+        
+    
+        sst_daily = repmat(sst_amsre_time3_MODIS_multi_day(:,:,iday_all_L2L3),[1 1 siz(3)]);
+        CTH.timeseries3 = (273.15 + sst_daily - Cloud_Top_Temperature_Day_Mean.timeseries3 - 2.35) / 0.0069 /1e3; %CTH from Zuidema (2009) in km
+        %where we have no CTH (e.g. over land) make the CTH very high, but
+        %below the 1e9 threshold for no CTH screening
+        CTH.timeseries3(isnan(CTH.timeseries3)) = 1e8;
+        
+        
+        
+%% select the screening based on the filename
+        
+%some defaults
+        thresh_NP=50;
+        thresh_CF=[0.8 1.01];        
+        thresh_SZA = [0 65];       
+        thresh_CTT = [273.15-100 373];        
+        thresh_sensZA = [0 90];
+        thresh_relAZ = [0 180];
+        thresh_stdW = [0 1e9];
+        thresh_tau = [0 1e9];
+        thresh_CTH = [0 1e9];
+        
+        screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT';  
+%        screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + min_tau + mean_CTH, no homog screening';          
+%        screen_type='NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + sigCTT';
+        
+        %add the new screening to modis_screening
+        
+  switch daily_averaged_files_loc2      
+      case {'/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_173_ice_allowed_SZA_65/',...
+              '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/Southern_Ocean_all_lons_no_water_path_confidence/CF_0.8_minCTT_173_ice_allowed_SZA_65/' ...
+              }
+          %set this screening to avoid issues of dropping data when have no SST data
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT';
+          %uses the defaults
+           [];
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_meanCTT_173_meanCTH_3.2km_SZA_65/'
+          %Not sure which of these is the best to use... the last one seems
+          %highlighted in modisL3_screening_timeseries3.m. 
+          %No homog screening in the first one refers to CTT homogenenity I think
+          
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + min_tau + mean_CTH, no homog screening';   
+%          screen_type='NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH'; 
+            %The above one didn't work - no minfrac_CF data          
+          thresh_CTH = [0 3.2];
+          
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.0_meanCTT_173_meanCTH_3.2km_SZA_65/'
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + min_tau + mean_CTH, no homog screening';   
+%          screen_type='NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH'; 
+            %The above one didn't work - no minfrac_CF data          
+          thresh_CTH = [0 3.2];
+          thresh_CF = [-0.01 1.01];
+          
+       case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.0_all_CTT_all_CTH_SZA_65/'
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA, no homog screening';   
+%          screen_type='NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH'; 
+            %The above one didn't work - no minfrac_CF data          
+%          thresh_CTH = [0 3.2];
+          thresh_CF = [-0.01 1.01];   
+          
+                      case 'NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA, no homog screening' %Added Jan 2018 to find no. days with all CFs, but including no cloud
+                screen_str = [' ( Cloud_Fraction_Liquid_Pixel_Counts.timeseries3(ilat,ilon,itime)./Cloud_Fraction_Liquid.timeseries3(ilat,ilon,itime)>=thresh_NP & Cloud_Fraction_Liquid.timeseries3(ilat,ilon,itime)>thresh_CF(1) & Cloud_Fraction_Liquid.timeseries3(ilat,ilon,itime)<=thresh_CF(2)  & Sensor_Zenith_Mean.timeseries3(ilat,ilon,itime)>thresh_sensZA(1) & Sensor_Zenith_Mean.timeseries3(ilat,ilon,itime)<=thresh_sensZA(2) & Relative_Azimuth_Mean.timeseries3(ilat,ilon,itime)>thresh_relAZ(1) & Relative_Azimuth_Mean.timeseries3(ilat,ilon,itime)<=thresh_relAZ(2)  & Solar_Zenith_Mean.timeseries3(ilat,ilon,itime)>=thresh_SZA(1) & Solar_Zenith_Mean.timeseries3(ilat,ilon,itime)<thresh_SZA(2) )']; thresh_str=['NP.GTE.' num2str(thresh_NP) ' AND CF.GT.' num2str(thresh_CF(1)) ' AND CF.LTE.' num2str(thresh_CF(2)) ' AND sensZA.GT.' num2str(thresh_sensZA(1)) ' AND sensZA.LTE.' num2str(thresh_sensZA(2)) ' AND relAZ.GT.' num2str(thresh_relAZ(1)) ' AND relAZ.LTE.' num2str(thresh_relAZ(2))  ' AND solarZA.GTE.' num2str(thresh_SZA(1)) ' AND solarZA.LT.' num2str(thresh_SZA(2)) 'iceCF allowed, no homog screening'];                 
+          
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_meanCTT_173_meanCTH_3.2km_SZA_65_meanTau10/'
+          %Not sure which of these is the best to use... the last one seems
+          %highlighted in modisL3_screening_timeseries3.m. no homog
+          %screening in the first one refers to CTT homogenenity I think
+          %screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + min_tau + mean_CTH, no homog screening';   
+%          screen_type='NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH'; 
+            %The above one didn't work - no minfrac_CF data
+            
+           %Made a new screening for the no homog one since it didn't actually include optical depth screening! 
+           screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + mean_tau + mean_CTH, no homog screening, Jan2017' 
+                      
+          thresh_CTH = [0 3.2];             
+          thresh_tau = [10 1e9]; %This is for mean tau
+          
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_meanCTT_173_meanCTH_1_3.2km_SZA_65_meanTau10/'; %One used for sea-ice edge stuff, Jan 2017 (added mean Tau screening) plus CTH>1km              
+           %Made a new screening for the no homog one since it didn't actually include optical depth screening! 
+           screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + mean_tau + mean_CTH, no homog screening, Jan2017' 
+                      
+          thresh_CTH = [1 3.2];             
+          thresh_tau = [10 1e9]; %This is for mean tau       
+          
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/Iceland_30W30E_40N90N/CF_0.8_meanCTT_173_meanCTH_0.5_3.2km_SZA_65_meanTau10/'; %One used for sea-ice edge stuff, Jan 2017 (added mean Tau screening) plus CTH>1km              
+           %Made a new screening for the no homog one since it didn't actually include optical depth screening! 
+           screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + mean_tau + mean_CTH, no homog screening, Jan2017' 
+                      
+          thresh_CTH = [0.5 3.2];             
+          thresh_tau = [10 1e9]; %This is for mean tau                 
+          
+
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/Iceland_30W30E_40N90N/CF_0.0_meanCTT_173_meanCTH_0.5_3.2km_SZA_65_meanTau10/'; %One used for sea-ice edge stuff, Jan 2017 (added mean Tau screening) plus CTH>1km              
+           %Made a new screening for the no homog one since it didn't actually include optical depth screening! 
+           screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + mean_tau + mean_CTH, no homog screening, Jan2017' 
+                      
+          thresh_CTH = [0.5 3.2];             
+          thresh_tau = [10 1e9]; %This is for mean tau   
+          thresh_CF = [0.0 1e9];
+                    
+          
+      case {'/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.0_minCTT_173_ice_allowed_SZA_65/'...
+              ,'/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/Iceland_30W30E_40N90N/CF_0.0_minCTT_173_ice_allowed_SZA_65/'}
+          %set this screening to avoid issues of dropping data when have no SST data
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT';
+          thresh_CF = [-0.1 1.1];    
+       case {'/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/no_screening/','/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/VOCALS_JointL2_box_only/no_screening/'...
+               '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/VOCALS_JointL2_box_only_no_confidence_screen/no_screening/', ...
+               '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/VOCALS_JointL2_box_only_confidence_screen_20um_limit_re16_37/no_screening/',...
+               '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/VOCALS_JointL2_box_only_confidence_screen_20um_limit_re16_37_consistent_pixels/no_screening/'}
+          %set this screening to avoid issues of dropping data when have no SST data
+          screen_type='none';     
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_268_meanCTH_3km_SZA_65/' 
+          thresh_CTH = [0 3];  
+          thresh_CTT = [273.15-5 373];
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_273_SZA_65/' 
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + noice';
+          thresh_CTT = [273.15 373];              
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_268_SZA_65/'   
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + noice';
+          thresh_CTT = [273.15-5 373];     
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_meanCTT_268_ice_allowed_SZA_65/'
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau';
+          thresh_CTT = [273.15-5 373]; 
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/SZA_paper_screening_CF_0.99_meanCTT_268_ice_allowed_SZA_0-90/'
+          screen_type= 'NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH';
+          thresh_CTT = [273.15-5 373];  
+          thresh_CF=[0.99 1];
+          minfrac_CF = 0.9;
+          minfrac_NpNd = 0.9;  
+          thresh_SZA = [0 90];
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/SZA_paper_screening_CF_0.99_meanCTT_268_ice_allowed_SZA_65/'
+          screen_type= 'NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH';
+          thresh_CTT = [273.15-5 373];  
+          thresh_CF=[0.99 1];
+          minfrac_CF = 0.9;
+          minfrac_NpNd = 0.9; 
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/SZA_paper_screening_CF_0.99_meanCTT_173_ice_allowed_SZA_0-90/'          
+          screen_type= 'NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH';
+          thresh_CTT = [273.15-100 373];  
+          thresh_CF=[0.99 1];
+          minfrac_CF = 0.9;
+          minfrac_NpNd = 0.9;    
+          thresh_SZA = [0 90];
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/SZA_paper_screening_CF_0.8_meanCTT_173_ice_allowed_SZA_0-90/'          
+          screen_type= 'NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH';
+          thresh_CTT = [273.15-100 373];  
+          thresh_CF=[0.8 1];
+          minfrac_CF = 0.9;
+          minfrac_NpNd = 0.9;    
+          thresh_SZA = [0 90]; 
+          
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/SZA_paper_screening_CF_0.8_meanCTT_173_ice_allowed_SZA_0-90_minfrac_CF_0.5/'
+          screen_type= 'NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH';
+          thresh_CTT = [273.15-100 373];  
+          thresh_CF=[0.8 1];
+          minfrac_CF = 0.5;
+          minfrac_NpNd = 0.9;    
+          thresh_SZA = [0 90]; 
+          
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/SZA_paper_screening_CF_0.8_meanCTT_173_ice_allowed_SZA_0-90_minfrac_NpNd_0.5/'
+          screen_type= 'NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH';
+          thresh_CTT = [273.15-100 373];  
+          thresh_CF=[0.8 1];
+          minfrac_CF = 0.9;
+          minfrac_NpNd = 0.5;    
+          thresh_SZA = [0 90]; 
+          
+          
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/SZA_paper_screening_CF_0.8_meanCTT_173_ice_allowed_SZA_0-90_minfrac_CF_0.5_minfrac_NpNd_0.5/'
+          screen_type= 'NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH';
+          thresh_CTT = [273.15-100 373];  
+          thresh_CF=[0.8 1];
+          minfrac_CF = 0.5;
+          minfrac_NpNd = 0.5;    
+          thresh_SZA = [0 90]; 
+          
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/SZA_paper_screening_CF_0.1_meanCTT_173_ice_allowed_SZA_0-90_minfrac_CF_0.0_minfrac_NpNd_0.0/'
+          screen_type= 'NP3 + CF3 + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau + mean_CTH';
+          thresh_CTT = [273.15-100 373];  
+          thresh_CF=[0.1 1];
+          minfrac_CF = 0.0;
+          minfrac_NpNd = 0.0;    
+          thresh_SZA = [0 90]; 
+          
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.6_meanCTT_268_ice_allowed_SZA_65/'
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau';
+          thresh_CTT = [273.15-5 373]; 
+          thresh_CF=[0.6 1];    
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.6_meanCTT_273_ice_allowed_SZA_65/'
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau';
+          thresh_CTT = [273.15-0 373];  
+          thresh_CF=[0.6 1];
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_meanCTT_273_ice_allowed_SZA_65/'
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + mean_CTT + min_tau';
+          thresh_CTT = [273.15-0 373];           
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_268_ice_allowed_SZA_65/'   
+          thresh_CTT = [273.15-5 373];  
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_278_ice_allowed_SZA_65/'   
+          thresh_CTT = [273.15+5 373];            
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_280_ice_allowed_SZA_65/'   
+          thresh_CTT = [273.15+7 373];   
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_284_ice_allowed_SZA_65/'   
+          thresh_CTT = [273.15+11 373];             
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_273_ice_allowed_SZA_65/'
+          thresh_CTT = [273.15+0 373];                       
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_268_ice_allowed_SZA_65_tau.GT.5/'
+           thresh_tau = [5 1e9]; 
+           thresh_CTT = [273.15-5 373];             
+      case {'/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_173_ice_allowed_SZA_65_tau.GT.5/'...
+              ,'/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/Iceland_30W30E_40N90N/CF_0.8_minCTT_173_ice_allowed_SZA_65/'}
+           thresh_tau = [5 1e9];            
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_173_ice_allowed_SZA_65_tau.LT.5/'
+           thresh_tau = [0 5];     
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_173_ice_allowed_SZA_0-90_tau.GT.5/'
+           thresh_tau = [5 1e9]; 
+           thresh_SZA = [0 90];
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_173_SZA_75-85/'        
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + noice';
+          thresh_SZA = [75 85];
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_173_ice_allowed_SZA_65-85/'
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + noice';
+          thresh_SZA = [65 85];          
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_173_ice_allowed_SZA_0-90/'
+          thresh_SZA = [0 90];  
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_173_ice_allowed_SZA_55/'
+          thresh_SZA = [0 55];            
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_173_ice_allowed_SZA_45/'
+          thresh_SZA = [0 45];           
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.8_minCTT_263_no_iceCF_SZA_65/' 
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + noice';
+          thresh_CTT = [273.15-10 373];       
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.6_CTT_273_SZA_65/'
+          screen_type='NP + CF + MEAN sensZA + MEAN relAZ + MEAN solarZA + min_CTT + noice';
+          thresh_CTT = [273.15 373];
+          thresh_CF=[0.6 1];
+          
+      case '/home/disk/eos8/d.grosvenor/saved_data_L2/averaged_daily_mockL3/CF_0.0_minCTT_173_ice_allowed_SZA_0-90_thresh_NP_0/'
+          %i.e. no screening - e.g. for SZA max 
+           thresh_SZA = [-1 90];
+           thresh_CF=[-1 1.1]; 
+           thresh_NP = -1;                      
+                        
+      otherwise
+          disp('**** screening not specified! ***');
+          return
+  end
+
+             
+
+
+        %itime=1:size(Cloud_Fraction_Liquid.timeseries3,3); %time indices for the screening script
+        %do the screening to get the ihtot indices to be removed
+        %actually this is set in there as long as iplot_global==1 and
+        %igcm_screen==0
+        iplot_global=1; %this tells is to give us the indices to be removed rather than used
+        igcm_screen=0;
+        ihtot=[]; %default of nothing made NaN (in case we want no screening)
+% -------------------------------------------------------------------------
+          modisL3_screening_timeseries3 %creates ihtot and thresh_str
+% -------------------------------------------------------------------------
+        save_file2 = [load_file '_DAILY_' datestr(now,30)];
+        save_file2 = remove_character(save_file2,'.mat','');
+        save_file2 = [save_file2 '.mat'];
+        save_path_dir = [daily_averaged_files_loc2 direcs{idirec} '/'];
+        if exist(save_path_dir)~=7
+            eval(['!mkdir ' save_path_dir]);
+        end
+        save_path =  [save_path_dir save_file2];
+
+
+        %% loop through all of the variables. Pass to the funciton, which performs the
+        %% screening, does the averaging, max, etc and saves to the daily average file
+
+        for idaily_var = 1:length(modis_var)
+            %pass both the string name of the variable for saving and the data
+            L2L3_make_daily_average(L2L3_load_file,save_path,modis_var{idaily_var},ihtot);
+        end
+        latlon_load = load(L2L3_load_file,'MLAT','MLON');
+%        save(save_path,'latlon_load','-APPEND','-v7.3');
+         %this funcation allows us to save variable MLAT without making a
+         %new MLAT in memory
+        save_var_append(save_path,latlon_load.MLAT,'MLAT');
+        save_var_append(save_path,latlon_load.MLON,'MLON');        
+        
+        %do these with screening for now - e.g. sensor ZA will vary with SZA
+        Solar_Zenith_Mean.timeseries3(ihtot)=NaN;
+        Solar_Zenith_Maximum.timeseries3 = max(Solar_Zenith_Mean.timeseries3,[],3);
+        save(save_path,'Solar_Zenith_Maximum','-APPEND','-v7.3');
+        tmp = Solar_Zenith_Mean.timeseries3;
+        %now also make an SZA max where we cut out all of the SZAs>81.4
+        %since this is the max SZA that MODIS daylight retrievals will be
+        %made for. I.e. then is the max SZA for which retrievals were made
+        tmp(tmp>81.4)=NaN;
+        Solar_Zenith_Maximum2.timeseries3 = max(tmp,[],3);
+        save(save_path,'Solar_Zenith_Maximum2','-APPEND','-v7.3');
+        Solar_Zenith_Minimum.timeseries3 = min(Solar_Zenith_Mean.timeseries3,[],3);
+        save(save_path,'Solar_Zenith_Minimum','-APPEND','-v7.3');
+
+        Sensor_Zenith_Mean.timeseries3(ihtot)=NaN;
+        Sensor_Zenith_Maximum.timeseries3 = max(Sensor_Zenith_Mean.timeseries3,[],3);
+        save(save_path,'Sensor_Zenith_Maximum','-APPEND','-v7.3');
+        Sensor_Zenith_Minimum.timeseries3 = min(Sensor_Zenith_Mean.timeseries3,[],3);
+        save(save_path,'Sensor_Zenith_Minimum','-APPEND','-v7.3');
+
+        Relative_Azimuth_Mean.timeseries3(ihtot)=NaN;
+        Relative_Azimuth_Maximum.timeseries3 = max(Relative_Azimuth_Mean.timeseries3,[],3);
+        save(save_path,'Relative_Azimuth_Maximum','-APPEND','-v7.3');
+        Relative_Azimuth_Minimum.timeseries3 = min(Relative_Azimuth_Mean.timeseries3,[],3);
+        save(save_path,'Relative_Azimuth_Minimum','-APPEND','-v7.3');
+
+        %save the description of the screening
+        save(save_path,'thresh_str','-APPEND','-v7.3');
+
+    case {'load L3 and concatenate','load processed L2 and concatenate'}
+        load(L2L3_load_file,'MLAT','MLON');
+        switch multiL2L3_case
+            case 'load L3 and concatenate'
+                load(L2L3_load_file,'thresh_str');
+            case 'load processed L2 and concatenate'
+                thresh_str='';
+        end
+        
+        if ~exist('thresh_str')
+            thresh_str = '*** UNKNOWN thresh_str ***';
+        end
+       
+        %load CF on the first file just to get the size
+        if iday_all_L2L3==1
+            load(L2L3_load_file,'Cloud_Fraction_Liquid');
+            if exist('Cloud_Fraction_Liquid')~=1
+                %try effective radius instead
+                load(L2L3_load_file,'Cloud_Effective_Radius_Liquid_Mean');
+                sdat = size(Cloud_Effective_Radius_Liquid_Mean.timeseries3);
+            else
+                sdat = size(Cloud_Fraction_Liquid.timeseries3);
+            end
+            
+            thresh_str_multiL2 = thresh_str;
+            
+            if exist('MLAT')
+                MLAT_orig=MLAT;
+                MLON_orig=MLON;
+                lat_comp=1;
+            else
+                 MLAT=[-89.5:89.5];
+                 MLON=[-179.5:179.5];
+                lat_comp=0;
+            end
+        
+            if length(LAT_val)>0
+                ilat = find(MLAT>=LAT_val(1) & MLAT<LAT_val(end));
+                ilon = find(MLON>=LON_val(1) & MLON<LON_val(end));
+                if length(sdat)<3
+                    sdat(3)=1;
+                end
+                sdat = [length(ilat) length(ilon) sdat(3)];
+                
+                 %make lat_lon_inds_str - a  string like '1:12,20:30' to select
+                 %only a portion of the lat lon domain
+                
+               lat_lon_inds_str = [num2str(ilat(1)) ':' num2str(ilat(end)) ',' num2str(ilon(1)) ':' num2str(ilon(end))]; 
+               
+               Cloud_Fraction_Liquid.timeseries3 = Cloud_Fraction_Liquid.timeseries3(ilat,ilon,:);
+                
+            else                
+                ilat = 1:length(MLAT);
+                ilon = 1:length(MLON);
+            end
+        
+        end
+        
+        %check that the screening sting hasn't changed
+        if strcmp(thresh_str,thresh_str_multiL2)~=1
+            fprintf(1,'\n*** non-matching thresh_str values from files !!! ***\n');
+%            return
+        end
+        if lat_comp==1 & ~(MLAT==MLAT_orig)
+            fprintf(1,'\n*** non-matching lat values from files !!! ***\n');
+%            return
+        end
+        if  lat_comp==1 & ~(MLON==MLON_orig)
+            fprintf(1,'\n*** non-matching lon values from files !!! ***\n');
+%ed            return
+        end
+        
+      
+                
+
+        for idaily_var = 1:length(modis_var)
+            %pre-allocate the arrays on the first pass
+            if iday_all_L2L3==1
+                switch multiL2L3_case
+                    case 'load L3 and concatenate'
+                        eval([modis_var{idaily_var} '.timeseries3=NaN*ones([sdat(1) sdat(2) Ndays_L2L3]);']);
+                    case 'load processed L2 and concatenate'
+                        if strcmp(modis_var{idaily_var},'MODIS_swath_filename')
+                            eval([modis_var{idaily_var} '.timeseries3=cell([sdat(1) sdat(2) length(direcs)*Ndays_L2L3*20]);']);
+                        else
+                            eval([modis_var{idaily_var} '.timeseries3=NaN*ones([sdat(1) sdat(2) length(direcs)*Ndays_L2L3*20]);']);
+                        end
+                end
+                
+            end       
+            
+            
+            switch multiL2L3_case
+                case 'load L3 and concatenate'
+                    %pass both the string name of the variable for saving and the data
+                    %the string for the function (i.e. whether to output
+                    %the 3rd dimension or not)
+                    %not in this case
+                    lat_lon_inds_str2 = ['(' lat_lon_inds_str ')'];
+                    lat_lon_inds_str3 = ['1:' num2str(length(ilat)) ',1:' num2str(length(ilon))];
+                    eval([modis_var{idaily_var} '.timeseries3(' lat_lon_inds_str3 ',iday_all_L2L3)=L2L3_concatenate_daily_arrays(L2L3_load_file,modis_var{idaily_var},lat_lon_inds_str2);']);
+                    daynum_timeseries3(iday_all_L2L3) = days_L2L3(iday_L2L3);
+                    modisyear_timeseries3(iday_all_L2L3) = years(iyear_L2L3);
+
+                case 'load processed L2 and concatenate'
+                    %output the 3rd dimension in this case
+                    lat_lon_inds_str2 = ['(' lat_lon_inds_str ',:)'];
+                    lat_lon_inds_str3 = ['1:' num2str(length(ilat)) ',1:' num2str(length(ilon))];
+                    tmp = L2L3_concatenate_daily_arrays(L2L3_load_file,modis_var{idaily_var},lat_lon_inds_str2);
+                    NcatL2=size(tmp,3);
+                    if idaily_var==1
+                        day_range_catL2 = [day_range_catL2(end)+1:day_range_catL2(end)+NcatL2];
+                    end
+                    
+
+                        eval([modis_var{idaily_var} '.timeseries3(' lat_lon_inds_str3 ',day_range_catL2)=tmp;']);
+
+                     %make a large array with one entry for each orbit
+%         daynum_timeseries3(end+1:end+siz(3)) = days_L2L3(iday_L2L3);
+%         modisyear_timeseries3(end+1:end+siz(3)) = years(iyear_L2L3);
+                    daynum_timeseries3(day_range_catL2) = days_L2L3(iday_L2L3);
+                    modisyear_timeseries3(day_range_catL2) = years(iyear_L2L3);
+ 
+            end
+            
+            
+        end
+        
+        %will need to sort out daynum, etc.
+
+end
+
+
+
+fprintf(1,'\nDone daily L2L3 process\n');
+
+

@@ -1,0 +1,55 @@
+function negdash(C,h)
+% NEGDASH Make negatively-valued contours dashed.
+%       NEGDASH(C,H) uses the output C and H of a contouring 
+%       routine such as MATLAB's CONTOUR or Rich P.'s 
+%       EXTCONTOUR to reset the LineStyle property of negative
+%       contours to '--'. 
+%
+%       See also CONTOUR, CONTOURC, EXTCONTOUR*, CONTOURSURF*
+%       (* by Rich Pawlowicz)
+
+%       For applications where the value of the contour is 
+%       repeatedly referenced, you might consider modifying
+%       this routine to store the contour value as the UserData
+%       property of each line. 
+
+%       Dan Goldner 1/95
+%       ----------------------------------------------------
+
+        linehandle=h',
+           x=get(linehandle,'Xdata');startx=x(1);
+           y=get(linehandle,'Ydata');starty=y(1);
+           col=find((C(1,:)==startx))-1;
+           
+           for i=1:length(col)
+               contourvalue=C(1,col(i));
+
+               if(contourvalue<0),
+                   set(linehandle,'LineStyle',':');
+               end;
+           end
+           
+           jc=1;
+           while jc<size(cbfA(i).c,2)
+            %ch(1,jc)=str2num(num2str(10^(cbfA(i).c(1,jc)),'%2.2e'));
+            
+            if dlogflag==0 & logflag==1 
+                if 10^cbfA(i).c(1,jc)>99
+                    ch(1,jc)=sigfig(10^(cbfA(i).c(1,jc) ),3);
+                else
+                    ch(1,jc)=sigfig(10^(cbfA(i).c(1,jc) ),2);
+                end
+            elseif dlogflag==1
+                %                    if idlog(cbfA(i).c(1,jc),dlogmin)>99
+                %                         ch(1,jc)=sigfig(idlog(cbfA(i).c(1,jc),dlogmin ),2);
+                %                     else
+                %                         ch(1,jc)=sigfig(idlog(cbfA(i).c(1,jc),dlogmin ),2);
+                %                     end
+                ch(1,jc)=sigfig(idlog(cbfA(i).c(1,jc),dlogmin),3);
+            else
+                ch(1,jc)=sigfig(cbfA(i).c(1,jc),sig);
+            end
+            
+            jc=jc+cbfA(i).c(2,jc)+1;
+        end
+           

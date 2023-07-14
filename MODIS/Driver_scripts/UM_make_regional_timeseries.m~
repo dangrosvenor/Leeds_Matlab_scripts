@@ -1,0 +1,20 @@
+function [timeser] = UM_make_regional_timeseries(dat,gcm_Plat2D_UM,nT,LAT_val,LON_val,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM)
+
+nT = length(time_inds);
+
+switch load_type
+    case 'mat'
+        dat_out = NaN * ones([size(gcm_Plat2D_UM,1) size(gcm_Plat2D_UM,2) nT]);
+        it=0;
+        for it_global_diff=time_inds
+            it=it+1;
+            dat_out(:,:,it) = eval(['dat_global.' var_UM '_ALL{it_global_diff};']);
+        end
+
+    case 'merged netCDF'
+        dat_out = squeeze(dat_global.dat(time_inds,:,:));
+        if length(size(dat_out))==3
+            dat_out = permute(dat_out,[2 3 1]);
+        end
+end
+

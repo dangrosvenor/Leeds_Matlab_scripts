@@ -1,0 +1,28 @@
+function [delA,delB]=Smith_solve_dual_layer_solve_del(Ha,Hb,hhat)
+
+del_start=5;
+dx=-0.005;
+
+delA=del_start;
+delB=delA-Hb+Ha +1;
+
+while hhat<delA+Ha | delA<delB+(Hb-Ha)
+
+    sign_fun=sign(Smith_dual_layer_solve_del_fun(del_start,Ha,Hb,hhat));
+    sign_fun_old=sign_fun;
+    x=del_start;
+    while sign_fun==sign_fun_old
+        x_start=x;
+        x=x+dx;
+        sign_fun=sign(Smith_dual_layer_solve_del_fun(x,Ha,Hb,hhat));
+    end
+
+    range=[min(x,x_start) max(x,x_start)]
+
+    delA=fzero(@Smith_dual_layer_solve_del_fun,range,[],Ha,Hb,hhat);
+    delB = sqrt( delA.^2 + ( (delA - hhat) / (Ha + delA - hhat) ).^2 ); %eqn (23)
+
+    del_start=x
+
+
+end

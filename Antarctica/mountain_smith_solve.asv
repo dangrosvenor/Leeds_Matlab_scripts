@@ -1,0 +1,124 @@
+function [h,hx,hx2,d,d2,Ahat,Bhat,ddel_dz,Ufac]=mountain_smith_solve(L,h0,H0)
+
+% h0=1.5e3; %mountain height
+ n=100;
+% 
+% 
+% 
+% L=0.011/10; %:L=N/U
+% L=0.013/7.5;
+% 
+% N=0.01; U0=20;
+% L=N/U0;
+% 
+% U0=7.65;
+% L=0.00183;
+% 
+% H0=2.25e3;
+% H0=3*pi/2/L;
+% 
+% H0=3200-1000;
+% 
+% h0=0.98/L;
+% 
+% h0=1350-1000;
+
+
+
+%h=0.6e3;
+
+%d0=-5e3;
+dmax=-10/L;
+
+clear d hx
+d(1)=0;
+hx(1)=0;
+i=0;
+
+d0_start=0;
+
+for h=0:h0/n:h0-1*h0/n  %solves for each point up the mountain (from h0 back down to 0)
+    i=i+1
+    sign0=sign(mountain_smith_func(d0_start+0.2e3,h,L,H0) );
+    for d0=[d0_start:-0.2e3:dmax]
+        if mountain_smith_func(d0,h,L,H0) < 1e-5
+            d(i)=d0;
+            ifzero=0;
+            break
+        else
+            ifzero=1;
+        end
+       
+        sign1 = sign(mountain_smith_func(d0,h,L,H0));
+        if sign1~=sign0
+            break
+        end
+%        sign0=sign1;
+        
+    end
+    
+    if ifzero==1
+        d(i)=fzero(@mountain_smith_func,[d0 d0+0.2e3],[],h,L,H0);
+    end
+    hx(i)=h; %store the mountain height used
+    
+    d0_start=d0;
+end
+
+
+%now solve for going down the other side of the mountain
+% - looking for solutions heading out to the more negative del values than at the peak
+
+%del_peak = d(1); %the del value at the peak of the mountain
+%the del for the h values on the downwind side must lie between here and del*L=-Inf
+N=3;  %
+i=0;
+dmax=-10/L;
+clear d2 hx2
+
+%d0_start=0.2e3;
+d0_start=d(end);
+for h=h0-1*h0/n:-4/L/n:-4/L  %solves for each point up the mountain - from h0 back down to 0 and
+                    % then below 0 (negative mountain height as can have an asymmetric mountain)
+    i=i+1
+     sign0=sign(mountain_smith_func(d0_start+0.2e3,h,L,H0) );
+     for d0=[d0_start+0.2e3:-0.2e3:dmax]
+         sign1 = sign(mountain_smith_func(d0,h,L,H0));
+         if sign1~=sign0
+             break
+         end
+ %        sign0=sign1;
+         
+     end
+        
+    d2(i)=fzero(@mountain_smith_func,[d0 d0+0.2e3],[],h,L,H0);
+    
+    d0_start=d2(i);
+    
+%    d2(i)=fzero(@mountain_smith_func,[del_peak dmax],[],h,L,H0);
+    hx2(i)=h; %store the mountain height used
+end
+
+
+%now find U as a function of h(x) for z=0
+%represents the maximum wind speed and shows how it varies as the flow goes over the crest
+%and down the other side of the mountain
+dh = 0*L; %to find speeds along a line that is 100m above the mountain surface
+Ahat = L*d2.*cos(H0*L+d2*L); %(2.14) of Smith
+Bhat = L*d2.*sin(H0*L+d2*L); %(2.15)
+ddel_dz=-Ahat.*sin(hx2*L + dh)+Bhat.*cos(hx2*L + dh); %found by differentiation of (2.9)
+
+U0=1;
+Ufac = U0 * (1 - ddel_dz); %from (2.2) of Smith
+%have confirmed that this works by comparing to the wind speeds in the examples
+%in Smith (e.g. Fig. 4) - using hhat=0.9846, H0_hat=3*pi/2, L=0.01/20
+%then run this script (with dh=0)
+%calculate wind at zhat=-1 :- U_calc=interp1(hx2,Ufac,-1/LS)*20 = 105
+
+
+
+
+
+
+
+'done mountain wave solve'

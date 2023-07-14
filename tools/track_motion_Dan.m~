@@ -1,0 +1,257 @@
+function [offset_x,offset_y,max_corr,x_grid,y_grid]=track_motion_Dan(A,B,dX_max,dY_max,N1,N2,x_in,y_in)
+%function [offset_x,offset_y]=track_motion_Dan(A,B,dX_max,dY_max,N1,N2)
+%Finds the offset between the two fields that gives the maximum 2D
+%correlation (using xcorr2) to determine how far the image has moved to get
+%wind fields. Gives the offset in x and y of B relative to A. N1 and N2 are
+%the sizes of the blocks that the domain is split up into -since wind might
+%vary across domain. dX_max and dY_max are the distances to search over in
+%and y for a match. 
+%Can set N1 and N2 to [] use the whole domain (minus
+% dX_max and dY_max) to give one offset value.
+
+iuse_threshold = 1;  prc=90;
+
+use_big_domain_for_comparison=0; %Whether to use the larger domain around each block to look for matches (size depeonds on 
+% dX_max and dY_max. But this doesn't seem to work correctly. Seems to be
+% better to use the same size patch, but with presumably less accuracy near
+% the edges. Probably only works well where the size of the patch is fairly
+% large in comparison to the amount of motion.
+%use_big_domain_for_comparison=1;
+
+if use_big_domain_for_comparison==0
+   dX_max=0;
+   dY_max=0;
+end
+
+A_in = A;
+B_in = B;
+
+if length(N1)<1
+    %Use as much of the domain as possible for given dX_max and dY_max to
+    %give one offset value.
+    nX=1;
+    nY=1;
+    N1 = floor(size(A,1)-2*dX_max);
+    N2 = floor(size(A,2)-2*dY_max);
+else
+
+%Calculate the region that can be used - need to leave room to move the
+%boxes by dX and dY both sides of the domain
+nX=floor((size(A,1)-2*dX_max)/N1);
+nY=floor((size(A,2)-2*dY_max)/N2);
+
+end
+
+if ~exist('x_in') | length(x_in)<1
+    calc_grid=0;
+else
+    calc_grid=1;
+end
+
+%set all NaNs to zero for now
+A(isnan(A))=0;
+B(isnan(B))=0;
+
+if iuse_threshold~=1
+    %normalize fields to make the correlation value more meaningful to help
+    %judge whether a good match has been found
+    max_val = maxALL([A(:) B(:)]);
+    max_val_A = maxALL(A);
+    max_val_B = maxALL(B);
+    A=A./max_val_A;
+    B=B./max_val_B;
+end
+
+
+
+
+
+
+for ibx=1:nX
+    for iby=1:nY
+        
+                if iuse_threshold==1
+            
+            threshA = prctile(A(:),prc);
+            threshB = prctile(small_mat(:),prc);            
+            thresh = ( threshA + threshB )/2;
+            
+            big_mat2=big_mat;
+            small_mat2=small_mat;
+            big_mat_self2=big_mat_self;            
+            
+            big_mat = zeros(size(big_mat2));
+            small_mat = zeros(size(small_mat2));
+            big_mat_self = zeros(size(big_mat_self2));
+            
+            big_mat(big_mat2>=thresh)=1;
+            small_mat(small_mat2>=thresh)=1;
+            big_mat_self(big_mat_self2>=thresh)=1;            
+            
+        end
+        
+       
+        
+        %For each small patch being considered need to pick out the region
+        %around it with the small patch in the centre
+        %xcorr2 will then compare it across the whole of the larger region
+        %and the distance from the centre of the resulting correlation
+        %matrix is then the offset
+        
+        %small patch
+        ix0 = dX_max + (ibx-1)*N1+1;
+        xinds = ix0:ix0+N1-1;
+        iy0 = dY_max + (iby-1)*N2+1;
+        yinds = iy0:iy0+N2-1;                 
+        small_mat = B(xinds,yinds);
+        
+  
+        
+        %larger region surrounding this        
+        ix02 = (ibx-1)*N1+1;
+        xinds2 = ix02:ix02+N1-1+2*dX_max;
+        iy02 = (iby-1)*N2+1;
+        yinds2 = iy02:iy02+N2-1+2*dY_max; 
+        
+        if use_big_domain_for_comparison==1
+            big_mat = A(xinds2,yinds2);
+            big_mat_self = B(xinds2,yinds2);
+        else
+            big_mat = A(xinds,yinds);
+            big_mat_self = B(xinds,yinds);
+        end
+        
+         
+        if iuse_threshold==1
+            
+            threshA = prctile(big_mat(:),prc);
+            threshB = prctile(small_mat(:),prc);            
+            thresh = ( threshA + threshB )/2;
+            
+            big_mat2=big_mat;
+            small_mat2=small_mat;
+            big_mat_self2=big_mat_self;            
+            
+            big_mat = zeros(size(big_mat2));
+            small_mat = zeros(size(small_mat2));
+            big_mat_self = zeros(size(big_mat_self2));
+            
+            big_mat(big_mat2>=thresh)=1;
+            small_mat(small_mat2>=thresh)=1;
+            big_mat_self(big_mat_self2>=thresh)=1;            
+            
+        end
+        
+ 
+            
+        if iuse_threshold~=1
+
+            %Remove extreme values since they tend to dominate the correlation
+            p5 = prctile(small_mat(:),5);
+            p95 = prctile(small_mat(:),95);
+            small_mat(small_mat>p95)=p95;
+            small_mat(small_mat<p5)=p5;
+
+            p5_big = prctile(big_mat(:),5);
+            p95_big = prctile(big_mat(:),95);
+            big_mat(big_mat>p95)=p95_big;
+            big_mat(big_mat<p5)=p5_big;
+
+        end
+        
+        
+        if calc_grid==1
+            x = x_in(xinds,yinds);
+            y = y_in(xinds,yinds);
+            dx = diff(x,[],1);
+            dy = diff(y,[],2);            
+            x_grid(ibx,iby) = meanNoNan(x(:),1);
+            y_grid(ibx,iby) = meanNoNan(y(:),1); 
+            dx2 = meanNoNan(dx(:),1);
+            dy2 = meanNoNan(dy(:),1);            
+        end
+        
+%        if ibx==5 & iby==7
+            %breakpoint
+%        end
+        
+%        big_mat(isnan(big_mat))=0;
+%        big_mat_self(isnan(big_mat_self))=0;
+        
+        c = xcorr2(small_mat,big_mat) / length(small_mat(:)); %normalize to max of one - think the biggest value that can have
+            %is that of the size of the small_mat domain
+        c_self = xcorr2(small_mat,big_mat_self) / length(small_mat(:));    
+        
+        c=c./maxALL(c_self);
+        
+        %find the point of maximum correlation
+        [m,imax]=maxALL(c);
+        max_corr(ibx,iby)=m;
+        
+%        m = prctile(c(:),90);
+
+        if m<0.4
+            reject=1;
+        else
+            reject=0;
+        end
+        
+        %in case all the correlations are the same we cannot determine any
+        %motion   
+        
+%       i0=find(c==0);
+%       max_corr2 = c(:);
+%        max_corr2(i0)=[];
+%        p75 = prctile(max_corr2,75);
+%        if m<p
+        
+        
+        if length(unique(c))==1 | reject==1  %Have a minimum correlation to be more sure of matching
+            offset_x(ibx,iby) = NaN;
+            offset_y(ibx,iby) = NaN;
+        else
+            %define co-ordinates with centre of c matrix as x=0,y=0
+            cmid_x=(size(c,1)+1)/2;
+            cmid_y=(size(c,2)+1)/2;
+            x=[1:size(c,1)]-cmid_x;
+            y=[1:size(c,2)]-cmid_y;
+            [X,Y]=meshgrid(x,y);
+            X = permute(X,[2 1]);
+            Y = permute(Y,[2 1]);            
+            
+            im=find(c>=m*0.999);
+%            [ix,iy]=ind2sub(size(c),im);
+
+            mean_x = mean(X(im));
+            mean_y = mean(Y(im));
+            
+            % Don't allow offsets that are large in comparison to the size
+            % of the patch, as they are likely to be inaccurate.
+            if ( abs(mean_x) > N1/2 ) & use_big_domain_for_comparison==0
+                offset_x(ibx,iby) = NaN;
+            else
+                offset_x(ibx,iby) = mean_x;   %.*sign(dx2);
+            end
+            if ( abs(mean_y) > N2/2 ) & use_big_domain_for_comparison==0
+                offset_y(ibx,iby) = NaN;
+            else
+                offset_y(ibx,iby) = mean_y;  %.*sign(dy2);
+            end
+            
+        end
+        
+  
+        
+    end
+end
+
+inan = find( isnan(offset_x)==1 | isnan(offset_y)==1 );
+%x_grid(inan) = NaN;
+%y_grid(inan) = NaN;
+
+
+
+
+
+
+

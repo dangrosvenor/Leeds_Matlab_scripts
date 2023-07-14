@@ -1,0 +1,18 @@
+tag = 'highSZA';
+filename = ['saved_vars_for_hig
+
+filedir_savevars = '/home/disk/eos1/d.grosvenor/';
+filename_savevars = [filedir_savevars 'saved
+
+ivar=1; clear vars_to_save
+
+
+vars_to_save{ivar}='xdat'; ivar=ivar+1;
+
+vars_to_save{ivar}='ydat'; ivar=ivar+1;
+vars_to_save{ivar}='errordatU'; ivar=ivar+1;
+vars_to_save{ivar}='errordatL'; ivar=ivar+1;
+vars_to_save{ivar}='thresh_str'; ivar=ivar+1;
+
+%run the save script.
+save_vars_mat

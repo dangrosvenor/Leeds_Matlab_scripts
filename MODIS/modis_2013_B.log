@@ -1,0 +1,26 @@
+No window system found.  Java option 'MWT' ignored.
+Warning: No window system found.  Java option 'MWT' ignored.
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2012 The MathWorks, Inc.
+                    R2012b (8.0.0.783) 64-bit (glnxa64)
+                              August 22, 2012
+
+[Warning: Duplicate directory name: /home/disk/eos1/d.grosvenor/matlab] 
+[Warning: Name is nonexistent or not a directory:
+/usr/local/MATLAB/R2012b/toolbox/mexcdf/netcdf_toolbox] 
+[Warning: Name is nonexistent or not a directory:
+/usr/local/MATLAB/R2012b/toolbox/mexcdf/netcdf_toolbox/netcdf] 
+[Warning: Name is nonexistent or not a directory:
+/usr/local/MATLAB/R2012b/toolbox/mexcdf/netcdf_toolbox/netcdf/ncsource] 
+[Warning: Name is nonexistent or not a directory:
+/usr/local/MATLAB/R2012b/toolbox/mexcdf/netcdf_toolbox/netcdf/nctype] 
+[Warning: Name is nonexistent or not a directory:
+/usr/local/MATLAB/R2012b/toolbox/mexcdf/netcdf_toolbox/netcdf/ncutility] 
+ 
+To get started, type one of these: helpwin, helpdesk, or demo.
+For product information, visit www.mathworks.com.
+ 
+{Undefined function or variable 'MODIS_multi_DAY_processL3L2_2013_B'.
+} 
+

@@ -1,0 +1,22 @@
+function Z = PDFdistZ(x,f,dx,p)
+% function Z = PDFdistZ(x,f,p)
+% returns the value x=Z value for which integral( P(x) )[0 Z] = p
+
+%cumulative sum of frequencies
+pdf = (f.*dx);
+
+
+cum = cumsum(f.*dx);
+
+%N=100;
+%Xbins=make_PDF_bins(cum,N);
+%X = 0.5 * (Xbins(1:end-1) + Xbins(2:end));
+
+%qh = ndHistc_run([cum], Xbins);
+
+Z = interp1(cum,x,p); %can't do this since the cum values are not unique
+
+%Use this c script that I wron
+Z = lininterp1f_multidim(cum,x',p,9e99)
+
+

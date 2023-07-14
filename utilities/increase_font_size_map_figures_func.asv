@@ -1,0 +1,41 @@
+function [pos_cb] = increase_font_size_map_figures_func(hax,ref_size,Hc1s)
+%changes the font size for the labels around a map and moves the colorbar
+%to compensate
+%ref_size = 22; %for single panels
+%ref_size = 16; %for 3x2 sub-plots
+
+%change the fontsize of the colorbar (and title)
+set(hax,'fontsize',ref_size);
+
+%change the size of the font for the lat lon labels.
+h = findobj(hax,'Type','text');
+set(h,'Fontsize',ref_size-4);
+
+if nargin<3
+    %get the handle to the colorbar
+    Hc1s = find_peer_colorbars_of_an_axes(hax);
+
+
+    if length(Hc1s)>0
+        pos2 = get(Hc1s,'position'); %position of colorbar
+        pos = get(hax,'position'); %position of main axis
+        dY = pos(4)*0.15; %fraction of the size of the main y-axis to move colorbar down by
+        pos_cb = [pos2(1) pos(2)-dY pos2(3) pos2(4)];
+        
+    else
+        disp('No colorbar!');
+    end
+
+else
+
+pos_cb = get(Hcb1,'position');
+
+end
+
+set(Hc1s,'position',pos_cb);
+set(Hc1s,'xaxislocation','bottom');
+        
+
+fname = get(gcf,'FileName');
+fname2 = [fname(1:end-4) '_LARGER_FONT'];
+%saveas_ps_fig_emf(gcf,fname2,'',0,1);

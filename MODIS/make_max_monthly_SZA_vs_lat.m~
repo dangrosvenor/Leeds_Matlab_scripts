@@ -1,0 +1,21 @@
+set_month = {1,2,3,4,5,6,7,8,9,10,11,12};
+
+
+clear max_SZA_vs_lat
+for im=1:length(set_month)
+                month_modis = set_month{im};                                
+                              
+                %Pick out the correct day nunbers of the month in
+                %question
+                [days_required_for_mean,time_mean_str] = days_of_month(month_modis);
+
+                clear idays
+                for i=1:length(days_required_for_mean)
+                    idays(i) = find(daynum_timeseries3_MODIS==days_required_for_mean(i);                
+                end
+                
+                max_SZA_vs_lat_temp = max(Solar_Zenith_Maximum.timeseries3(:,:,idays),[],3); %Max over the month
+                max_SZA_vs_lat(:,im) = max(max_SZA_vs_lat_temp(:,:),[],2); %Max over lon
+                
+                
+end

@@ -1,0 +1,40 @@
+i_aws=0;
+
+
+clear dire rundir
+
+if i_aws==1
+    flt_graphs={'Temp','Pressure','Wind','Wind dir'};  %remove the specifier of flt_graphs in timeseries_dan.m
+%    flt_graphs={'Pressure'};  %remove the specifier of flt_graphs in timeseries_dan.m
+    length_i = length(flt_graphs);
+else
+    dire(1).dir='Y:/WRF/';
+    rundir(1).dir='ant_jan06_ecmwf_Nov08';
+    rundir(1).dir='ant_jan06_sfRUC_v3';
+    rundir(1).dir='ecmwf_ml_0.5';
+%    rundir(1).dir='ecmwf_ml_0.5_nudging';    
+    %rundir(1).dir='ncepR2_3dom_nudging';
+    %rundir(1).dir='ncepR2_3dom_nudging';
+%    dire='E:/wrfruns/'; rundir(1).dir='ncepR2_3dom_nudging';
+%    dire='E:/wrfruns/'; rundir(1).dir='ecmwf_ml_0.5_wps_snow';
+    cd([dire(1).dir rundir(1).dir]);
+    files = dir('met_em*d03*01-05*');
+    length_i = length(files);
+end
+
+
+
+for ifile=1:length_i
+        
+    if i_aws==0
+        imanual_select_load_case=1; %need to reset this every time
+        fileWRF(1).file=files(ifile).name; 
+        load_WRF_vars;
+    else
+        flt_graph = flt_graphs{ifile};    
+    end
+
+%            waterVapourMay2005;
+            multisaveplot;  %set idir=1:7 to run through the AWS stations
+
+end

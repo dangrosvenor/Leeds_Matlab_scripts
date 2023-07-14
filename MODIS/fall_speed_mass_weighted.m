@@ -1,0 +1,175 @@
+function [V,lambda,re] = fall_speed_mass_weighted(qR,P,nR,rhoa_in)
+%qR in kg/kg
+%P in mm/hr
+
+%constants for rain gamma dist - note that setting alpha=0 gives the
+%Marshall-Palmer size dist n(D) = na * exp(-lambda*D)
+
+dist = 'gamma';
+%dist = 'Marshall';  %If select this then we don't use the fall speed
+%relation as calculate lambda from the rain rate (V(D) must be implicit
+%somewhere).
+  %This may be preferable for now since using the gamma method gives some
+  %reliance on the initial V_fall chosen for the iteration.
+
+gamma_case = 'LEM';
+gamma_case = 'Abel_Boutle_2012';
+%gamma_case = 'Marshall Palmer like';
+gamma_case = 'UM CASIM';
+
+fall_speed_params = 'LEM default';
+%fall_speed_params = '2';
+%fall_speed_params = '3';
+%fall_speed_params = '4';
+%fall_speed_params = 'Comstock 2004';
+%fall_speed_params = 'Test';
+%fall_speed_params = 'UM 3D mphys (UMDP)';
+fall_speed_params = 'UM CASIM';
+
+c = 523.6;  %c = pi/6 * rhoW
+d = 3;
+rhoa = 1;
+
+switch dist
+    case 'gamma'  %as for LEM
+        
+        switch gamma_case
+            case 'LEM'
+                alpha = 2.5;
+                na = 1.1e15;
+                nb = 0;  %This makes n(D) of the form na * D^alpha * exp(-lambda*D)
+                
+            case 'Abel_Boutle_2012'
+                alpha = 0;
+                na = 0.22;
+                nb = 2.2;  % N0 = na * lambda^nb. The LEM dist is desgined with this in mind, but nb=0 making na=N0
+                  %so the same calculation of lambda below still applies
+                  %Presumably the same fall speed parameters still apply?
+                  %He used relations from Beard (1972, JAS)
+                  
+            case 'Marshall Palmer like'
+                alpha = 0;  %This gives an exponential distribution
+                na =8e6;
+                na = 1e9;
+                nb = 0;  
+                
+            case 'UM CASIM'
+                alpha = 2.5;
+                na=-999;
+                nb=-999;
+                c = pi*997/6;
+                d = 3;
+                
+                rhoa = rhoa_in;
+               
+
+
+        end
+        
+        switch gamma_case
+            case 'UM CASIM'
+                [lambda,n0] = lambda_gamma_size_dist(qR,alpha,na,nb,c,d,rhoa,nR);
+            otherwise
+                lambda = lambda_gamma_size_dist(qR,alpha,na,nb,c,d,rhoa);
+        end
+        
+        rhoa0 = rhoa;
+        rhoa0=1.2;
+        %constants for fall speed relationship
+
+        
+
+        
+        switch fall_speed_params            
+            %V(D) relationship is of the form
+            %   V(D) = a*D^b*exp(-f*D)*(rhoa0/rhoa)^g
+            
+            case 'LEM default'
+                a=362;
+                b=0.65;
+                f=0;
+                g=0.5;
+
+            case '2'
+
+                a=4854;
+                b=1;
+                f=195;
+                g=0.5
+
+            case '3'
+                a=842;
+                b=0.8;
+                f=0;
+                g=0.5;
+
+            case '4'
+                a=836;
+                b=0.8;
+                f=0;
+                g=0.286;
+                
+            case 'Comstock 2004'
+                a = 2.2e5 / 2.^1.4;
+                b = 1.4;
+                f=0;
+                g=0;
+                
+            case 'Test'
+                a=362*0.75;
+                b=0.65;
+                f=0;
+                g=0.5;   
+                
+            case 'UM 3D mphys (UMDP)'
+                C1 = 4854.1;
+                d1 = 1.0;
+                h1 = 195;
+                C2 = -446.009;
+                d2 = 0.782127;
+                h2 = 4085.35;
+                g = 0.5;
+                
+            case 'UM CASIM'
+                 a=130;
+                 b=0.5;
+                 f=0;
+                 g=0.5;
+                
+                
+                
+        end      
+        
+        switch fall_speed_params
+            case 'UM 3D mphys (UMDP)'
+                V = 1./qR .* c*na.*lambda.^nb.* (rhoa0./rhoa).^g .* ( C1./(lambda+h1).^(d+alpha+d1+1).*gamma(d+alpha+d1+1) + C2./(lambda+h2).^(d+alpha+d2+1).*gamma(d+alpha+d2+1) ); 
+            case 'UM CASIM'
+                V   = a .* lambda.^(-b).*(rhoa./rhoa0).^g .*gamma(1. + alpha + d + b)./gamma(1. + alpha + d);
+
+            otherwise
+                V = a * gamma(1 + alpha + d + b) .* lambda.^(1+d+alpha) ./ ( gamma(1+d+alpha) .* (lambda + f).^(1+d+b+alpha) ) * (rhoa0./rhoa).^g ;
+                %V = 1./qR .* c*na*a ./ (lambda+f).^(1+d+alpha+b) .* gamma(1+d+alpha+b) .* (rhoa0./rhoa).^0.5;
+        end
+
+
+    case 'Marshall'
+        alpha = 0;
+        na = 8e6;
+        lambda = 1e3 * 4.1 * P.^(-0.21); %Using the relationship in Pruppacher and Klett (using P in mm/hr). in metres^-4
+        V=P/3600.*lambda.^4./(pi/6*1e3*na*gamma(4)); %which follows from the MP distribution
+end
+
+
+
+
+% effective radius for gamma dist
+re = 1./(2.*lambda) .* gamma(alpha+4) ./ gamma(alpha+3);  %metres
+
+
+
+
+
+
+
+
+

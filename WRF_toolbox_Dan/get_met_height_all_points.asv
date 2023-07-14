@@ -1,0 +1,7 @@
+ilat=1:slat2d.var(:);
+ilon=lon2d.var(:);
+for iloc=1:length(ilat)
+    height(iloc)=get_met_height(nc,ilat,ilon,iloc);
+end
+
+

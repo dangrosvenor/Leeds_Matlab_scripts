@@ -1,0 +1,788 @@
+% plot_global_maps  (use to shorcut to it)
+icf_low_only=0; %flag to say whether we want to screen the CF for LWP using only low clouds (pressure
+%screening), or for all clouds
+i_ice_screen=1; %flag to screen for the presence of any ice - if a layer has ice then the cloud 
+%fraction in that layer is ignored and not used for determining whether we have a CF>0.8
+%in a column, which is used for determining whether to include the LWP value for that column
+
+min_cf=0.01;
+
+low_liq_thresh = 0.05e-3; %kg/kg
+low_liq_thresh = -0.05e-3; %kg/kg
+%low_liq_thresh = 0.2e-3; %kg/kg
+low_cf_thresh = [0.01 1]; %will be excluding isolated clouds for low CF values
+low_cf_thresh = [0.8 1.01]; %
+%low_cf_thresh = [0.0 0.8]; %
+thresh_Nlevs = 0; %minimum number of vertical model levels required for a vertically
+thresh_P = [750 1080]*1e2;
+thresh_Nd = 5; %per cc
+
+if length(gcm_idays)>1
+    inotkeep=1;
+else
+    inotkeep=0;
+end
+
+
+%---- info on the cloud layer identification -------
+%Uses gcm_pfull2 to identify cloud layers (via iCTP & iCBP). This is screened for very low
+%Nd, lwc and also for ice (if ice screening is on). So, Nd, CTT, etc for
+%the layers will not be reported for ice clouds. Takes the uppermost layer.
+
+%  -----------  Variables produced  -------------------------------------------------------
+% for the layer (e.g. as for gcm_Nd_meanlayer, gcm_CTT_layer) - the uppermost continuous
+% layer is identified
+
+
+%gcm_Nd_maxALL                   - max Nd in column (old screening)
+%gcm_Nd_maxALL_ice_screen        - max Nd in column after old screening for presence of ice
+%gcm_CF_max_screened             - max CF in column
+%                                  Could be ice or pressure screened depending on the flags set.
+%gcm_CF_mean_screened            - As above, but the mean CF in column
+%gcm_lwp_minthreshCF             - Grid-box mean LWP for columns that have
+%                                  at least low_cf_thresh(1) in them
+%gcm_lwc_minthreshCF             - 3D field of lwc for columns with at least low_cf_thresh(1) in them
+%gcm_lwc_minthreshCF2            - 3D field of lwc for columns with at least low_cf_thresh(1) in them
+%                                  and also have a max column CF < low_cf_thresh(2).
+%                                  gcm_lwc_minthreshCF2 is used to calculate the i_remove_lwc indices
+%                                  where lwc values are removed if < low_liq_thresh
+%                                ** Perhaps this is unnecesary since if are screening for CF anyway then it doesn't
+%                                matter if the LWC is inflated by a low CF when calculating an LWC field for
+%                                screening? Think that it is done to avoid
+%                                divide by zero problems when calculating the in-cloud mean lwc
+%gcm_pfull_ice_screen            - Pressure field after (new) screening for threshold CF (icf_bounds indices),
+%                                  ice (i_ice), v.low Nd (iNd) and v.low lwc (i_remove_lwc)
+%gcm_Nd_ice_screen               - As above, but for Nd (based on 1e-6*gcm_drop. gcm_drop is the CLOUD-MEAN value)
+%gcm_drop_ice_screen             - 3D 1e-6*gcm_drop screened for CF thresholds only
+%gcm_Nd_maxALL_ice_screen        - squeeze_keep1(max(gcm_drop_ice_screen,[],2));
+%gcm_Nd_maxALL                   - squeeze_keep1(max(gcm_drop2,[],2));
+        % i_low_liq2 = find(gcm_liq2<low_liq_thresh); %gcm_liq2 is been screened for pressure,
+        %                                              Nd and cloud fraction (at each height)
+        % if i_ice_screen==1
+        %     gcm_pfull2 = gcm_pfull_ice_screen;  %otherwise gcm_pfull2 is as gcm_liq2
+        % end
+        % gcm_pfull2(i_low_liq2)=NaN;
+        % gcm_drop2(i_low_liq2)=NaN;
+        % gcm_liq2(i_low_liq2)=NaN;
+% below are the probably most useful ones utilised in plot_global_maps
+%gcm_drop2                       - = 1e-6 * gcm_drop; %cm3 - already done the /kg to /m3 conversion
+%gcm_Nd_maxliq                   - Nd at max LWC over all levels (after screening, e.g. CF screening)
+%gcm_Nd_meanlayer                - mean Nd over the the identified continuous liquid cloud layer
+%gcm_Nd_max_lwc_cont             - Nd at the location of the max LWC within the continuous cloud layer
+%gcm_Nd_maxlayer                      - max Nd in the continuous layer
+%gcm_LWC_max                     - max LWC in the continuous layer
+%gcm_Nd_max_screen               - max Nd in all layers (after screening for whatever screening was requested from the switches
+%gcm_CF_maxliq                   - CF at height of max LWC (condsidering all model levels)
+
+
+% Screening indices list - used for removal of undesired points
+% icf_bounds = find(~ (gcm_cf>low_cf_thresh(1) & gcm_cf<=low_cf_thresh(2)) );
+%  - so CF screened from originial gcm_cf field
+% i_ice = find(gcm_iwc_av>0.0001e-3);
+%  - gcm_iwc_av is straight from the read routine - grid-box average 3D iwc (kg/kg)
+% iNd = find( 1e-6*gcm_drop < thresh_Nd );
+%  - again using field straight from the model read (in per m3)
+% i_remove_lwc = find(gcm_lwc_minthreshCF2<low_liq_thresh);
+%  - more complicated as using the lwc as described above
+
+
+
+%calculate the overall LWP,RWP,IWP (kg/m2)
+
+if exist('h_half')
+    dz = - (h_half(:,2:end,:,:)-h_half(:,1:end-1,:,:) );
+else %use the hydrostatic equation to calculate dz
+    dp = - ( gcm_phalf(:,2:end,:,:) - gcm_phalf(:,1:end-1,:,:) );
+    dz = -dp./(gcm_rho.*9.81);
+end
+
+
+
+
+% if exist('h_half')
+%     dz = - (h_half(:,2:end,:,:)-h_half(:,1:end-1,:,:) );
+%     [rwp,Nmean] =  meanNoNan( gcm_rwc_av2.*dz , 2 , 'mean',0);
+%     rwp = squeeze_keep1( rwp.*Nmean ,inotkeep);
+% end
+
+if exist('gcm_rain3D') & prod(size(gcm_rain3D))>0 
+%integrate over pressure rather than height ( using dz =
+%-dp/(rho*g)) - only changes the answer by a few hundreths
+% Saves having to calculate the height field, which is a slow process
+    gcm_rwc_av2 = gcm_rain3D;
+    [rwp,Nmean] =  meanNoNan( gcm_rwc_av2.*dz , 2 , 'mean',0);
+    rwp = squeeze_keep1( rwp.*Nmean ,inotkeep);
+end
+
+
+
+
+%first calculate the low mid and high CFs (no screening for cloud
+%thickness) based on ISCCP definitions
+%low = CTP >= 680, mid = 680 > CTP >= 440, high = 440 > CTP >= 50
+
+% ---- Low cloud -----
+isccp = find( ~ (gcm_pfull >= 680e2) );
+gcm_cf2 = gcm_cf;
+gcm_cf2(isccp) = NaN; %remove those that don't satisfy the criteria
+%find the max over height
+cf_isccp_low = squeeze_keep1(max(gcm_cf2,[],2),inotkeep);
+
+%Should really do random overlap for layers (that are separated by clear air).
+%Terry picks the two highest CF layers and then applies CF =
+%CF1+CF2-CF1*CF2 (if they are separated by clear air).
+
+
+%if exist('h_half')
+    %IWP
+    gcm_iwc_av2 = gcm_iwc_av;
+    gcm_iwc_av2(isccp) = NaN;
+    [iwp_isccp_low,Nmean] =  meanNoNan( gcm_iwc_av2.*dz , 2 , 'mean',0);
+    iwp_isccp_low = squeeze_keep1( iwp_isccp_low.*Nmean ,inotkeep);
+%end
+%LWP
+gcm_lwc_av2 = gcm_lwc_av;
+gcm_lwc_av2(isccp) = NaN;
+%if exist('h_half')
+    [lwp_isccp_low,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);  
+    lwp_isccp_low = squeeze_keep1( lwp_isccp_low.*Nmean ,inotkeep);       
+%end
+
+% Before and after mphys LWPs
+if ilwcAPBP==1
+    gcm_lwc_av2 = gcm_lwcBP_av;
+    gcm_lwc_av2(isccp) = NaN;
+    [lwpBP_isccp_low,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwpBP_isccp_low = squeeze_keep1( lwpBP_isccp_low.*Nmean ,inotkeep);
+    
+    gcm_lwc_av2 = gcm_lwcAP_av;
+    gcm_lwc_av2(isccp) = NaN;
+    [lwpAP_isccp_low,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwpAP_isccp_low = squeeze_keep1( lwpAP_isccp_low.*Nmean ,inotkeep);
+    
+    gcm_lwc_av2 = gcm_lwcSEDTEN_av;
+    gcm_lwc_av2(isccp) = NaN;
+    [lwpSEDTEN_isccp_low,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwpSEDTEN_isccp_low = squeeze_keep1( lwpSEDTEN_isccp_low.*Nmean ,inotkeep);
+    
+    gcm_lwc_av2 = gcm_lwcEVAPTEN_av;
+    gcm_lwc_av2(isccp) = NaN;
+    [lwpEVAPTEN_isccp_low,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwpEVAPTEN_isccp_low = squeeze_keep1( lwpEVAPTEN_isccp_low.*Nmean ,inotkeep);
+end
+
+if exist('gcm_rain3D') & prod(size(gcm_rain3D))>0
+%RWP
+gcm_rwc_av2 = gcm_rain3D;
+gcm_rwc_av2(isccp) = NaN;
+%if exist('h_half')
+    [rwp_isccp_low,Nmean] =  meanNoNan( gcm_rwc_av2.*dz , 2 , 'mean',0);
+    rwp_isccp_low = squeeze_keep1( rwp_isccp_low.*Nmean ,inotkeep);
+%end
+end
+
+% ---- Mid cloud -----
+isccp = find( ~ (gcm_pfull < 680e2 & gcm_pfull >= 440e2) );
+gcm_cf2 = gcm_cf;
+gcm_cf2(isccp) = NaN; %remove those that don't satisfy the criteria
+cf_isccp_mid = squeeze_keep1(max(gcm_cf2,[],2),inotkeep);
+%IWP
+gcm_iwc_av2 = gcm_iwc_av;
+gcm_iwc_av2(isccp) = NaN;
+%if exist('h_half')
+    [iwp_isccp_mid,Nmean] =  meanNoNan( gcm_iwc_av2.*dz , 2 , 'mean',0);    
+    iwp_isccp_mid = squeeze_keep1( iwp_isccp_mid.*Nmean ,inotkeep);
+%end
+%LWP
+gcm_lwc_av2 = gcm_lwc_av;
+gcm_lwc_av2(isccp) = NaN;
+%if exist('h_half')
+    [lwp_isccp_mid,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwp_isccp_mid = squeeze_keep1( lwp_isccp_mid.*Nmean ,inotkeep);
+%end
+
+% Before and after mphys LWPs
+if ilwcAPBP==1
+    gcm_lwc_av2 = gcm_lwcBP_av;
+    gcm_lwc_av2(isccp) = NaN;
+    [lwpBP_isccp_mid,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwpBP_isccp_mid = squeeze_keep1( lwpBP_isccp_mid.*Nmean ,inotkeep);
+    
+    gcm_lwc_av2 = gcm_lwcAP_av;
+    gcm_lwc_av2(isccp) = NaN;
+    [lwpAP_isccp_mid,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwpAP_isccp_mid = squeeze_keep1( lwpAP_isccp_mid.*Nmean ,inotkeep);
+    
+    gcm_lwc_av2 = gcm_lwcSEDTEN_av;
+    gcm_lwc_av2(isccp) = NaN;
+    [lwpSEDTEN_isccp_mid,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwpSEDTEN_isccp_mid = squeeze_keep1( lwpSEDTEN_isccp_mid.*Nmean ,inotkeep);
+    
+    gcm_lwc_av2 = gcm_lwcEVAPTEN_av;
+    gcm_lwc_av2(isccp) = NaN;
+    [lwpEVAPTEN_isccp_mid,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwpEVAPTEN_isccp_mid = squeeze_keep1( lwpEVAPTEN_isccp_mid.*Nmean ,inotkeep);
+end
+
+if exist('gcm_rain3D') & prod(size(gcm_rain3D))>0
+%RWP
+gcm_rwc_av2 = gcm_rain3D;
+gcm_rwc_av2(isccp) = NaN;
+%if exist('h_half')
+    [rwp_isccp_mid,Nmean] =  meanNoNan( gcm_rwc_av2.*dz , 2 , 'mean',0);
+    rwp_isccp_mid = squeeze_keep1( rwp_isccp_mid.*Nmean ,inotkeep);
+%end
+end
+
+% ---- High cloud -----
+isccp = find( ~ (gcm_pfull < 440e2 & gcm_pfull >= 50e2) );
+gcm_cf2 = gcm_cf;
+gcm_cf2(isccp) = NaN; %remove those that don't satisfy the criteria
+cf_isccp_high = squeeze_keep1(max(gcm_cf2,[],2),inotkeep);
+%IWP
+gcm_iwc_av2 = gcm_iwc_av;
+gcm_iwc_av2(isccp) = NaN;
+%if exist('h_half')
+    [iwp_isccp_high,Nmean] =  meanNoNan( gcm_iwc_av2.*dz , 2 , 'mean',0);
+    iwp_isccp_high = squeeze_keep1( iwp_isccp_high.*Nmean ,inotkeep);
+%end
+%LWP
+gcm_lwc_av2 = gcm_lwc_av;
+gcm_lwc_av2(isccp) = NaN;
+%if exist('h_half')
+    [lwp_isccp_high,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwp_isccp_high = squeeze_keep1(lwp_isccp_high.*Nmean ,inotkeep);
+%end
+
+% Before and after mphys LWPs
+if ilwcAPBP==1
+    gcm_lwc_av2 = gcm_lwcBP_av;
+    gcm_lwc_av2(isccp) = NaN;
+    [lwpBP_isccp_high,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwpBP_isccp_high = squeeze_keep1( lwpBP_isccp_high.*Nmean ,inotkeep);
+    
+    gcm_lwc_av2 = gcm_lwcAP_av;
+    gcm_lwc_av2(isccp) = NaN;
+    [lwpAP_isccp_high,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwpAP_isccp_high = squeeze_keep1( lwpAP_isccp_high.*Nmean ,inotkeep);
+    
+    gcm_lwc_av2 = gcm_lwcSEDTEN_av;
+    gcm_lwc_av2(isccp) = NaN;
+    [lwpSEDTEN_isccp_high,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwpSEDTEN_isccp_high = squeeze_keep1( lwpSEDTEN_isccp_high.*Nmean ,inotkeep);
+    
+    gcm_lwc_av2 = gcm_lwcEVAPTEN_av;
+    gcm_lwc_av2(isccp) = NaN;
+    [lwpEVAPTEN_isccp_high,Nmean] =  meanNoNan( gcm_lwc_av2.*dz , 2 , 'mean',0);
+    lwpEVAPTEN_isccp_high = squeeze_keep1( lwpEVAPTEN_isccp_high.*Nmean ,inotkeep);
+end
+
+if exist('gcm_rain3D') & prod(size(gcm_rain3D))>0
+%RWP
+gcm_rwc_av2 = gcm_rain3D;
+gcm_rwc_av2(isccp) = NaN;
+%if exist('h_half')
+    [rwp_isccp_high,Nmean] =  meanNoNan( gcm_rwc_av2.*dz , 2 , 'mean',0);
+    rwp_isccp_high = squeeze_keep1(rwp_isccp_high.*Nmean ,inotkeep);
+%end
+else
+    gcm_rain3D = [];
+end
+
+
+%convert and store some of the fields read from the model
+gcm_drop2 = 1e-6 * gcm_drop_read; %cm3 - already done the /kg to /m3 conversion
+gcm_drop = gcm_drop_read; %cm3 - already done the /kg to /m3 conversion
+
+%gcm_drop2 = 1e-6 * gcm_awnc; %cm3 - already done the /kg to /m3 conversion
+%gcm_drop = gcm_awnc; %doesn't seem to make any difference to the average, although the max and other aspects are
+%different?
+
+%max over the height dimension, no screening for CF
+gcm_drop3 = gcm_drop2;
+gcm_REFFL3 = gcm_REFFL;
+icf_min = find(gcm_cf<=min_cf);
+gcm_drop3(icf_min) = NaN;
+gcm_REFFL3(icf_min) = NaN;
+gcm_REFFL_max_noCF = squeeze(max(gcm_REFFL3,[],2));
+gcm_Nd_max_noCF = squeeze(max(gcm_drop3,[],2)); %max Nd and Re with no CF screening, except to remove the very low
+%and zero CFs
+%This is done since for very low CFs can get very high REL values in CAM.
+%Also, REL seems to default at 10um even when there is no cloud, so this
+%will remove the non-cloud values too.
+
+
+
+gcm_liq2 = gcm_liq;
+gcm_pfull2 = gcm_pfull;
+gcm_temp2 = gcm_temp;
+gcm_REFFL2 = gcm_REFFL;
+gcm_temp_half = NaN*ones(size(gcm_phalf));
+gcm_temp_half(:,2:end-1,:,:) = 0.5*( gcm_temp(:,1:end-1,:,:) + gcm_temp(:,2:end,:,:) );
+%gcm_temp_half(:,1,:,:) = gcm_t2; %don't have T2 for AM3 in output - but not
+%important as want cloud top and so will never use the surface/T2
+%temperature for a CTT. Also prob won't need the uppermost temperature
+
+gcm_CF_screened = gcm_cf; %gcm_cf is from the model read
+gcm_cf2 = gcm_cf;
+
+
+
+%have divided by cloud fractions to get in-cloud averages - remove values when
+%have low CF, as will be inflated by zero cloud-fractions. So we insure a
+%minimum CF here (=min_cf)
+ii=find(low_cf_thresh<min_cf);
+low_cf_thresh(ii)=min_cf;
+
+%indices for points that DO NOT have the desired cloud fraction
+icf_bounds = find(~ (gcm_cf>low_cf_thresh(1) & gcm_cf<=low_cf_thresh(2)) );
+
+%points to remove that are out of our pressure range
+ip = find( ~ ( gcm_pfull>=thresh_P(1) & gcm_pfull<thresh_P(2) )  );
+
+iNd = find( 1e-6*gcm_drop < thresh_Nd ); %to remove for a few low Nd regions with reasonable LWC
+%e.g. up to 0.05 g/kg, but with only 2 per cc droplets - likely rain I
+%guess, or evaporating old cloud. Likely to have a low tau anyway, so MODIS
+%likely wouldn't detect them
+
+%combination of the two sets of indices to be removed with no repetitions
+%(can use union or unique)
+iremove = icf_bounds; %just CF screening
+%iremove = union(icf_bounds,[iNd]);
+%iremove = unique([icf_bounds; ip; iNd]);
+
+%icf_bounds indices are points that are outside of our cloud fraction
+%condition. iNd is for when Nd is lower than thresh_Nd
+
+
+%here we screen for pressure, Nd and cloud fraction (at each height)
+gcm_drop2(iremove)=NaN;
+gcm_liq2(iremove)=NaN;
+gcm_cf2(iremove)=NaN;
+gcm_pfull2(iremove)=NaN;
+gcm_temp2(iremove)=NaN;
+gcm_REFFL2(iremove)=NaN;
+%gcm_temp_half(iremove)=NaN; %don't want to do this as is 49 levels - and is
+%not necessary as are picking out the required indices for CTT
+
+if icf_low_only==1
+    gcm_CF_screened(ip)=NaN; %set cloud fraction to NaN when outside of required pressure range
+end
+
+if i_ice_screen==1
+    i_ice = find(gcm_iwc_av>0.0001e-3);
+    gcm_CF_screened(i_ice)=NaN; %set cloud fraction to NaN for screening
+else
+    switch gcm_str
+        case {'AM3','CAM5'}
+            gcm_str = [gcm_str '_with_ice'];
+    end
+end
+
+%i_remove_CF = find(gcm_liq<low_liq_thresh);
+%gcm_CF_screened(i_remove_CF)=0; %set cloud fraction to zero when there is little LWC
+
+%when have v.low cf will assume LWC=0 and ignore CF (or set to zero)
+i_remove_CF = find(gcm_cf<min_cf); %remove CF when CF is near zero as are dividing by 0
+gcm_CF_screened(i_remove_CF)=0; %set cloud fraction to zero when there is little CF - perhaps not necessary
+%since CF is already low!! - Although want to remove even low CFs when the
+%LWC is low - am assuming that don't know LWC when CF<0.01 - are replacing
+%e.g. CF=0.009 with CF=0 since the cloud is likely undetectable
+%do we need to consider the effect of MODIS pixel size?
+
+%i_remove_CF = find(gcm_drop2<thresh_Nd);
+%gcm_CF_screened(i_remove_CF)=0; %set cloud fraction to zero when there are few droplets
+
+%so at this stage gcm_CF_screened is screened for presence of ice at each
+%height and for cloud pressure (if flags are set), as well as removing when cf<min_cf
+
+gcm_CF_max_screened = squeeze_keep1(max(gcm_CF_screened,[],2),inotkeep);
+gcm_CF_mean_screened = squeeze_keep1(meanNoNan(gcm_CF_screened,2),inotkeep);
+
+%if length(size(gcm_CF_max_screened))==2
+%    gcm_CF_max_screened = shiftdim(gcm_CF_max_screened,-1);
+%    gcm_CF_mean_screened = shiftdim(gcm_CF_mean_screened,-1);
+%end
+
+
+%now we have removed the height dimension - use to screen for lwp
+%use LWP only when we have at least thresh CF somewhere in the column
+iadd_lwp = find(gcm_CF_max_screened>=low_cf_thresh(1));
+%iadd_lwp are now the indices for (time,lat,lon) fields for columns
+%contained a CF of at least low_cf_thresh(1)
+
+%start with an array of NaNs
+gcm_lwp_minthreshCF = NaN*ones(size(gcm_lwp));
+%add the desired ones
+gcm_lwp_minthreshCF(iadd_lwp)=gcm_lwp(iadd_lwp);
+%this will now be the cell average LWP, rather than the cloud-average
+%is probably best to compare this to the MODIS cell average value
+
+%here are just taking columns of LWC if the min CF in that column is
+%below low_cf_thresh(1) - not sure why in the end!? - i.e. don't think is
+%used excepth for screening
+
+%start with all NaNs
+gcm_lwc_minthreshCF = NaN*ones(size(gcm_liq));
+
+% *** find the 4D indices of the desired columns ***
+%first find the time,lat,lon indices of all the columns we want
+[T,I,J] = ind2sub(size(gcm_CF_max_screened),iadd_lwp);
+%now create the full K dimension for all desired times/locations of columns
+K=repmat([1:size(gcm_liq,2)],[length(I) 1]); K=K';
+%replicate all of the T,I and J indices over height dimension
+T2=repmat(T,[1 size(gcm_liq,2)]); T2=T2';
+I2=repmat(I,[1 size(gcm_liq,2)]); I2=I2';
+J2=repmat(J,[1 size(gcm_liq,2)]); J2=J2';
+%convert back to linear indices for the 4D array
+lwc_inds = sub2ind(size(gcm_liq),T2(:),K(:),I2(:),J2(:));
+
+%add in the desired lwc values
+gcm_lwc_minthreshCF(lwc_inds)=gcm_liq_av(lwc_inds); %
+%Is used in plot_global_maps to plot the max LWC for columns with at least
+%low_cf_thresh(1). And also in make_indices_for_continuous_k for an lwc
+%array containing only continuous cloud layers in desired columns
+%NOTE - using the grid-box average LWC here
+
+gcm_lwc_minthreshCF2=gcm_lwc_minthreshCF;
+%remove lwc if we are out of the CF criteria
+gcm_lwc_minthreshCF2(icf_bounds)=NaN;
+
+i_remove_lwc = find(gcm_lwc_minthreshCF2<low_liq_thresh); %gcm_lwc_minthreshCF2 here is the gridbox mean LWC
+%but have also restricted to CF>low_cf_thresh(1), so may not have a big impact
+%for cloud depth probably just want to use layers when CF>0.8
+
+gcm_Nd_ice_screen = 1e-6*gcm_drop; %gcm_drop is in per m3 and is the IN-CLOUD average
+gcm_Nd_ice_screen(icf_bounds) = NaN; %remove points outside CF threshold
+    
+if i_ice_screen==1
+    gcm_pfull_ice_screen = gcm_pfull; %orignial pressure field
+    gcm_pfull_ice_screen(icf_bounds) = NaN; %remove points where CF is outside of the threshold
+    gcm_pfull_ice_screen(i_ice) = NaN; %remove ice points
+    gcm_pfull_ice_screen(iNd) = NaN; %remove v.low Nd points
+    gcm_pfull_ice_screen(i_remove_lwc) = NaN; %remove v.low LWC points
+    %gcm_pfull_ice_screen(ip) = NaN;
+    
+    gcm_Nd_ice_screen(i_ice) = NaN; %remove columns with ice points    
+end
+
+gcm_Nd_ice_screen(iNd) = NaN; %remove v.low Nd points
+gcm_Nd_ice_screen(i_remove_lwc) = NaN; %remove v.low LWC points
+gcm_Nd_max_screen = squeeze_keep1( max(gcm_Nd_ice_screen,[],2) ,inotkeep); %take the max
+
+
+%% Now put some of the above into the ISCCP categories - e.g. max over low
+%% clouds only, etc.
+
+% ---- High cloud -----
+isccp = find( ~ (gcm_pfull < 440e2 & gcm_pfull >= 50e2) );
+gcm_cf2 = gcm_cf;
+gcm_cf2(isccp) = NaN; %remove those that don't satisfy the criteria
+cf_isccp_high = squeeze_keep1(max(gcm_cf2,[],2),inotkeep);
+
+
+
+%gcm_drop_ice_screen = NaN*ones(size(gcm_drop));
+%gcm_drop_ice_screen(lwc_inds) = 1e-6*gcm_drop(lwc_inds);
+%gcm_drop_ice_screen(icf_bounds) = NaN;  % 
+
+gcm_drop_ice_screen = 1e-6*gcm_drop; %gcm_drop is the CLOUD-MEAN value
+gcm_drop_ice_screen(icf_bounds) = NaN;  %need to do this because of the divide by zero CF problem 
+
+gcm_REFFL_ice_screen = gcm_REFFL; %gcm_drop is the CLOUD-MEAN value
+gcm_REFFL_ice_screen(icf_bounds) = NaN;  %need to do this because of the divide by zero CF problem 
+
+% ----------- Older screenings -----------------
+%The arrays with 2 after them here have been screened already with iremove
+%indices (usually for threshold CF and v.low Nd)
+
+if i_ice_screen==1
+    gcm_pfull2 = gcm_pfull_ice_screen;
+end
+
+i_low_liq2 = find(gcm_liq2<low_liq_thresh);
+%gcm_temp_half(i_low_liq2)=NaN; %don't want to do this as is 49 levels - and is
+%not necessary as are picking out the required indices for CTT
+gcm_pfull2(i_low_liq2)=NaN;
+gcm_drop2(i_low_liq2)=NaN;
+gcm_temp2(i_low_liq2)=NaN;
+gcm_liq2(i_low_liq2)=NaN;
+gcm_REFFL2(i_low_liq2)=NaN;
+
+% ----------------------------------------------- 
+
+gcm_Nd_maxALL = squeeze_keep1(max(gcm_drop2,[],2),inotkeep);
+gcm_Nd_maxALL_ice_screen = squeeze_keep1(max(gcm_drop_ice_screen,[],2),inotkeep);
+
+
+
+
+
+% gcm_cf_thresh = 0.8;
+% icf = find( ~(gcm_cf>=gcm_cf_thresh & gcm_liq2./gcm_cf>=gcm_liq_thresh) );
+% %create an array of the model levels (1=TOA, 48=ground), so that we
+% %can remove the points that don't meet the cloud criteria. Then the lowest
+% %number for the column of each cell will denote the highest model level
+% %that meets our cloud criteria
+% s_am3=size(gcm_cf);
+% gcm_icf = repmat([1:s_am3]',[1 s_am3(2) s_am3(3)]);
+% gcm_icf_orig = gcm_icf;
+% gcm_icf(icf)=s_am3(1); %set to min - the surface
+% gcm_maxz = min(gcm_icf,[],1); %the surface is actually at iz=48 so we want the min index
+% 
+% maxz_lin = gcm_maxz(:);
+% gcm_maxzp = gcm_pfull(maxz_lin);
+% gcm_maxzp = reshape(gcm_maxzp,size(gcm_maxz));
+
+%could take the Nd at the point with the highest LWC in each profile
+%or could take the mean Nd over the profile - Nd seems to vary quite a lot
+%in the model profile I looked at - need to look at more
+
+ 
+
+%% Permuting happens here to allow certain operations
+   
+
+gcm_liq2 = permute(gcm_liq2,[2 1 3 4]);
+gcm_REFFL2 = permute(gcm_REFFL2,[2 1 3 4]);
+gcm_drop2 = permute(gcm_drop2,[2 1 3 4]);
+gcm_drop_ice_screen = permute(gcm_drop_ice_screen,[2 1 3 4]);
+gcm_REFFL_ice_screen = permute(gcm_REFFL_ice_screen,[2 1 3 4]);
+gcm_cf2 = permute(gcm_cf,[2 1 3 4]);
+gcm_lwc_minthreshCF2 = permute(gcm_lwc_minthreshCF2,[2 1 3 4]);
+if exist('h_half')
+    h_half2 = permute(h_half,[2 1 3 4]);
+end
+gcm_pfull2 = permute(gcm_pfull2,[2 1 3 4]);
+gcm_temp2 = permute(gcm_temp2,[2 1 3 4]);
+gcm_temp_half = permute(gcm_temp_half,[2 1 3 4]);
+gcm_CF_screened = permute(gcm_CF_screened,[2 1 3 4]);
+
+
+
+s_gcm_low = size(gcm_cf2);
+
+[max_liq,imax_liq] = max(gcm_liq2,[],1);
+max_liq = squeeze_keep1(max_liq,inotkeep);
+
+
+%% Identify all the continuous cloud layers - end up with the indices at the
+%% top of all the different layers
+%Using gcm_pfull2 to identify cloud layers (via iCTP & iCBP). This is screened for very low
+%Nd, lwc and also for ice (if ice screening is on). So, Nd, CTT, etc for
+%the layers will not be reported for ice clouds.
+%do the same for the cloud top and base to calculate cloud depth
+[gcm_CTP,iCTP] = min(gcm_pfull2,[],1); %find the minimum pressure of present LWC (cloud top)
+%[gcm_CBP,iCBP] = max(gcm_pfull2,[],1); %find the maximum pressure of present LWC (cloud base)
+%have to be concerned about multiple cloud layers, though
+gcm_CTP = squeeze_keep1(gcm_CTP,inotkeep);
+%gcm_CBP = squeeze_keep1(gcm_CBP);
+
+%use the highest continuous cloud layer - so cloud top is the min pressure
+%with LWC as above. Have put NaNs at locations where there is no cloud
+%meeting our criteria - so look for continuous layers of non-NaN values.
+inan=isnan(gcm_pfull2);
+inan(end+1,:,:,:)=1; %add an a column to the height dimension to make the diff array the same size
+%as the original - this way if the height index closest to the surface is not NaN (inan=0) then diff
+%will equal 1 for the surface index and will report the lowest level as
+%the cloud top height -  diff does X(2:end)-X(1:end-1) and 1=the uppermost
+%level, the surface is at the end
+%Now find the differences in the inan array :-
+d=diff(inan,1,1);
+ii=find(d==1); %d==1 is where we reach the base of a cloud layer - going from 0 (not NaN, i.e. cloud) to 1 (NaN, not
+%cloud), but in the direction from TOA towards surface
+
+
+[K,T,I,J]=ind2sub(size(d),ii); %find the i,j,k,l indices from the linear ii indices
+iCBP2 = NaN*ones(size(d));
+iCBP2(ii) = K; %put in the indices of our cloud layer tops (everything else is NaN)
+%if want to record properties about each layer then write those instead of
+%K (in another array)
+
+include_experimental = 0;
+switch include_experimental
+    case 1
+        jj=find(d==-1); %this should be the top of all the layers - going from 1 to 0 (no cloud to cloud)
+        % -- except will need to add one to this
+
+        [K2,T2,I2,J2]=ind2sub(size(d),jj); %find the i,j,k,l indices from the linear ii indices
+        K2 = K2 + 1; %add one to make this correct
+        %iCTP2 = NaN*ones(size(d));
+
+end
+
+
+iCBP = min(iCBP2,[],1); %find the min value since this corresponds to the highest altitude level
+iremove2 = find(isnan(iCBP)==1); %points where have no cloud - want to remove these, see next line
+iCBP(iremove2)=1; %cannot have an index as NaN or will cause an error
+%will remove these values later
+
+
+%% Find properties at the position of the max LWC
+
+%imax_liq now gives a matrix containing the z-index of the max LWC for each
+%position and time
+
+%convert these into a linear index for the the whole of the big matrix
+% use IND = SUB2IND(SIZ,I,J)
+% will use imax_liq(:) - i.e. a vector containing a list of all the
+% z-indices. SIZ will be [NZ NT*NI*NJ]. I will be the NZ indices. J will be
+% all of the other indices. i.e. 1:NT*NI*NJ
+imax_lin = sub2ind([s_gcm_low(1) s_gcm_low(2)*s_gcm_low(3)*s_gcm_low(4)],imax_liq(:),[1:s_gcm_low(2)*s_gcm_low(3)*s_gcm_low(4)]');
+%max_test = reshape(gcm_liq2(imax_lin),s_gcm_low(2),s_gcm_low(3),s_gcm_low(4)); %are the same
+
+%for heights we will use the h_half2 array which is one level larger than
+%h_full in the vertical. Level N = 0m, level N-1 = the top of the first layer
+%in h_half2 (h_half2(N) is between the h_full(N) and h_full(N-1) )
+%so will find the linear indices for the larger matrix h_half2 and will use
+%the height indices +1 for CTH & the index as is for CBH
+imax_lin_CTH = sub2ind([s_gcm_low(1)+1 s_gcm_low(2)*s_gcm_low(3)*s_gcm_low(4)],iCTP(:),[1:s_gcm_low(2)*s_gcm_low(3)*s_gcm_low(4)]');
+imax_lin_CBH = sub2ind([s_gcm_low(1)+1 s_gcm_low(2)*s_gcm_low(3)*s_gcm_low(4)],iCBP(:)+1,[1:s_gcm_low(2)*s_gcm_low(3)*s_gcm_low(4)]');
+imax_lin_CBP = sub2ind([s_gcm_low(1) s_gcm_low(2)*s_gcm_low(3)*s_gcm_low(4)],iCBP(:),[1:s_gcm_low(2)*s_gcm_low(3)*s_gcm_low(4)]');
+
+
+gcm_Nd_maxliq = reshape(gcm_drop2(imax_lin),s_gcm_low(2),s_gcm_low(3),s_gcm_low(4)); %
+gcm_CTT_maxliq = reshape(gcm_temp2(imax_lin),s_gcm_low(2),s_gcm_low(3),s_gcm_low(4)); %
+%have already converted to per cc
+gcm_CF_maxliq = reshape(gcm_cf2(imax_lin),s_gcm_low(2),s_gcm_low(3),s_gcm_low(4)); 
+gcm_liq_maxliq = reshape(gcm_liq2(imax_lin),s_gcm_low(2),s_gcm_low(3),s_gcm_low(4)); 
+gcm_REFFL_maxliq = reshape(gcm_REFFL(imax_lin),s_gcm_low(2),s_gcm_low(3),s_gcm_low(4)); 
+
+
+%% Calc some other stuff - comment this
+gcm_CTT_layer = reshape(gcm_temp_half(imax_lin_CTH),s_gcm_low(2),s_gcm_low(3),s_gcm_low(4)); %approx cloud top temperature
+
+if exist('h_half2')
+    gcm_CTH = reshape(h_half2(imax_lin_CTH),s_gcm_low(2),s_gcm_low(3),s_gcm_low(4)); %have now lost the height dimension
+    gcm_CBH = reshape(h_half2(imax_lin_CBH),s_gcm_low(2),s_gcm_low(3),s_gcm_low(4));
+end
+gcm_CBP = reshape(gcm_pfull2(imax_lin_CBP),s_gcm_low(2),s_gcm_low(3),s_gcm_low(4));
+
+
+%script to take all the iCBP and iCTP indices and make a 3D LWC array from
+%them that only contains values in the cloudy layers - makes gcm_lwc_cloud,
+%gcm_Nd_cloud, gcm_CF_cloud. Uses gcm_lwc_minthreshCF2 (so only columns with no ice and within the 
+%threshold CF), gcm_drop_ice_screen and gcm_CF_screened
+%N.B. the cloud layer chosen is the highest cloudy layer
+make_indices_for_continuous_k %note - the above bit is already for continuous layers - this just makes a 3D array
+
+%gcm_lwc_cloud is in g/kg at this stage
+gcm_mean_lwc_cloud = squeeze_keep1(meanNoNan(gcm_lwc_cloud,1),inotkeep); %mean over each vertical dim now gives the mean lwc
+[gcm_LWC_max,ilwc_max_cont] = max(gcm_lwc_cloud.*permute(gcm_rho,[2 1 3 4])./gcm_cf2,[],1); 
+gcm_LWC_max = squeeze_keep1(gcm_LWC_max,inotkeep);
+%max cloud-mean LWC within the designated cloudy layer
+
+%find the Nd value at the position of the max LWC within the layer
+imax_lin_cont = sub2ind([s_gcm_low(1) s_gcm_low(2)*s_gcm_low(3)*s_gcm_low(4)],ilwc_max_cont(:),[1:s_gcm_low(2)*s_gcm_low(3)*s_gcm_low(4)]');
+gcm_Nd_max_lwc_cont = reshape(gcm_Nd_cloud(imax_lin_cont),s_gcm_low(2),s_gcm_low(3),s_gcm_low(4)); %
+
+
+if exist('h_half2')
+    [me,Nme]=meanNoNan(1e3*gcm_lwc_cloud.*permute(gcm_rho,[2 1 3 4]).*-dz,1, 'mean',0); %mean over each vertical dim now gives the mean lwc
+    %integrate our own LWP over this layer
+    gcm_lwp_cloud = me.*Nme; %equivalent to sum(xxx) %LWP is in g/m2
+end
+
+%gcm_Nd_cloud is made in make_indices_for_continuous_k from
+%gcm_drop_ice_screen, which is screened for the cloud threshold low_cf_thresh
+[gcm_Nd_meanlayer,Nlevs_meanNd] = meanNoNan(gcm_Nd_cloud,1);
+gcm_Nd_maxlayer = squeeze_keep1( max(gcm_Nd_cloud,[],1) ,inotkeep); %max Nd within the designated cloudy layer
+gcm_REFFL_maxlayer = squeeze_keep1( max(gcm_REFFL_cloud,[],1) ,inotkeep); %max Nd within the designated cloudy layer
+
+gcm_CF_max = squeeze_keep1(max(gcm_CF_cloud,[],1),inotkeep);
+
+%in case we require the layer to be >= thresh_Nlevs
+ilevs = find(Nlevs_meanNd<thresh_Nlevs);
+gcm_Nd_meanlayer(ilevs)=NaN;
+gcm_Nd_maxlayer(ilevs)=NaN;
+gcm_LWC_max(ilevs)=NaN;
+gcm_Nd_max_lwc_cont(ilevs)=NaN;
+gcm_CF_max(ilevs)=NaN;
+
+
+
+%IMPORTANT! - remove values when the max or min was NaN (i.e. all the values are NaN)
+%- since an index will be reported, but it is meaningless
+gcm_liq_maxliq(isnan(max_liq))=NaN;
+%gcm_Nd_maxliq(isnan(max_liq))=NaN;
+gcm_Nd_maxliq(isnan(gcm_CTP))=NaN;
+
+gcm_CF_maxliq(isnan(max_liq))=NaN;
+if exist('h_half2')
+    gcm_CTH(isnan(gcm_CTP))=NaN;
+    gcm_CBH(isnan(gcm_CTP))=NaN;
+end
+gcm_CBP(iremove2)=NaN;
+gcm_CTT_layer(isnan(gcm_CTP))=NaN;
+
+
+%% permute them back to the normal way around
+gcm_liq2 = permute(gcm_liq2,[2 1 3 4]);
+gcm_REFFL2 = permute(gcm_REFFL2,[2 1 3 4]);
+gcm_drop2 = permute(gcm_drop2,[2 1 3 4]);
+gcm_temp2 = permute(gcm_temp2,[2 1 3 4]);
+gcm_cf2 = permute(gcm_cf,[2 1 3 4]);
+if exist('h_half2')
+    h_half2 = permute(h_half2,[2 1 3 4]);
+end
+gcm_pfull2 = permute(gcm_pfull2,[2 1 3 4]);
+gcm_temp_half = permute(gcm_temp_half,[2 1 3 4]);
+gcm_lwc_minthreshCF2 = permute(gcm_lwc_minthreshCF2,[2 1 3 4]);
+gcm_drop_ice_screen = permute(gcm_drop_ice_screen,[2 1 3 4]);
+gcm_REFFL_ice_screen = permute(gcm_REFFL_ice_screen,[2 1 3 4]);
+gcm_CF_screened = permute(gcm_CF_screened,[2 1 3 4]);
+
+disp('Done gcm_process')
+
+%new function 
+%        [ilat,ilon,dmins]=gcm_map_lat_lon_points(gcm_lat,gcm_lon,lat_am3,lon_am3);
+
+%would still need to calculate Plat2 and Plon2 below and feed these into
+%the above
+
+% lat_min = min(gcm_lat,[],1);
+% lat_max = max(gcm_lat,[],1);
+% 
+% Plat2=[ceil(min(lat_max)):1:floor(max(lat_min))];
+% Plon2=[ceil(minALL(gcm_lon)):1:floor(maxALL(gcm_lon))];
+% 
+% clear am32_Nd am32_CF dmins
+% max_ov=-1;
+% for i=1:length(Plat2)
+%     for j=1:length(Plon2)
+%         dist = distlatlon(Plat2(i),Plon2(j),gcm_lat,gcm_lon);
+%         [minval,idist]=minALL(dist);
+%         lats(i,j) = gcm_lat(idist(1),idist(2));
+%         lons(i,j) = gcm_lon(idist(1),idist(2));
+%         
+%         am32_Nd(i,j) = gcm_Nd_maxliq(idist(1),idist(2));
+%         am32_CF(i,j) = max(gcm_cf(:,idist(1),idist(2)),[],1);        
+% 
+%         
+%         dmin = minALL(dist);
+%         if dmin>max_ov
+%             max_ov=dmin;
+%             imax=i;
+%             jmax=j;
+%         end
+%         
+%         dmins(i,j)=dmin;
+% 
+% 
+%     end
+% end
+% 
+% [Plon,Plat]=meshgrid(Plon2,Plat2);
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,575 @@
+                            
+filedir = '/home/disk/eos1/d.grosvenor/modis_work/vert_pen_paper/Odran_data/';
+
+channel='2.1 \mum';
+channel='3.7 \mum';
+
+isave_data=0; %whether to save the data - make sure that save_label is set to something different to previous files
+              %if want to avoid overwriting.
+
+switch channel
+    case '2.1 \mum'
+
+        %nc=netcdf([filedir 'VP_2Dmatrix_v1.1_netCDF3.nc']); vers = '1.1'; %Odran had the wrong LUT loaded (wrong surface albedo) - so don't use these!
+        nc=netcdf([filedir 'VP_2Dmatrix_v1.2_netCDF3.nc']); vers = '1.2'; %correct surface albedo and ve=0.13
+        nc=netcdf([filedir 'VP_2Dmatrix_v1.3_netCDF3.nc']); vers = '1.3'; %plus finer vertical model and ve=0.1
+        nc=netcdf([filedir 'VP_2Dmatrix_v2.0_21um_netCDF3.nc']); vers = '1.3'; %Corrections for the strange departures
+        nc=netcdf([filedir 'VP_2Dmatrix_v2.0_21um_cw=1E-6_netCDF3.nc']); vers = '1.3'; save_label='cw_1e-6'; %Post review - test using cw=1e-6
+
+    case '3.7 \mum'
+
+        %3.7um data
+        % %nc=netcdf([filedir 'VP_2Dmatrix_v1.3_37um_netCDF3.nc']); vers = '1.3'; channel='3.7 \mum';%plus finer vertical model and ve=0.1
+
+        nc=netcdf([filedir 'VP_2Dmatrix_v2.0_37um_netCDF3.nc']); vers = '1.3'; %channel='3.7 \mum';%Corrections for the strange departures
+
+        nc=netcdf([filedir 'VP_2Dmatrix_v3.0_37um_cw=1E-6_netCDF3.nc']); vers = '1.3'; save_label='cw_1e-6'; %channel='3.7 \mum';% cw=1e-6
+%        nc=netcdf([filedir 'VP_2Dmatrix_v3.0_37um_cw=2.5E-6_netCDF3.nc']); vers = '1.3'; save_label='cw_2.5e-6'; %channel='3.7 \mum';% cw=2.5e-6
+        nc=netcdf([filedir 'VP_2Dmatrix_v3.0_37um_cw=1.81E-6_netCDF3.nc']); vers = '1.3'; save_label='cw_1.81e-6'; %channel='3.7 \mum';% cw=1.8e-6 (orig value for test)       
+end
+
+
+isave_plot=1;
+iplot_Platnick = 0;
+
+
+switch vers
+    case {'1.1','1.2'}
+        %Odran has ve=0.13 and Qeff computed rather than set to 2.0
+        %ve = 0.13 gives a k value of
+        ve=0.13;
+        k_Odran = (1-ve)*(1-2*ve); % = 0.64  - N.B. - only used in the calc of re_top and have this from Odran now.
+    otherwise
+        %Later used ve=0.1...
+        ve=0.1;
+        k_Odran = (1-ve)*(1-2*ve); % = 0.72
+end
+
+re_ret_Odran = nc{'Re'}(:); %Retrieved value from Odran's MODIS-like retrievals
+re_top_Odran = nc{'Re_top'}(:); %Cloud top re from the model profile
+tau_ret_Odran = nc{'OD'}(:); %MODIS retrieved tau.
+tau_model_Odran = nc{'OD_sim'}(:); %This is the total tau for the model profile (note Qe is not constant here)
+dtau_Odran = nc{'dOD'}(:); %Odran calcualted dtau from the retrieved reff and the model profile.
+
+Nd_Odran = nc{'Nd'}(:); %Input Nd and LWP values
+LWP_Odran = nc{'LWP'}(:);
+
+if length(tau_model_Odran)==0
+    itau_Odran=0; %v1.2 of the NetCDF files
+else
+    itau_Odran=1;
+end
+
+if length(re_top_Odran)==0
+    ire_top_Odran=0; %v1.1 of the NetCDF files (did not have Odran's re)
+else
+    ire_top_Odran=1;
+end
+
+%cw = 1.45e-6; % kg/m4
+CTT = 278;
+CTP = 850e2;
+fad=0.8;
+                     
+% Work out the cloud profile info
+% Have N, LWP, tauc and re* (below cloud top) from the file
+
+[W2d,N2d] = meshgrid(LWP_Odran, Nd_Odran);
+
+%work out the cloud top re
+[re_top_Dan,H,k,Q,cw,tau_model]=MODIS_re_func_W_and_Nd(W2d,N2d,CTT,CTP,fad,k_Odran);
+[N_check,H_check,W_check,k_check,Q_check,cw_check]=MODIS_N_H_func(tau_model,re_top_Dan,'calc',NaN,CTT,fad,k_Odran);
+max_Nd_diff = maxALL(abs(N_check - N2d/1e6))   %this is 1e-12, so the adiabatic calculations for reff above should be correct.
+
+re_top_Dan = re_top_Dan*1e6; %convert to um
+
+if ire_top_Odran==1
+    reff = re_top_Odran; %Use Odran's cloud top value - this is now very close to my re_top using the integrated equations with Qe=2
+else
+    reff = re_top_Dan; %Use my one from the adiabatic profiles
+end
+
+%From Platnick (2000)
+x=1; %for adiabatic cloud, profile B
+n = (2*x+3)/x; %=5
+  
+% a0=reff.^n;
+% a1=a0; %-re_bot(i).^n;
+
+dtau_calc_model_Dan = tau_model .* ( 1 - (re_ret_Odran./re_top_Dan).^n ); %Using tau from the equations (assumes Qe=2, no discretization)
+
+if itau_Odran==1
+    dtau_calc_Odran = tau_model_Odran .* ( 1 - (re_ret_Odran./re_top_Odran).^n ); %Using total tau from Odran's discretized profile (variable Qe).
+    %This is probably the best one to compare to the dtau from Odran's
+    %profile since it uses the actual profile total tau, but then applies
+    %the adiabatic formula. And re_top, although this should not depend on
+    %Qe.
+    
+    %dtau = dtau_calc_Odran;
+    dtau = dtau_Odran; %Odran's calculation of dtau using the profiles (constnat Qe not assumed).
+    dreff = reff - re_ret_Odran; %reff is the reff at the top of the model profile (i.e., the true reff). re_ret_Odran is the retrieved reff
+else %if don't have Odran's value in the NetCDF file
+    dtau = dtau_calc_model_Dan;
+end
+
+
+
+%% Plots
+figure
+pcolor(N2d/1e6,W2d*1e3,re_ret_Odran - reff); shading flat; colorbar
+xlabel('N_d (cm^{-3})');
+ylabel('LWP (g m^{-2})');
+title('re_{retrieved} - re_{top} (\mum)');
+
+if ire_top_Odran==1
+
+%Matching Odran's figure - using my reff
+figure
+pcolor(W2d*1e3,N2d/1e6,re_top_Dan - re_ret_Odran ); shading flat; colorbar
+ylabel('N_d (cm^{-3})');
+xlabel('LWP (g m^{-2})');
+title('re_{top}(Dan) - re_{retrieved} (\mum)');
+set(gca,'yscale','log');
+
+
+
+%Matching Odran's figure; using Odran's reff
+figure
+pcolor(W2d*1e3,N2d/1e6,re_top_Odran - re_ret_Odran ); shading flat; colorbar
+ylabel('N_d (cm^{-3})');
+xlabel('LWP (g m^{-2})');
+title('re_{top}(Odran) - re_{retrieved} (\mum)');
+set(gca,'yscale','log');
+
+
+%Difference between my and Odran's reff
+figure
+pcolor(W2d*1e3,N2d/1e6,re_top_Dan - re_top_Odran ); shading flat; colorbar
+ylabel('N_d (cm^{-3})');
+xlabel('LWP (g m^{-2})');
+title('re_{top}(Dan) - re_{top}(Odran) (\mum)');
+set(gca,'yscale','log');
+
+
+%Matching Odran's figure; using Odran's reff_top
+figure
+pcolor(W2d*1e3,N2d/1e6,reff - re_top_Odran ); shading flat; colorbar
+ylabel('N_d (cm^{-3})');
+xlabel('LWP (g m^{-2})');
+title('re_{top} - re_{retrieved} (\mum)');
+set(gca,'yscale','log');
+
+%Retrieved re
+figure
+pcolor(W2d*1e3,N2d/1e6,re_ret_Odran); shading flat; colorbar
+ylabel('N_d (cm^{-3})');
+xlabel('LWP (g m^{-2})');
+title('re_{retrieved} (\mum)');
+set(gca,'yscale','log');
+
+%Re top
+figure
+pcolor(W2d*1e3,N2d/1e6,re_top_Odran); shading flat; colorbar
+ylabel('N_d (cm^{-3})');
+xlabel('LWP (g m^{-2})');
+title('re_{top} (Odran) (\mum)');
+set(gca,'yscale','log');
+
+
+%Re top (Dan)
+figure
+pcolor(W2d*1e3,N2d/1e6,re_top_Dan); shading flat; colorbar
+ylabel('N_d (cm^{-3})');
+xlabel('LWP (g m^{-2})');
+title('re_{top} (Dan) (\mum)');
+set(gca,'yscale','log');
+
+
+end
+
+figure
+pcolor(N2d/1e6,W2d*1e3,dtau); shading flat; colorbar
+xlabel('N_d (cm^{-3})');
+ylabel('LWP (g m^{-2})');
+
+if itau_Odran==1
+
+%dtau from the calculation (Qe=2) using tau_model (calculated tau using Qe=2) vs dtau from Odran's profile
+figure
+pcolor(W2d*1e3,N2d/1e6, dtau_calc_model_Dan - dtau_Odran ); shading flat; colorbar
+ylabel('N_d (cm^{-3})');
+xlabel('LWP (g m^{-2})');
+title('d\tau_{Dan} - d\tau_{profile} (\mum)');
+set(gca,'yscale','log');
+caxis([-1 1])
+
+
+
+%dtau from the calculation (Qe=2) using tau_model_Odran (calculated using
+%Odran's profile tau with variable tau) vs dtau from Odran's profile. ANd
+%the model (Odran's) re_top too
+figure
+pcolor(W2d*1e3,N2d/1e6, dtau_calc_Odran - dtau_Odran ); shading flat; colorbar
+ylabel('N_d (cm^{-3})');
+xlabel('LWP (g m^{-2})');
+title('d\tau_{Odran} - d\tau_{profile} (\mum)');
+set(gca,'yscale','log');
+caxis([-0.1 0.1]);
+
+end
+
+%% 2D histogram of dtau vs tau
+tau_max = 35;
+
+%Run this script to get the values for the 4 clouds in Platnick
+MODIS_vert_pen_representative_tau_calc
+switch channel 
+    case '2.1 \mum'
+        line_dat = tau_star21;
+    case '3.7 \mum'
+       line_dat = tau_star37; 
+end
+
+%2D histos - all the data
+Y_driver = dtau; %the data
+X_driver = tau_model; %the data
+Ybins_DRIVER = [0.1:0.1:15]; ichoose_Ybins=1;
+Xbins_DRIVER = [0:0.2:50]; ichoose_Xbins=1;
+vert_pen_Bennartz_Fig2_2D_histo_dtau_vs_tau
+% Alter the title to add extra info
+extra_str = ' All N_d';
+titw=textwrap({[tit(i).tit extra_str]},100); %wrap the title onto two lines if >100 chars
+title(titw,'fontsize',fsize_tit);
+clims=get(gca,'clim');
+caxis([clims(2)/12.5 clims(2)]); %truncate the colourscale to not show the outliers, which are the dubious points from Odran's retrievals.
+set(gca,'xlim',[0 tau_max]);        
+set(gca,'ylim',[0 8]);        
+
+if iplot_Platnick==1
+    hold on
+    %Plot on the Platnick line
+    plot(tauc_Plat,line_dat,'ko-','linewidth',lwidth,'markerfacecolor','k');
+end
+
+%And the mean of the data
+
+igood=find(isnan(Y_mean)~=1 & mid_Xbins<tau_max);
+[xsmooth,ysmooth] = window_average(mid_Xbins(igood),Y_mean(igood),5,'mean')
+
+
+%plot(mid_Xbins,Y_mean,'k-','linewidth',4);
+plot(xsmooth,ysmooth,'k-','linewidth',4);
+%Y_mean_all_Nd = Y_mean;
+Y_mean_all_Nd = ysmooth;
+X_mean_all_Nd = xsmooth;
+
+
+
+
+%Fit curve
+
+%Y_mean_poly = Y_mean(igood); mid_Xbins_poly = mid_Xbins(igood);
+Y_mean_poly = ysmooth; mid_Xbins_poly = xsmooth;
+
+Npoly=4;
+Pfit = polyfit(mid_Xbins_poly,Y_mean_poly,Npoly);
+Ypoly=0;
+for ip=1:length(Pfit)
+      Ypoly = Ypoly + Pfit(ip)*mid_Xbins_poly.^(Npoly-ip+1);
+end
+plot(mid_Xbins_poly,Ypoly,'w-','linewidth',1);
+
+max_diff_poly = max(abs(Ypoly - Y_mean_poly));
+
+fprintf(1,'\n');
+fprintf(1,'%s & %.3e & %.3e & %.4g & %.4g & %.4g & %2.2f %s \n',channel,Pfit(1),Pfit(2),Pfit(3),Pfit(4),Pfit(5),max_diff_poly,'\\');
+
+savedir=[filedir '/plots/'];
+savename=[savedir 'vert_pen_2d_histo_' channel];
+
+isave_plot=0;
+if isave_plot==1    
+    fsize=26;
+    title(channel,'fontsize',fsize);
+    fontsize_figure(gcf,gca,fsize);  
+    opts.iplot_png=0;
+    saveas_ps_fig_emf(gcf,[savename],'',0,1,0,'',[],1,opts);
+end
+
+if isave_data==1    
+    %save data
+    Y_mean_file = ['/home/disk/eos1/d.grosvenor/modis_work/vert_pen_paper/Y_mean_Odran_saved_' save_label '.mat'];
+    xstr = ['X_mean_all_Nd_' channel]; xstr = remove_problem_chars(xstr); xstr = remove_character(xstr,'.','');
+    ystr = ['Y_mean_all_Nd_' channel]; ystr = remove_problem_chars(ystr); ystr = remove_character(ystr,'.','');
+    eval([xstr '= X_mean_all_Nd;']);
+    eval([ystr '= Y_mean_all_Nd;']);
+    if exist(Y_mean_file)==2
+        app_str='''-V7.3'',''-APPEND''';
+    else
+        app_str='''-V7.3''';
+    end
+       
+    eval(['save(Y_mean_file,xstr,ystr,' app_str ');']);
+end
+%%
+
+iplotNd_gt_300=0;
+if iplotNd_gt_300==1
+
+    % Only for Nd>300 per cc - N.B. - think this was only necessary for the
+    % comparison to the Bennartz values - doesn't seem to make much difference
+    % with Odran's data.
+    dtau2=dtau;
+    dtau2(N2d/1e6>300)=NaN;
+    Y_driver = dtau2; %the data
+    X_driver = tau_model; %the data
+    % Ybins_DRIVER = [1:0.1:5]; ichoose_Ybins=1;
+    % Xbins_DRIVER = [5:0.2:15]; ichoose_Xbins=1;
+    Ybins_DRIVER = [0.1:0.1:15]; ichoose_Ybins=1;
+    Xbins_DRIVER = [0:0.2:50]; ichoose_Xbins=1;
+    vert_pen_Bennartz_Fig2_2D_histo_dtau_vs_tau
+    extra_str = ' N_d.LTE.300 cm^{-3}';
+    titw=textwrap({[tit(i).tit extra_str]},100); %wrap the title onto two lines if >100 chars
+    title(titw,'fontsize',fsize_tit);
+
+    if iplot_Platnick==1
+        hold on
+        plot(tauc_Plat,line_dat,'ko-','linewidth',lwidth,'markerfacecolor','k');
+    end
+
+    %And the mean of the data
+    plot(mid_Xbins,Y_mean,'k-','linewidth',3);
+    Y_mean_low_Nd = Y_mean;
+
+end
+
+
+
+
+%% 2D histograms of dreff or dreff/re vs tau or reff
+clear gca
+tau_max = 35;
+
+y_type = 'absolute';
+%y_type = 'relative';
+y_type = 'relative re';
+
+x_axis = 'tau';
+%x_axis = 'reff';
+
+
+
+%2D histos - all the data
+switch y_type
+    case 'absolute'
+        Y_driver = dreff;
+        dy=0.05; Ybins_DRIVER = [-dy/1000 dy:dy:10]; ichoose_Ybins=1;
+        ylims_vert = [0 3];
+        ylabelstr='dr_e';
+    case 'relative'
+        Y_driver = dreff./reff;
+        dy=0.002; Ybins_DRIVER = [-0.2:dy:0.2]; ichoose_Ybins=1;           
+        ylims_vert = [-0.2 0.2];
+        dy=0.004; Ybins_DRIVER = [-dy/1000 dy:dy:0.2]; ichoose_Ybins=1;       
+        ylims_vert = [0 0.2];       
+        ylabelstr='dr_e / r_e';
+    case 'relative re'
+        Y_driver = reff./re_ret_Odran;
+%        inan=find(reff<7);
+%        Y_driver(inan)=NaN;
+        %    dreff = reff - re_ret_Odran; %reff is the reff at the top of
+        %    the model profile (i.e., the true reff). re_ret_Odran is the retrieved reff
+        dy=0.002; Ybins_DRIVER = [-dy/1000 dy:dy:1.3]; ichoose_Ybins=1;       
+%        dy=0.002; Ybins_DRIVER = [0 dy:dy:1.3]; ichoose_Ybins=1;            
+        ylims_vert = [1 1.3];       
+        ylabelstr='r_e(H) / r_e(H^{*})';
+end
+
+
+
+switch x_axis
+    case 'tau'
+        X_driver = tau_model; %the data
+        Xbins_DRIVER = [0:0.2:50]; ichoose_Xbins=1;
+        xlabelstr='\tau';
+        xlims_vert = [0 tau_max];
+    case 'reff'
+        X_driver = reff; %the data
+        Xbins_DRIVER = [0:0.2:50]; ichoose_Xbins=1;
+        xlabelstr='r_e';
+        xlims_vert = [0 20];
+end
+
+vert_pen_Bennartz_Fig2_2D_histo_dreff_vs_tau_or_reff
+% Alter the title to add extra info
+extra_str = ' All N_d';
+titw=textwrap({[tit(i).tit extra_str]},100); %wrap the title onto two lines if >100 chars
+title(titw,'fontsize',fsize_tit);
+clims=get(gca,'clim');
+caxis([clims(2)/8 clims(2)]); %truncate the colourscale to not show the outliers, which are the dubious points from Odran's retrievals.
+
+set(gca,'xlim',xlims_vert);        
+set(gca,'ylim',ylims_vert);        
+
+if iplot_Platnick==1
+    hold on
+    %Plot on the Platnick line
+    %Run this script to get the values for the 4 clouds in Platnick
+    MODIS_vert_pen_representative_tau_calc
+    switch channel
+        case '2.1 \mum'
+            line_dat = tau_star21;
+        case '3.7 \mum'
+            line_dat = tau_star37;
+    end
+    plot(tauc_Plat,line_dat,'ko-','linewidth',lwidth,'markerfacecolor','k');
+end
+
+%And the mean/mode etc of the data
+
+%Using mean for each bin
+%igood=find(isnan(Y_mean)~=1 & mid_Xbins<tau_max);
+%[xsmooth,ysmooth] = window_average(mid_Xbins(igood),Y_mean(igood),5,'mean');
+
+%Using mode to try to avoid the spurious outliers
+%igood=find(isnan(Y_mean)~=1 & mid_Xbins<tau_max);
+%[xsmooth,ysmooth] = window_average(mid_Xbins(igood),Y_mode(igood),5,'mean');
+
+%Using median to avoid the spurious outliers that give reff/re < 1
+[Y_median,imed] = percentiles_from_PDF(mid_Ybins,pdf_norm(1:end-1,1:end-1),50,1);
+igood=find(isnan(Y_mean)~=1 & mid_Xbins<tau_max); %cuts out some of the low tau data too.
+[xsmooth,ysmooth] = window_average(mid_Xbins(igood),Y_median(igood),5,'mean');
+
+%plot(mid_Xbins,Y_mean,'k-','linewidth',4);
+plot(xsmooth,ysmooth,'k-','linewidth',4);
+%Y_mean_all_Nd = Y_mean;
+Y_mean_all_Nd = ysmooth;
+X_mean_all_Nd = xsmooth;
+
+
+
+
+%Fit curve
+
+%Y_mean_poly = Y_mean(igood); mid_Xbins_poly = mid_Xbins(igood);
+Y_mean_poly = ysmooth; mid_Xbins_poly = xsmooth;
+
+Npoly=4;
+Pfit = polyfit(mid_Xbins_poly,Y_mean_poly,Npoly);
+Ypoly=0;
+for ip=1:length(Pfit)
+      Ypoly = Ypoly + Pfit(ip)*mid_Xbins_poly.^(Npoly-ip+1);
+end
+plot(mid_Xbins_poly,Ypoly,'w-','linewidth',1);
+
+max_diff_poly = max(abs(Ypoly - Y_mean_poly));
+
+channel_latex = [channel(1:3) ' $\unit{\mu}$m'];
+
+fprintf(1,'\n');
+fprintf(1,'%s & %.3e & %.3e & %.3e & %.4g & %.4g & %.3f %s \n',channel_latex,Pfit(1),Pfit(2),Pfit(3),Pfit(4),Pfit(5),max_diff_poly,'\\');
+
+savedir=[filedir '/plots/'];
+savename=[savedir 'vert_pen_2d_histo_' channel];
+
+isave_plot=0;
+if isave_plot==1    
+    fsize=26;
+    title(channel,'fontsize',fsize);
+    fontsize_figure(gcf,gca,fsize);  
+    opts.iplot_png=0;
+    saveas_ps_fig_emf(gcf,[savename],'',0,1,0,'',[],1,opts);
+end
+
+if isave_data==1    
+    %save data
+%    Y_mean_file = '/home/disk/eos1/d.grosvenor/modis_work/vert_pen_paper/Y_mean_Odran_saved.mat';
+    Y_mean_file = ['/home/disk/eos1/d.grosvenor/modis_work/vert_pen_paper/Y_mean_Odran_saved_reff_param_' save_label '.mat'];    
+    xstr = ['X_mean_all_Nd_' channel]; xstr = remove_problem_chars(xstr); xstr = remove_character(xstr,'.','');
+    ystr = ['Y_mean_all_Nd_' channel]; ystr = remove_problem_chars(ystr); ystr = remove_character(ystr,'.','');
+    eval([xstr '= X_mean_all_Nd;']);
+    eval([ystr '= Y_mean_all_Nd;']);
+    if exist(Y_mean_file)==2
+        app_str='''-V7.3'',''-APPEND''';
+    else
+        app_str='''-V7.3''';
+    end
+       
+    eval(['save(Y_mean_file,xstr,ystr,' app_str ');']);
+end
+%%
+
+%% 2D plot of dreff as function of tau and reff
+y_type = 'absolute';
+y_type = 'relative';
+
+tau_grid = [1:0.2:55];
+reff_grid = [4:0.2:30];
+
+switch y_type
+    case 'absolute'
+        zsurf = griddata(tau_model, reff, dreff, tau_grid, reff_grid'); 
+        titstr='dr_e';
+    case 'relative'
+        zsurf = griddata(tau_model, reff, dreff./reff, tau_grid, reff_grid');
+        titstr='dr_e / r_e';
+end
+
+figure;
+pcolor(tau_grid, reff_grid, zsurf); shading flat; colorbar
+xlabel('\tau');
+ylabel('r_e');
+title(titstr);
+
+
+
+
+
+%% 2D plot of tau error as function of tau and reff
+y_type = 'absolute';
+y_type = 'relative';
+
+tau_grid = [1:0.2:55];
+reff_grid = [4:0.2:30];
+
+tau_error = tau_model_Odran - tau_ret_Odran; %difference in error between the model profile value and the retrieved to answer Zhibo's comment about reff affecting the tau retrieval
+
+switch y_type
+    case 'absolute'
+%        zsurf = griddata(tau_model, reff, tau_error, tau_grid, reff_grid'); 
+        zsurf = tau_error;
+        titstr='\tau error';
+    case 'relative'
+%        zsurf = griddata(tau_model, reff, 100*tau_error ./ tau_ret_Odran, tau_grid, reff_grid');
+        zsurf = 100*tau_error ./ tau_ret_Odran;
+        titstr='Percentage \tau error (%)';
+end
+
+figure;
+%pcolor(tau_grid, reff_grid, zsurf); shading flat; colorbar
+pcolor(tau_model, reff, zsurf); shading interp; colorbar
+lb_map = lbmap(16,'brownblue'); colormap(lb_map);
+ 
+
+xlabel('\tau');
+ylabel('r_e');
+title(titstr);
+
+set(gca,'xlim',[0 tau_max]);
+caxis([-8.0 0]);
+
+
+isave_plot=0;
+if isave_plot==1    
+    fsize=26;
+    title(channel,'fontsize',fsize);
+    fontsize_figure(gcf,gca,fsize);  
+    opts.iplot_png=0;
+    savedir=[filedir '/plots/']; savename=[savedir 'vert_pen_tau_error_' channel];
+    saveas_ps_fig_emf(gcf,[savename],'',0,1,0,'',[],1,opts);
+end
+
+
+
+
+

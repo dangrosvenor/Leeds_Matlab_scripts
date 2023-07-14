@@ -1,0 +1,16 @@
+function me=meanNoNan_multidim(dat,ndim)
+
+dat=squeeze(dat);
+inan=~isnan(dat); %so returns a matrix of ones for points that aren't NaN
+
+size_dat=size(dat);
+
+sum_dims=1:length(size_dat); %list of all the dimensions of dat
+sum_dims(sum_dims==ndim)=[]; %remove the dimension over which we require the mean
+
+for i=1:length(size_dat)-1
+nnums=sum(inan,2); %number of non-NaN numbers in each row
+ib=find(inan==0);
+dat(ib)=0;
+
+me=sum(dat,2)./nnums; %multiplication by inan removes all NaN numbers from sum

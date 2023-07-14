@@ -1,0 +1,14 @@
+function [nsell,nnew,ratio,av_price]=shares_rights_nsell(N1,current_price,extra_cash_invest)
+
+N2= (extra_cash_invest + current_price*N1 ) / (1.3*0.37 + current_price );
+
+nsell = N1-N2;
+
+nnew = N2 + N2*1.3;
+
+ratio = nnew / (N1+N1*1.3); %ratio of new shares to total amount possible
+
+av_price = (0.91 + 1.3*0.37 ) / (1+1.3); %average price is independant of how many are bought
+
+av_price_new = N1*0
+

@@ -1,0 +1,69 @@
+function [output,dat_size_out,MLAT,MLON,daynum_timeseries3,modisyear_timeseries3,aqua_terra_timeseries3] = load_saved_modis_vars_func(data_type,modis_varname,savedir_var,modis_data_case,iknow_size,dat_size,field_string,high_lat_correction,now_str)
+ 
+%once have run this once we know the size of the time dimension and then
+%can allocate the array to save memory
+if iknow_size==1
+    output = NaN*ones(dat_size);
+end
+        
+
+itime=1;
+for imod=1:length(modis_data_case)  %loop through the files to load from
+
+    % runs this script to determine the filename
+    filename_choose_saved_MODIS_files
+    
+    
+    switch data_type       
+        case 'Monthly averages etc from timeseries3'
+            load(savevarname{3},modis_varname);
+            modisyear_timeseries3 = modis_year;
+    end
+  
+    %load lat and lon each time
+    MLAT = load(savevarname{1},'MLAT');
+    MLON = load(savevarname{1},'MLON');
+    
+    %coarsen resolution as a function of latitude
+    if high_lat_correction==1
+        eval_str = [modis_var{ivar} field_string{ivar} '_coarse=reduce_high_lats(' modis_var{ivar} field_string{ivar} ',LAT,''reduce'')'];
+        eval(eval_str);
+        save([savevarname{1} now_str],[modis_var{ivar} field_string{ivar} '_coarse'],'-APPEND');
+    end
+
+    
+    switch data_type           
+        case 'Monthly averages etc from timeseries3'
+            size_dat_new = eval( ['size( ' modis_varname ');'] );
+            output = eval( [modis_varname ';'] );
+
+    end
+   
+    
+    itime=itime+size_dat_new(3);    
+    
+    clear savevarname %to make sure that it is set each time
+    
+
+end
+
+dat_size_out=size(output);
+
+switch data_type
+    case 'L3 processed data'
+%        LAT = eval( [modis_varname '.timeseries3_LAT;'] );
+%        LON = eval( [modis_varname '.timeseries3_LON;'] );
+        
+    case 'Nd vs SZA profiles at constant LAT'       
+        MLAT=LAT_sza;        
+        MLON=mid_sza;
+        
+    otherwise
+%        MLAT=0;
+%        MLON=0;
+        
+end
+
+
+
+

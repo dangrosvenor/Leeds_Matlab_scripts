@@ -1,0 +1,395 @@
+%N.B. the mexdcf53 bit I wrote doesn't work for larger file names so are
+%changing directory to keep it as short as possible
+
+if exist('cd')==1
+    fprintf(1,'variable cd exists - clear it!');
+end
+
+is_ecmwf=0;
+is_met_em=0;
+file_type = 'wrfout';
+
+file_num=[1]; %set file_num for file required
+
+if ~exist('imanual_select_load_case') | imanual_select_load_case==0
+    
+dire(1).dir = 'Y:\WRF\';
+dire(2).dir = 'Y:\WRF\';
+%dire(1).dir='C:\Documents and Settings\dan\My Documents\WRF\';
+
+
+%fileWRF(1).file=['/ddisk3/mbexddg5/d03'];
+%fileWRF(2).file=['Y:\WRF\ant_jan06\d03'];
+%fileWRF(1).file=['/home/mbexddg5/work/Ant_Jan06/d03'];
+%fileWRF(1).file=['/home/mbexddg5/work/Ant_Jan06/wrfout_d03_2006-01-05_00:00:00'];
+%fileWRF(1).file=['/home/mbexddg5/mobile4/Database4/Dans_Model/WRF/ant_jan06_sf2/d03_ncep'];
+%fileWRF(1).file=['/home/mbexddg5/mobile4/Database4/Dans_Model/WRF/ant_jan06_z162_repeat/met_em.d03.2006-01-05_06-00-00.nc'];
+%fileWRF(1).file=['/home/mbexddg5/mobile4/Database4/Dans_Model/WRF/ant_jan06_z162_repeat/d03'];
+%fileWRF(1).file=['/home/mbexddg5/mobile4/Database4/Dans_Model/WRF/ant_jan06_sfRUC_v3/wrfout_d03_2006-01-05_00-00-00'];
+%fileWRF(1).file=['/home/mbexddg5/mobile4/Database4/Dans_Model/WRF/ant_jan06_ncep_z162_v3_timestep/wrfout_d03_2006-01-06_12-00-00'];
+%fileWRF(1).file=['/home/mbexddg5/wrfout_d02_2008-10-16_00:00:00'];
+%rundir(1).dir='ant_jan06_sfRUC_v3'; fileWRF(1).file=['wrfout_d03_2006-01-05_00-00-00'];
+%rundir(1).dir='ant_jan06_ecmwf_mp8'; fileWRF(1).file=['wrfout_d03_2006-01-05_00-00-00'];
+
+%rundir(1).dir='ant_jan06_sfRUC_v3'; fileWRF(1).file=['met_em_d03-2006-01-06_12-00-00'];
+
+
+%rundir(1).dir='ant_jan06_ecmwf_mp8'; fileWRF(1).file=['met_em.d03-06_18-00-00.nc'];
+%rundir(1).dir='ant_jan06_6th'; fileWRF(1).file=['wrfout_d03_2006-01-06_00-00-00'];
+
+%rundir(1).dir='ant_jan06_ecmwf_Nov08_met_em'; fileWRF(1).file=['met_em_d03-2006-01-07_18-00-00'];
+
+%newly_made_met_em_25Nov08/
+%rundir(1).dir='jan06_met_orig_ecmwf/'; fileWRF(1).file=['met_em_d03-2006-01-07_00-00-00'];
+
+%rundir(1).dir='ant_jan06_ecmwf_3rd/'; fileWRF(1).file=['met_em_d02-2006-01-01_18-00-00'];
+%rundir(1).dir='ant_jan06_ecmwf_3rd/'; fileWRF(1).file=['wrfout_d03_01_18'];
+
+%rundir(1).dir='ant_jan06_sfRUC_v3'; fileWRF(1).file=['met_em_d02-2006-01-07_00-00-00'];
+
+%rundir(1).dir='jan06_met_orig_ecmwf'; fileWRF(1).file=['met_em_d02-2006-01-05_00-00-00'];
+
+%rundir(1).dir='ant_jan06_ecmwf_ncep_skin/'; fileWRF(1).file=['wrfout_d03_2006-01-05_00-00-00'];
+%rundir(1).dir='ant_jan06_sf2/'; fileWRF(1).file=['d03_ncep'];
+
+%rundir(1).dir=''; fileWRF(1).file=['met_em_d03-2006-01-05_00-00-00'];
+
+%%%%%%%%%%%
+%rundir(1).dir='ant_jan06_ncep_polarWRF/'; fileWRF(1).file=['wrfout_d03_2006-01-05_00-00-00'];
+%%%%%%%%%%%
+
+%rundir(1).dir='ant_jan06_ncep_AMPS/'; fileWRF(1).file=['wrfout_d03_2006-01-05_00-00-00'];
+%rundir(1).dir='ant_jan06_ecmwf_ncep_polar/'; fileWRF(1).file=['wrfout_d02_2006-01-05_00-00-00'];
+
+%rundir(1).dir='ant_jan06_ecmwf_ncep_polar/met_em_files_t511_L60_ModelLevels/'; fileWRF(1).file=['met_em_d03-2006-01-03_00-00-00']; %wrong pressure
+%rundir(1).dir='ant_jan06_ecmwf_ncep_polar/met_em_with_ncep_snow_only/'; fileWRF(1).file=['met_em_d03-2006-01-05_00-00-00']; %pressure levels
+
+%rundir(1).dir='ecmwf_tests/'; fileWRF(1).file=['ecmwf albedo - peninsula netcdf.nc']; %grid is regular in lat/lon (lat/lon grid based)
+%rundir(1).dir='ecmwf_tests/'; fileWRF(1).file=['ecmwf albedo - peninsula netcdf_0.5.nc'];
+%rundir(1).dir='ecmwf_tests/'; fileWRF(1).file=['high_veg_0.25.nc'];
+
+%rundir(1).dir='ant_jan06_ecmwf_ml_0.225'; fileWRF(1).file=['met_em_test']; %pressure levels
+
+%rundir(1).dir='ant_jan06_ecmwf_ml_0.225'; fileWRF(1).file=['met_em_d03-2006-01-05_00-00-00']; %working files - but no SOILHGT
+%rundir(1).dir='ant_jan06_ncepR2_polarWRF/'; fileWRF(1).file=['met_em_d01-2006-01-05_00-00-00'];
+%rundir(1).dir='ant_jan06_ncepR2_polarWRF/'; fileWRF(1).file=['wrfout_d02_2006-01-01_18-00-00'];
+%rundir(1).dir='ant_jan06_ncepR2_polarWRF/'; fileWRF(1).file=['geo_em.d01.nc'];
+%rundir(1).dir='ant_jan06_ncepR1_surface_test/'; fileWRF(1).file=['wrfout_d03_2006-01-05_00-00-00'];
+%rundir(1).dir='ncep_R2_one_domain/'; fileWRF(1).file=['met_em_d01-2006-01-05_12-00-00'];
+%rundir(1).dir='ncep_R2_one_domain/'; fileWRF(1).file=['wrfout_d01_2006-01-05_00-00-00'];
+%rundir(1).dir='ncep_R2_one_domain_nudging/'; fileWRF(1).file=['wrfout_d01_2006-01-05_00-00-00'];
+
+%rundir(1).dir='temp/'; fileWRF(1).file=['met_em_d02-2006-01-03_00-00-00'];
+
+%rundir(1).dir='ant_jan06_ecmwf_ml_0.225/'; fileWRF(1).file=['d03_snow'];
+
+
+%    rundir(1).dir='ncepR2_3dom_nudging'; fileWRF(1).file=['wrfout_d02_2006-01-05_00-00-00'];
+
+
+%rundir(1).dir='ncepR2_3dom_nudging'; fileWRF(1).file=['met_em_d02-2006-01-05_00-00-00'];
+
+%rundir(1).dir='ecmwf_ml_0yzzzzz1_18\'; fileWRF(1).file=['met_em_d03-2006-01-05_18-00-00'];
+
+
+
+
+%%%%%%%%
+    rundir(1).dir='ecmwf_ml_0.5_nudging'; fileWRF(1).file=['d03'];   %usual ECMWF run (24th April, 2009) 
+%    rundir(1).dir='ecmwf_ml_0.5_nudging'; fileWRF(1).file=['met_em_d03-2006-01-03_00-00-00'];  %
+
+%    rundir(1).dir='ecmwf_ml_0.5_wps_snow'; fileWRF(1).file=['d03']; %d03 and d01
+%dire(1).dir='E:/wrfruns/'; rundir(1).dir='ecmwf_ml_0.5_wps_snow'; fileWRF(1).file=['d02'];%dire(1).dir='E:/wrfruns/'; rundir(1).dir='ecmwf_ml_0.5_wps_snow'; fileWRF(1).file=['wrfinput_d02_0700'];
+
+    rundir(1).dir='ecmwf_ml_0.5'; fileWRF(1).file=['wrfinput_d02_2006-01-06_06-00-00'];   %
+   
+%    rundir(1).dir='ecmwf_ml_0.5_nudging'; fileWRF(1).file=['regular_zgrid_output_time11.nc'];   % 
+%    rundir(1).dir='ecmwf_ml_0.5_nudging'; fileWRF(1).file=['geo_em.d01.nc'];   %usual ECMWF run (24th April, 2009) 
+%%%%%%%%
+
+%rundir(1).dir='ecmwf_ml_0.5'; fileWRF(1).file=['met_em_d03-2006-01-06_18-00-00'];  %
+%rundir(1).dir='ecmwf_ml_0.5'; fileWRF(1).file=['d03'];  %
+
+%rundir(1).dir='ncepR2_3dom_nudging_seaice'; fileWRF(1).file=['met_em_d02-2006-01-05_00-00-00'];
+%dire(1).dir='E:/wrfruns/'; rundir(1).dir='ant_jan06_ncepR1_surface_test'; fileWRF(1).file=['d03'];
+%dire(1).dir='C:\Documents and Settings\dan\My Documents\WRF\'; rundir(1).dir='ecmwf_ml_0.5_nudging_z30'; fileWRF(1).file=['d03'];
+%dire(1).dir='E:/wrfruns/'; rundir(1).dir='ecmwf_ml_0.5_nudging_coeff_half'; fileWRF(1).file=['d03'];
+
+%%%%%%%
+%    dire(1).dir='E:/wrfruns/'; rundir(1).dir='ncepR2_3dom_nudging_seaice'; fileWRF(1).file=['d03'];
+     
+
+%     dire(1).dir='Y:\WRF\'; rundir(1).dir='ncepR2_3dom_nudging'; fileWRF(1).file=['met_em_d02-2006-01-07_00-00-00']; 
+%     dire(2).dir='Y:\WRF\'; rundir(2).dir='ncepR2_3dom_nudging'; fileWRF(2).file=['met_em_d02-2006-01-05_12-00-00'];
+%     rundir(1).dir='ncepR2_seaice'; fileWRF(1).file=['d02'];
+%%%%%%%
+
+
+
+
+%dire(1).dir='E:/wrfruns/'; rundir(1).dir='ecmwf_ml_0.5_nudging_blres'; fileWRF(1).file=['d03'];
+%dire(1).dir='E:/wrfruns/'; rundir(1).dir='ecmwf_ml_0.5_nudging_dom1'; fileWRF(1).file=['d03'];
+%dire(1).dir='E:/wrfruns/'; rundir(1).dir='ecmwf_ml_0.5_nudging_uv'; fileWRF(1).file=['d03'];
+%dire(1).dir='E:/wrfruns/'; rundir(1).dir='ecmwf_ml_hires'; fileWRF(1).file=['met_em_d03-2006-01-05_00-00-00'];
+%dire(1).dir='E:/wrfruns/'; rundir(1).dir='Jaafar_Yanbu_nudging'; fileWRF(1).file=['d02'];
+%dire(1).dir='E:/wrfruns/'; rundir(1).dir='Jaafar_Yanbu_no_nudging'; fileWRF(1).file=['wrfout_d02_2009-03-13_00'];
+
+%dire(1).dir='E:/wrfruns/'; rundir(1).dir='ecmwf_blres_test'; fileWRF(1).file=['d03_5-7Jan'];
+%dire(1).dir='E:/wrfruns/'; rundir(1).dir='ecmwf_blres_test'; fileWRF(1).file=['d03_7-8thJan'];
+
+%NOTE - make sure the Matlab screen is wide enough to fit the filename on (for nc command)!!
+
+%rundir(1).dir='ant_jan06_sf2'; fileWRF(1).file=['d03_ncep'];
+
+
+% dire(1).dir = 'Y:\WRF\'; rundir(1).dir='ecmwf_ml_0.5_nudging'; fileWRF(1).file=['d02'];   %usual ECMWF run (24th April, 2009) 
+% dire(2).dir='E:/wrfruns/'; rundir(2).dir='ecmwf_ml_0.5_wps_snow'; fileWRF(2).file=['d02'];
+% dire(3).dir='E:/wrfruns/'; rundir(3).dir='ncepR2_3dom_nudging_seaice'; fileWRF(1).file=['d02'];
+ 
+% dire(1).dir = 'Y:\WRF\'; rundir(1).dir='ecmwf_ml_0.5_nudging'; fileWRF(1).file=['d03'];   %usual ECMWF run (24th April, 2009) 
+% dire(2).dir='Y:\WRF\'; rundir(2).dir='ecmwf_ml_0.5_wps_snow'; fileWRF(2).file=['d03'];
+% dire(3).dir='E:/wrfruns/'; rundir(3).dir='ncepR2_3dom_nudging_seaice'; fileWRF(1).file=['d03'];
+ 
+% dire(1).dir='Y:\WRF\'; rundir(1).dir='Ant01_Dec_new_22Sep09'; fileWRF(1).file=['d03_full'];
+% dire(1).dir='Y:\WRF\'; rundir(1).dir='Ant07_Dec_29Sep09'; fileWRF(1).file=['d03'];
+
+% dire(1).dir='Y:\WRF\'; rundir(1).dir='Yanbu_GFS_hires_03Dec09_61x61km'; fileWRF(1).file=['d03'];
+
+%rundir(1).dir='30thNov_Min'; fileWRF(1).file=['d03'];   %main run for 30th case (as shown in SPARC presentation) 
+
+%rundir(1).dir='temp'; fileWRF(1).file=['output2.nc'];   %
+
+%dire(1).dir='C:\Documents and Settings\dan\My Documents\'; rundir(1).dir='volcano'; fileWRF(1).file=['core-cloud-phy_faam_20100421_v500_r0_arsf111a-10.nc'];   %
+%dire(1).dir='C:\Documents and Settings\dan\My Documents\'; rundir(1).dir='volcano'; fileWRF(1).file=['core-cloud-phy_faam_20100421_v500_r1_arsf111b-10.nc'];   %
+
+%dire(1).dir='Y:\WRF\Jaafar\'; rundir(1).dir='Jan_forecast\'; fileWRF(1).file=['wrfout_d03'];
+
+
+else
+    clear imanual_select_load_case %if have used the switch once then 
+    %clear it to reset it for future executions of this script
+end
+
+try
+close(nc);
+catch
+end
+
+
+filestr=rundir(1).dir;
+iund=findstr('_',filestr);
+filestr(iund)='-';
+
+iund=findstr('/',filestr);
+filestr(iund)='';
+
+add_ground_height=0; %value for some plotting scripts
+
+
+
+
+try
+    if strcmp(fileWRF(file_num(1)).file(1:6),'met_em')==1 | strcmp(fileWRF(file_num(1)).file(1:6),'geo_em')==1
+        file_type = 'met_em';
+    elseif strcmp(fileWRF(file_num(1)).file(1:8),'wrfinput')==1
+            file_type = 'wrfinput';
+    end
+catch
+    file_type = 'wrfout';
+end
+
+if length(file_num>1)
+    dire2 = [dire(1).dir rundir(1).dir];
+    cd(dire2);
+    nc=netcdf(fileWRF(file_num(1)).file);
+    for ifile=1:length(file_num)
+        dire2 = [dire(ifile).dir rundir(ifile).dir];
+        cd(dire2);
+        nca(ifile).nc=netcdf(fileWRF(file_num(ifile)).file);
+        
+        try
+
+            if strcmp(fileWRF(file_num(ifile)).file(1:6),'met_em')==1 | strcmp(fileWRF(file_num(ifile)).file(1:6),'geo_em')==1                
+                is_met_em(ifile)=1;
+            else
+                file_type = 'wrfout';
+            end
+
+
+            if strcmp(fileWRF(file_num(ifile)).file(1:5),'ecmwf')==1
+                is_ecmwf==1;
+                file_type = 'ecmwf';
+            end
+            
+            if strcmp(fileWRF(file_num(1)).file(1:8),'wrfinput')==1
+                file_type = 'wrfinput';
+            end
+
+        catch
+            'error 1'
+        end
+    end
+else
+    dire2 = [dire(1).dir rundir(1).dir];
+    cd(dire2);
+
+    nc=netcdf(fileWRF(file_num(1)).file);
+        
+    nca(1).nc=netcdf(fileWRF(file_num(1)).file);
+        try
+
+            if strcmp(fileWRF(file_num).file(1:6),'met_em')==1 | strcmp(fileWRF(file_num).file(1:6),'geo_em')==1
+                file_type = 'met_em';
+                is_met_em=1;
+            else
+                file_type = 'wrfout';
+            end
+
+
+            if strcmp(fileWRF(file_num).file(1:5),'ecmwf')==1
+                is_ecmwf==1;
+                file_type = 'ecmwf';
+            end
+
+        catch
+            'error 2'
+        end
+        
+
+end
+
+
+
+
+
+
+% Times array
+dire2 = [dire(1).dir rundir(1).dir];
+cd(dire2);
+Times=nca(1).nc{1}(:);
+% Times=datenum(str2num(Times(:,1:4)),str2num(Times(:,6:7)),...
+%     str2num(Times(:,9:10)),str2num(Times(:,12:13)),str2num(Times(:,15:16)),...ncnclslfalsdfj
+%     str2num(Times(:,18:19)))+8.5./24-tShift./24;
+% The times array
+time=1;
+
+if size(Times,2)==1  %if there is only one time then it gets put the wrong way around so change it
+    Times=Times';
+end
+
+switch file_type
+    case {'wrfout','wrfinput'}
+        lat2d=WRFUserARW(nc,'XLAT',time);
+        lon2d=WRFUserARW(nc,'XLONG',time);
+    case 'met_em'
+        lat2d.var=nc{'XLAT_M'}(:);
+        lon2d.var=nc{'XLONG_M'}(:);
+    case 'ecwmf'
+        lon2d.var=nc{'longitude'}(:);
+        lat2d.var=nc{'latitude'}(:);
+  
+end
+
+
+
+%x_grid = ([1:size(lat2d(1).var,2)]-1) * distlatlon(lat2d.var(1,1),lon2d.var(1,1),lat2d.var(1,2),lon2d.var(1,2));
+%y_grid = ([1:size(lat2d(1).var,1)]-1) * distlatlon(lat2d.var(1,1),lon2d.var(1,1),lat2d.var(2,1),lon2d.var(2,1));
+
+DX=nc.DX(1)/1000;
+DY=nc.DY(1)/1000;
+
+x_grid = ([1:size(lat2d(1).var,2)]-1) * DX;
+y_grid = ([1:size(lat2d(1).var,1)]-1) * DY;
+
+
+
+
+
+
+
+
+% switch file_num
+% case 1
+%     
+% LAT=[-11.6];
+% LON=[130.8];
+% [ilat,ilon] = getind_latlon_quick(lat2d.var,lon2d.var,LAT,LON,0.1); %reduce the last number as higher resolution
+% 
+% case 2  
+% 
+% LAT=[-67.2 -67.2 -67.2 -68.0168 lat2d(1).var(140,240) lat2d(1).var(174,290)];
+% LON=[-62 -63 -64 -62.4159 lon2d(1).var(140,240) lon2d(1).var(174,290)];
+% [ilat,ilon] = getind_latlon_quick(lat2d.var,lon2d.var,LAT,LON,1);
+% case 3
+% 	LAT=[-67.6]; %Rothera
+% 	LON=[-68.1];
+% end
+
+ %returns index of point nearest to lat lon (i.e. closest_lat=latitude(ilat,ilon)
+                                                              %closest_lon=longitude(ilat,ilon)min
+
+                                                              
+% terrain = nc{'HGT'}(time,:,:);
+% x=[1:size(terrain,1)];
+% contour(x,x,nc{'HGT'}(1,:,:),[0 1]);
+% 
+% sea_ice=nc{'SEAICE'}(time,:,:);
+
+
+% temp=nc{'QRAIN'}(15,:,:,:);
+% temp=temp+nc{'QICE'}(15,:,:,:);
+% temp=temp+nc{'QSNOW'}(15,:,:,:);
+% temp=temp+nc{'QGRAUP'}(15,:,:,:);
+% temp=temp+nc{'QCLOUD'}(15,:,:,:);
+% 
+% mean_cloud=squeeze(mean(temp));
+
+
+
+% for i=1:length(LAT)
+% 	
+% 	ydat(i).y=WRFUserARW(nc,'Z',time,ilat(i),ilon(i));
+% 	xdat(i).x=WRFUserARW(nc,'tc',time,ilat(i),ilon(i));
+%     labs(i).l=[num2str(LAT(i)) ' , ' num2str(LON(i)) ];    
+% end
+
+
+% LON=-63;
+% [ilat,ilon] = getind_latlon(lat2d.var,lon2d.var,LAT,LON);
+% ydat(2).y=WRFUserARW(nc,'Z',time,ilat,ilon);
+% xdat(2).x=WRFUserARW(nc,'tc',time,ilat,ilon);
+% 
+% LON=-64;
+% [ilat,ilon] = getind_latlon(lat2d.var,lon2d.var,LAT,LON);
+% ydat(2).y=WRFUserARW(nc,'Z',time,ilat,ilon);
+% xdat(2).x=WRFUserARW(nc,'tc',time,ilat,ilon);
+% 
+
+
+%p =WRFUserARW(nc,'p',time);
+%rho_a=p.var.*100./287./(tc.var+273.15);
+
+%latlon_make_fine_grid
+
+filename='C:\Documents and Settings\dan\My Documents\MATLAB\WRF_toolbox_Dan\XY_latlon.mat';
+load(filename);
+
+%correct for the fact that the newly created analysis files
+%have a grid that is slightly different to the old grid
+%(about 30 km in y direction).
+% *** only apply this for domain 3 if required ***
+% set icg=1 on the command line and then run
+if exist('icgXY') & icgXY==1
+    disp('****** WARNING CORRECTING GRIDS!! ********');
+    ii=round(length(x_grid)/2);
+    XX=interp2(LATS,LONS,X_latlon,lat2d.var(ii,ii),lon2d.var(ii,ii));
+    x_grid=x_grid + (XX-x_grid(ii));
+
+    YY=interp2(LATS,LONS,Y_latlon,lat2d.var(ii,ii),lon2d.var(ii,ii));
+    y_grid=y_grid + (YY-y_grid(ii));
+    
+    clear icgXY
+end
+
+disp('done load WRF');
+

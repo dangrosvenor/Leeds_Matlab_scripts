@@ -1,0 +1,60 @@
+comp='uni';
+%comp='lacieLap';
+
+i_action='load';
+i_action='save';
+
+saveselect=[1]; %directory to save to
+
+saveflag(1)=1; %for melting flux data
+
+
+
+for jdir=1:length(saveselect)   %
+    exdir=[dire rundir]; %
+    j=saveselect(jdir);
+
+    
+
+    switch i_action
+        case 'save'
+            question_string = ['Proceed with save in directory ' exdir ' ??? (''y'' for yes) '];
+            islash=findstr(question_string,'\');
+
+            islash=[0 islash length(question_string)];
+
+            %add an extra '\' to whereever it appears as otherwise won't print out properly in fprintf (used by input command)
+            %could've just replaced '\' with '/' .....!
+            question_string_new='';
+            for islash2=1:length(islash)-1
+                question_string_new=[question_string_new question_string(islash(islash2)+1:islash(islash2+1)) '\'];
+            end
+
+            yn=input(question_string_new);
+            if strcmp(yn,'y')
+                fprintf(1,'\nSaving...');
+
+            else
+                fprintf(1,'\nFiles NOT SAVED');
+                break
+            end
+
+    end
+
+
+
+    if saveflag(1)==1
+        exname=[exdir '\mean_melting_flux_data.mat'];
+        varlist={'melt_tot','sw_tot','lw_tot','lwdown_tot','sh_tot','lh_tot','grd_tot','temp_tot','sp10_tot','cond_tot','rh_tot','rh_iz_tot'};
+        
+        switch i_action
+            case 'save'                
+                savingCommands %saves variables in varlist (with SAVE on end)
+            case 'load'
+                loadingCommands %saves variables in varlist (with SAVE on end)
+        end
+
+    end
+
+
+end

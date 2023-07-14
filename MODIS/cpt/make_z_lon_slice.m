@@ -1,0 +1,104 @@
+%create height lon slice for GCMs using multiple calls to watervap, case
+%115 (one for each height)
+
+gcm_str=gcm_str_select;
+gcm_strs={gcm_str_select};
+
+zslice_indices = eval(['[1:size(gcm_liq_av_' gcm_str ',2)];']);
+
+% gcm_strs= {...
+%     'CAM5_CLUBB'...
+%     }
+%LAT_val = [-22.74 -18;]; LON_val = [-104 -71.25];
+
+
+
+clear z_zslice x_zslice lon_edges
+
+for zslice_index=1:length(zslice_indices)+1
+    %the first z index is for the bottom edge of the height co-ord
+    %(will have one more height and lon value than actual data for d_pcolor
+    %plotting
+%% run first for the pressure/height    
+    man_choose_water_graph=1;
+    graph=115;
+    ioverride_longitude_transect_options=1;
+    ioverride_time_selection=1;
+    ioverride_lat_vals=1;
+    gcm_case = 'Pressure_vert_slice';
+    %        gcm_strs={'CAM5'};
+    use_saved_dat=1;
+    %        var_choose ='Precip rate';
+    iscreen_CTT = 0;
+    noplot=1;
+    waterVapourMay2005
+    time_mean_str = time_mean_str_orig;
+    
+    z_zslice(:,zslice_index) = ydat(1).y;
+    
+    if zslice_index==1      
+        x_zslice = lon_edges; %changed to be the lon edges
+        dat_zslice = NaN*ones([length(x_zslice)-1 length(zslice_indices)]);
+    end
+    
+   
+    
+    
+    if zslice_index<=length(zslice_indices)
+        
+        if zslice_index==1
+            %run for SLP value
+            man_choose_water_graph=1;
+            graph=115;
+            ioverride_longitude_transect_options=1;
+            ioverride_time_selection=1;
+            ioverride_lat_vals=1;
+            gcm_case =  'Sea Level Pressure_vert_slice';
+            %        gcm_strs={'CAM5'};
+            use_saved_dat=1;
+            %        var_choose ='Precip rate';
+            iscreen_CTT = 0;
+            noplot=1;
+            waterVapourMay2005
+            time_mean_str = time_mean_str_orig;
+
+            SLP = ydat(1).y;
+        end
+
+        man_choose_water_graph=1;
+        graph=115;
+        ioverride_longitude_transect_options=1;
+        ioverride_time_selection=1;
+        ioverride_lat_vals=1;
+        gcm_case = 'LWC_vert_slice (g kg^{-1})';
+        %        gcm_strs={'CAM5'};
+        use_saved_dat=1;
+        %        var_choose ='Precip rate';
+        iscreen_CTT = 0;
+        noplot=1;
+        waterVapourMay2005
+        time_mean_str = time_mean_str_orig;
+
+
+        dat_zslice(:,zslice_index) = ydat(1).y;
+        titlenam_save = titlenam_orig;
+    end
+    
+               
+end
+
+
+titlenam = [titlenam_save 'for ' gcm_str];
+figname = titlenam;
+tit(1).tit = titlenam;
+%just repeat the pressure data for the first column to give extra z values
+%for d_pcolor
+z_zslice = cat(1,z_zslice(1,:),z_zslice);
+x_zslice = repmat(x_zslice,[size(z_zslice,2) 1]);
+x_zslice = x_zslice';
+
+x1D_zslice = x_zslice(:,1);
+xc_zslice = 0.5 * (x1D_zslice(1:end-1) + x1D_zslice(2:end) );
+
+
+

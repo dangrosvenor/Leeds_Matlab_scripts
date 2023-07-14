@@ -1,0 +1,191 @@
+function th5propinfo()
+
+%
+test_datasetTransfer;    
+test_datasetCreate;  
+test_datasetAccess;
+test_fileAccess; 
+test_fileCreate; 
+
+fprintf ( 'All H5PROPINFO tests succeeded.\n\n' );
+
+%--------------------------------------------------------------------------
+function test_datasetTransfer()
+
+switch(computer)
+    case { 'MAC', 'MACI', 'GLNX86', 'PCWIN' }
+        platform = 'thirtytwo_bit';
+    case { 'MACI64', 'GLNXA64', 'PCWIN64', 'SOL64' }
+        platform = 'sixtyfour_bit';
+end
+
+
+dxpl = H5P.create('H5P_DATASET_XFER');
+actInfo = h5propinfo(dxpl);
+H5P.close(dxpl);
+
+load('th5propinfo.mat');
+
+[majnum,minnum,relnum] = H5.get_libversion();
+switch(minnum)
+    case 6
+        expInfo = expInfo.v16x.(platform).dxpl;
+    case 8
+        expInfo = expInfo.v18x.(platform).dxpl;
+    otherwise
+        error('unhandled hdf5 version');
+end
+
+
+if ~isequal(expInfo,actInfo)
+    error('DXPL info struct did not match');
+end
+
+
+fprintf ( 1, 'Retrieval of H5P_DATASET_XFER property values succeeded .\n' );
+
+%--------------------------------------------------------------------------
+function test_datasetCreate()
+
+switch(computer)
+    case { 'MAC', 'MACI', 'GLNX86', 'PCWIN' }
+        platform = 'thirtytwo_bit';
+    case { 'MACI64', 'GLNXA64', 'PCWIN64', 'SOL64' }
+        platform = 'sixtyfour_bit';
+end
+
+
+dcpl = H5P.create('H5P_DATASET_CREATE');
+actInfo = h5propinfo(dcpl);
+H5P.close(dcpl);
+
+load('th5propinfo.mat');
+
+[majnum,minnum,relnum] = H5.get_libversion();
+switch(minnum)
+    case 6
+        expInfo = expInfo.v16x.(platform).dcpl;
+    case 8
+        expInfo = expInfo.v18x.(platform).dcpl;
+    otherwise
+        error('unhandled hdf5 version');
+end
+
+% Remove the external file list and pipeline properties, they seem too
+% volatile
+expInfo = rmfield(expInfo,'pline');
+expInfo = 
+
+if ~isequal(expInfo,actInfo)
+    error('DCPL info struct did not match');
+end
+
+
+fprintf ( 1, 'Retrieval of H5P_DATASET_CREATE property values succeeded .\n' );
+
+%--------------------------------------------------------------------------
+function test_datasetAccess()
+
+switch ( version('-release') )
+case { '2008b', '2008a', '2007b', '2007a', '2006b', '2006a' }
+    fprintf ( 1, 'Cannot create H5P_DATASET_ACCESS in this release.\n' );
+    return
+end
+
+switch(computer)
+    case { 'MAC', 'MACI', 'GLNX86', 'PCWIN' }
+        platform = 'thirtytwo_bit';
+    case { 'MACI64', 'GLNXA64', 'PCWIN64', 'SOL64' }
+        platform = 'sixtyfour_bit';
+end
+
+
+dapl = H5P.create('H5P_DATASET_ACCESS');
+actInfo = h5propinfo(dapl);
+H5P.close(dapl);
+
+load('th5propinfo.mat');
+
+[majnum,minnum,relnum] = H5.get_libversion();
+switch(minnum)
+    case 6
+        expInfo = expInfo.v16x.(platform).dapl;
+    case 8
+        expInfo = expInfo.v18x.(platform).dapl;
+    otherwise
+        error('unhandled hdf5 version');
+end
+
+
+
+if ~isequal(expInfo,actInfo)
+    error('DAPL info struct did not match');
+end
+
+fprintf ( 1, 'Retrieval of H5P_DATASET_ACCESS property values succeeded .\n' );
+%--------------------------------------------------------------------------
+function test_fileAccess()
+
+switch(computer)
+    case { 'MAC', 'MACI', 'GLNX86', 'PCWIN' }
+        platform = 'thirtytwo_bit';
+    case { 'MACI64', 'GLNXA64', 'PCWIN64', 'SOL64' }
+        platform = 'sixtyfour_bit';
+end
+
+
+fapl = H5P.create('H5P_FILE_ACCESS');
+actInfo = h5propinfo(fapl);
+H5P.close(fapl);
+
+load('th5propinfo.mat');
+
+[majnum,minnum,relnum] = H5.get_libversion();
+switch(minnum)
+    case 6
+        expInfo = expInfo.v16x.(platform).fapl;
+    case 8
+        expInfo = expInfo.v18x.(platform).fapl;
+    otherwise
+        error('unhandled hdf5 version');
+end
+
+
+if ~isequal(expInfo,actInfo)
+    error('FAPL info struct did not match');
+end
+
+fprintf ( 1, 'Retrieval of H5P_FILE_ACCESS property values succeeded .\n' );
+%--------------------------------------------------------------------------
+function test_fileCreate()
+
+switch(computer)
+    case { 'MAC', 'MACI', 'GLNX86', 'PCWIN' }
+        platform = 'thirtytwo_bit';
+    case { 'MACI64', 'GLNXA64', 'PCWIN64', 'SOL64' }
+        platform = 'sixtyfour_bit';
+end
+
+
+fcpl = H5P.create('H5P_FILE_CREATE');
+actInfo = h5propinfo(fcpl);
+H5P.close(fcpl);
+
+load('th5propinfo.mat');
+
+[majnum,minnum,relnum] = H5.get_libversion();
+switch(minnum)
+    case 6
+        expInfo = expInfo.v16x.(platform).fcpl;
+    case 8
+        expInfo = expInfo.v18x.(platform).fcpl;
+    otherwise
+        error('unhandled hdf5 version');
+end
+
+
+if ~isequal(expInfo,actInfo)
+    error('FCPL info struct did not match');
+end
+
+fprintf ( 1, 'Retrieval of H5P_FILE_CREATE property values succeeded .\n' );

@@ -1,0 +1,45 @@
+function [dom_mean_var_plume,std_dev,N,inan]=Hawaii_binned_by_filter_var(var,var_filter,var_filter_bin_edges,time,title_str,ylab_str,ylims,opts)
+    
+    if min(size(var_filter) == size(var))==0
+       error(['*** DPG - size of var (' num2str(size(var)) ') needs to be the same as the size of var_filter (' num2str(size(var_filter)) ')***']);
+    end
+        
+    for i=1:length(var_filter_bin_edges)-1
+        %yvals(:,i)=Hawaii_plume_timeseries(dLWP,dNd,[var_filter_bin_edges(i) 1e99],time,title_str,ylab_str,ylims,opts);        
+        imean=find(dNd>=var_filter_bin_edges(i) & dNd<var_filter_bin_edges(i+1));
+        [ymean(i),yn(i),ystd(i)] = meanNoNan(dLWP(imean),1);        
+    end
+    
+    %yvals_timemean = meanNoNan(yvals,1);
+    figure
+    %plot(var_filter_bin_edges,yvals_timemean,'linewidth',3);
+    mid_points = 0.5*( var_filter_bin_edges(1:end-1) + var_filter_bin_edges(2:end) );
+    plot(mid_points,ymean,'linewidth',3);
+    xlabel(xlab);
+    ylabel('Time mean ' ylab);
+    fontsize_figure(gcf,gca,18);
+    
+    figure
+    %plot(var_filter_bin_edges,yvals_timemean,'linewidth',3);
+    plot(mid_points,yn,'linewidth',3);
+    %plot(var_filter_bin_edges,ystd./sqrt(yn),'linewidth',3);
+    xlabel(xlab);
+    ylabel('N_{samples}');
+    fontsize_figure(gcf,gca,18);
+    grid on
+    set(gca,'yscale','log')  
+    
+    
+    figure    
+    plot(mid_points,ystd./sqrt(yn),'linewidth',3);
+    %plot(var_filter_bin_edges,ystd./sqrt(yn),'linewidth',3);
+    xlabel(xlab);
+    ylabel(['\sigma/\surd(N) ' units_str]);
+    fontsize_figure(gcf,gca,18);
+    grid on
+    %set(gca,'yscale','log')     
+    
+%
+
+
+    

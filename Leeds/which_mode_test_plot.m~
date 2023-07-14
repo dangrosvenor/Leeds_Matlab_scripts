@@ -1,0 +1,43 @@
+%f=[0.001 0.01 0.1 0.5 0.99 1];
+
+%methods={'UM','Robin','Dan Robin','Dan Robin2','lognormal dN/lnD ratio'}
+
+figure
+
+col={'b','b','k','r','g','c'};
+mark={'o','s','x','^','v','s'};
+
+for im=1:length(methods)
+method = methods{im};
+
+plot(r_ratio(end,:),r1_new(im,:),'-','color',col{im},'marker',mark{im});
+%plot(r_ratio(im,:),dm1(im,:),'-','color',col{im},'marker',mark{im});
+hold on
+
+end
+
+set(gca,'xscale','log');
+legend(methods);
+
+plot(r_ratio(im,:),r1(im,:)*ones(size(r_ratio(im,:))),'k--');
+plot(r_ratio(im,:),r2(im,:)*ones(size(r_ratio(im,:))),'k--');
+
+
+figure
+
+col={'b','k','r','g','c'};
+mark={'o','x','^','v','s'};
+
+for im=1:length(methods)
+method = methods{im};
+
+plot(r_ratio(im,:),r2_new(im,:),'-','color',col{im},'marker',mark{im});
+hold on
+
+end
+
+plot(r_ratio(im,:),r1*ones(size(r_ratio(im,:))),'k--');
+plot(r_ratio(im,:),r2*ones(size(r_ratio(im,:))),'k--');
+
+set(gca,'xscale','log');
+legend(methods);

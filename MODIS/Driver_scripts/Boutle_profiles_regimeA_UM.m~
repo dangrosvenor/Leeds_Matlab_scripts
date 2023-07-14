@@ -1,0 +1,65 @@
+%Looking at profiles form UM for regime A
+
+roi_file = '/home/disk/eos8/d.grosvenor/VOCALS/GOES_cloud/cloud-products/saved_roi_Joint_Histo_phase_space_20160218T045214.mat';
+load(roi_file);
+
+zlevs_file = '/home/disk/eos8/d.grosvenor/UM/12Nov2008_Boutle/zlevs_orig_L70_40';
+[N_levs,z_levs,dz_levs] = read_zlevs_UM(zlevs_file);
+
+%% ------------------------------
+% ------ UM data --------
+% ------------------------------
+
+dirUM='/home/disk/eos8/d.grosvenor/UM/26thOct_POC/';
+dirUM='/home/disk/eos8/d.grosvenor/UM/12Nov2008_Boutle/';
+idat=1;
+
+for i=1:99
+    flag{i}='';
+end
+
+
+fileUM{idat} = '/xlhg-w/xlhgw_Nd_.pp.nc'; fileUM_Nd{idat} = '/xlhg-w/xlhgw_Nd_.pp.nc';labs_UM(idat).l = 'CASIM-Ndvar-10';  flag{idat} = 'load_mat'; pole_lat=70; pole_lon=284; 
+        line_patternUM(idat).p= '--';  line_colourUM(idat).c=[0.8 0.4 0]; marker_styleUM(idat).m='^'; idat=idat+1;
+        
+
+idat_UM=1;
+
+file_rho = [dirUM remove_character(fileUM{idat_UM},'Nd','rho')];
+
+     
+%% Times get selected here
+time_select=[]; %set to this for all times
+time_select = datenum('13-Nov-2008 19:00'); %for UM - daytime
+time_select = datenum('12-Nov-2008 03:00'); %for UM - daytime
+
+file_qL = [dirUM remove_character(fileUM{idat_UM},'Nd','qL')];
+[nc_qL,time_matlab,gcm_Plat2D_UM,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM,it,daynum_timeseries3_UM,modisyear_timeseries3_UM,gcm_time_UTC_UM,gcm_time_matlab_UM] = read_UM_file(file_qL,time_select,pole_lat,pole_lon);
+
+file_Nd = [dirUM remove_character(fileUM{idat_UM},'Nd','Nd')];
+[nc_Nd,time_matlab,gcm_Plat2D_UM,gcm_Plon2D_UM,gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM,it,daynum_timeseries3_UM,modisyear_timeseries3_UM,gcm_time_UTC_UM,gcm_time_matlab_UM] = read_UM_file(file_Nd,time_select,pole_lat,pole_lon);
+
+iroi=1; %pick point
+lat=lat_in_roi(iroi);
+lon=lon_in_roi(iroi);
+
+[ilat,ilon] = getind_latlon_quick(gcm_Plat2D_UM,gcm_Plon2D_UM,lat,lon,0.1);
+
+
+qL = nc_qL{'qL'}(it,:,ilat,ilon);
+Nd = nc_Nd{'Nd'}(it,:,ilat,ilon);
+figure
+plot(qL,z_levs);
+xlabel('qL (kg kg^{-1})');
+set(gca,'ylim',[0 3000]);
+
+figure
+plot(Nd,z_levs);
+xlabel('Nd (# kg^{-1})');
+set(gca,'ylim',[0 3000]);
+
+[temp,imax]=max(qL);
+Nd(imax)
+
+
+

@@ -1,0 +1,43 @@
+nx=4; %multiplication factor for each dimension
+ny=4; %16 is too high! 4 is ok.
+
+x_fine=x_grid(1):DX/nx:x_grid(end);
+y_fine=y_grid(1):DY/ny:y_grid(end);
+
+[X,Y]=meshgrid(x_fine,y_fine); %makes X and Y matrices so that X(:),Y(:) would
+%be all the x,y pairings
+
+
+lat2d_fine=interp2(x_grid,y_grid,squeeze(lat2d.var),...
+    X,Y);
+
+lon2d_fine=interp2(x_grid,y_grid,squeeze(lon2d.var),...
+    X,Y);
+
+
+max_lat=maxALL(lat2d_fine);
+min_lat=minALL(lat2d_fine);
+dlat=( max_lat-min_lat )/100;
+lats=[min_lat:dlat:max_lat];
+
+max_lon=maxALL(lon2d_fine);
+min_lon=minALL(lon2d_fine);
+dlon=( max_lon-min_lon )/100;
+lons=[min_lon:dlon:max_lon];
+
+[LATS,LONS]=meshgrid(lats,lons); %makes lat and lon matrices so that LATS(:),LONS(:) would
+%be all the lat,lon pairings
+
+LATS2=LATS(:); %make into a vector
+LONS2=LONS(:); %make into a vector
+
+    [ilat,ilon] = getind_latlon_quick(lat2d_fine,lon2d_fine,LATS2,LONS2,0.1);
+    
+    dx = x_fine(2)-x_fine(1);    
+    X_latlon = (reshape(ilon,size(LONS))-1) * dx;
+    
+    dy = y_fine(2)-y_fine(1);    
+    Y_latlon = (reshape(ilat,size(LATS))-1) * dy;
+
+
+    

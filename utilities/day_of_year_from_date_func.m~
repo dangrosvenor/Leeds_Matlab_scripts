@@ -1,0 +1,21 @@
+function [day,day_str] = day_of_year_from_date_func(date_str,date_format)
+% [day,day_str] = day_of_year_from_date_func(date_str,date_format)
+%
+%also see date = date_from_day_of_year_func(day,year)
+
+if nargin==1
+    date_format = 'dd-mmm-yyyy';
+end
+
+date_num = datenum(date_str,date_format);
+
+[Y,M,D] = datevec(date_num);
+
+date_str_beg = repmat(['01-Jan-'],[length(Y) 1]);
+
+date_str2 = cat(2,date_str_beg,num2str(Y));
+
+day = floor(date_num -  datenum(date_str2) + 1);
+
+if day<10
+    day_str = ['00' num2str(day)]

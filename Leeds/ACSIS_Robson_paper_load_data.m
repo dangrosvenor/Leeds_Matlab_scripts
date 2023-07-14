@@ -1,0 +1,1200 @@
+%function ACSIS_Robson_paper_load_data()
+
+% Steps to follow when adding a new variable.
+% Run Linux script to convert from NetCDF4 to 3, to merge the files and to
+%   create a link - ~/scripts/merge_netcdf_esgf (for data from ESGF archive).
+% Process into .mat data using ACSIS_dat_trends_load_ensemble_multi_vars.m
+%   or ACSIS_dat_trends_load_ESGF_ensemble_multi_vars.m for ESGF data.
+% Add files for loading in this script.
+% Also add something for obs in this script.
+% Also add an entry in for the variable in:- ACSIS_Robson_paper_choose_clims_etc
+
+%Typical next scripts to run will be :-
+%ACSIS_Robson_paper_plot_timeseries_RUN_multi_generic - to make timeseries
+
+
+
+
+clear load_file
+
+try
+    
+    if ~exist('ioverride_vals')
+        ioverride_vals=0;
+    end
+
+%% UKESM eval
+inew_folder=0;
+if inew_folder==1
+    savedir_date=['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_' datestr(now,30) '/'];
+    eval(['!mkdir ' savedir_date]);
+else
+    savedir_date='/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_20200325T024432/';
+end
+
+%%
+
+% Load CF data using :-
+%read_calipso_monthly_IPSL_2007_2017
+
+%savedir_date=['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_' datestr(now,30) '/'];
+%eval(['!mkdir ' savedir_date]);
+
+no_PI = 0; % = 1 signifies that there is no PI file - set to zero in var_ukesm switch if this is not the case.
+%This is the default value
+
+PI_seasonal=1; %Whether we have seasonal PI data, or just annual.
+
+%ioverride_vals=0;
+if ioverride_vals==0
+
+MIP = 'AMIP';
+MIP = 'CMIP'; %(UKESM)
+%MIP = 'DAMIP';
+%MIP = 'DAMIP-Hist-Aer';
+%MIP = 'NUDGED';
+%MIP = 'HADGEM-LL';
+%MIP = 'UKESM1-AerChemMIP_control';
+
+
+
+%var_ukesm = 'Nd_cf_weighted_UKESM'; % For HADGEM think we want to use scldncl
+%var_ukesm = 'Nd_clw_weighted_ESGF'; %The one to use for Nd for the SW paper for UKESM and AerChemMIP control
+%var_ukesm = 'Nd_clw_weighted_ESGF_no_dz';
+%var_ukesm = 'Nd_clw_weighted_ESGF_no_dz_no_ice_total_column_to_zdomain_top';
+%var_ukesm = 'cldnvi';
+%var_ukesm = 'reffclwtop';
+%var_ukesm = 'calipso_low_cloud_amount';
+%var_ukesm = 'calipso_total_cloud_amount';
+%var_ukesm = 'SW_up_TOA';
+%var_ukesm = 'DEEPC_fluxes'; %SW TOA fluxes from the DeepC dataset.
+%var_ukesm = 'SO2_low_anthropogenic_emissions';
+var_ukesm = 'clt';
+var_ukesm = 'rsut'; %Upwelling TOA SW
+%var_ukesm = 'rsutcs'; %Clear-sky upwelling TOA SW
+%var_ukesm = 'rsds'; %Downwelling surface SW
+%var_ukesm = 'ts'; %surface temperature
+%var_ukesm = 'dust_od550';
+%var_ukesm = 'scldncl'; %cloud top stratiform Nd averaged from daily to monthly by me (ACSIS_Robson_paper_calc_monthly_Nd_ESGF.m)
+%N.B. - didn't do liq cloud frac weighting for time average here - not
+%really needed if consider that cumulus should weight equally to
+%stratocumlus
+%var_ukesm='clwvi'; clwvi includes IWP too.
+%var_ukesm='lwp'; %
+%var_ukesm='lwpic'; % N.B. - have divided by the total cloud fraction for this variable (in ACSIS_dat_trends_load_ensemble_esgf.m)
+% to approximate the in-cloud LWP.
+%var_ukesm='prw'; %column water vapour (water vapour path)
+%var_ukesm='od550aer'; %Optical depth at 550nm
+%var_ukesm='od550tot'; %Aerosol + dust aod at 550nm
+%var_ukesm='od550aerso'; %Optical depth at 550nm
+
+
+end
+
+Nd_obs = 'MODIS'; %use MODIS for the Nd timeseries
+%Nd_obs = 'CCI'; %Use CCI Nd (based on monthly reff and tau)
+%Nd_obs = 'both';
+
+yr_start_trend=1850;
+%yr_start_trend=2003;
+yr_end_trend=2014;
+
+
+p_conf = 95; % Confidence limit (%) for the trend significance
+nthresh_days = 3;
+%nthresh_days = 0;
+
+
+UKESM_Nd_case = 'to ztop';
+UKESM_Nd_case = 'to 3.2km';
+
+
+iscreen_land=1;
+icoarse_grain=0;
+
+time_round='';
+time_format_str='';
+icontour_DRIVER=0;
+isave_plot=0;
+iplot_wind_arrows=0;
+
+cont_col_str_DRIVER='k';
+
+
+ACSIS_Robson_paper_choose_clims_etc %run script to choose clims, units, etc. based on
+% var_ukesm
+% var_str set in the above too
+
+model_str = 'UKESM1';
+
+LAT_val=[-1e9 1e9];
+LON_val=[-1e9 1e9];
+
+
+%% Run the script to load the 9 member ensemble
+
+%ACSIS_dat_trends_load_ensemble_multi_vars(); %This reads in the model data and makes
+%the .mat files - only need to do once for each variable.
+
+fscale=1;
+
+switch var_ukesm
+    case 'Nd_cf_weighted_UKESM_ztop'
+        %load('/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/Nd_trends_ukesm.mat');
+    case 'Nd_cf_weighted_UKESM'
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_Nd_cf_weighted_UKESM.mat';
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);                
+                
+                
+        end
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_Nd_cf_weighted_UKESM.mat';
+        
+   case 'Nd_clw_weighted_ESGF'   %AMIP run from ESGF
+       fscale=1e-6;
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'                
+                %UKESM1 16 member ensemble
+                model_str = 'UKESM1'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_UKESM1-0-LL_all_Nd_clw_weighted_ESGF.mat';
+                %error(['Need to set a file for ' MIP '!']);
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);
+                                               
+            case 'HADGEM-LL'
+                model_str = 'HADGEM-GC31-LL'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_HADGEM3_GC31_LL_all_Nd_clw_weighted_ESGF.mat';                
+                
+            case 'UKESM1-AerChemMIP_control'
+                %UKESM1 3 member ensemble that corresponds to the
+                %AerChemMIP runs.
+                model_str = 'AerChemMIP-all-emissions'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_' MIP '_all_' var_ukesm '_total_column_to_zdomain_top.mat'];
+                no_PI = 1;
+                
+        end
+                
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_Nd_cf_weighted_UKESM.mat';
+
+    case {'Nd_clw_weighted_ESGF_no_dz'}
+       fscale=1e-6;       
+       
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble                 
+                 %model_str = 'UKESM1'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_Nd_clw_weighted_ESGF_no_dz.mat';               
+                 model_str = 'UKESM1'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_' var_ukesm '.mat'];
+                 %model_str = 'UKESM1'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_UKESM1-0-LL_all_' var_ukesm '.mat'];                 
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);
+                                               
+            case 'HADGEM-LL'
+                error(['Need to set a file for ' MIP '!']);               
+                
+        end
+                
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_Nd_cf_weighted_UKESM.mat';        
+
+        
+case {'Nd_clw_weighted_ESGF_no_dz_no_ice_total_column_to_zdomain_top'}
+       fscale=1e-6;       
+       
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble                 
+                 %model_str = 'UKESM1'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_Nd_clw_weighted_ESGF_no_dz.mat';               
+                 %model_str = 'UKESM1'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_' var_ukesm '.mat'];
+                 model_str = 'UKESM1'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_UKESM1-0-LL_all_' var_ukesm '.mat'];                 
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);
+                                               
+            case 'HADGEM-LL'
+                error(['Need to set a file for ' MIP '!']);               
+                
+        end
+                
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_Nd_cf_weighted_UKESM.mat';        
+
+case 'reffclwtop'   %
+       fscale=1e6;
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble                 
+                 model_str = 'UKESM1'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_UKESM1-0-LL_all_reffclwtop.mat';
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);
+                                               
+            case 'HADGEM-LL'
+                error(['Need to set a file for ' MIP '!']);               
+                
+        end
+                
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_Nd_cf_weighted_UKESM.mat';        
+   
+        
+case 'cldnvi'   %
+       %fscale=1e6;
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble                 
+                 model_str = 'UKESM1'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_UKESM1-0-LL_all_cldnvi.mat';
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);
+                                               
+            case 'HADGEM-LL'
+                error(['Need to set a file for ' MIP '!']);               
+                
+        end
+                
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_Nd_cf_weighted_UKESM.mat';        
+           
+       
+    case 'calipso_low_cloud_amount'
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_calipso_low_cloud_amount.mat';
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);
+        end
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_calipso_low_cloud_amount.mat';
+        
+    case 'calipso_total_cloud_amount'
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_calipso_low_cloud_amount.mat';
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);
+        end
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_calipso_total_cloud_amount.mat';
+        
+    case 'SW_up_TOA'
+        switch MIP
+            case 'AMIP'
+                %AMIP                
+                error(['Need to set a file for ' MIP '!']);
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_SW_up_TOA.mat';
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);
+        end
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        
+    case 'SO2_low_anthropogenic_emissions'
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_SO2_low_anthropogenic_emissions.mat';
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);
+        end
+        
+        
+        load_file_PI = load_file; %don't need one of these
+        %load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        
+        no_PI = 1;
+        
+        fscale = 3600*24*365*1e6/1e3; %convert from kg/m2/s to tonnes/km2/yr
+        
+    case 'clt'   %AMIP run from ESGF
+        %load_file_PI = load_file;
+        %load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_calipso_total_cloud_amount.mat';
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm__PI_control_clt.mat';
+        
+        % -- default for clt set to 0.01 --
+        fscale=0.01; %convert from % to fraction
+        
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                model_str = 'UKESM1-AMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_clt.mat';
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                model_str = 'UKESM1'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_clt.mat';
+            case 'DAMIP'
+                model_str = 'UKESM1-DAMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_DAMIP_ensemble_timeseries_HADGEM_all_rsut.mat';                
+            case 'NUDGED'
+                model_str = 'NUDGED'; load_file = '/home/disk/eos15/d.grosvenor/UM/ACSIS_Nd_trends/ensemble_timeseries_ukesm_nudged_CONTROL_all_tot_cloud_amount_in_rad.mat';                
+                fscale=1;
+            case 'HADGEM-LL'
+                %model_str = 'HADGEM-LL'; load_file = '/home/disk/eos15/d.grosvenor/UM/ACSIS_Nd_trends/EGSF_HADGEM-LL_ensemble_timeseries_all_clt.mat';
+                model_str = 'HADGEM-GC31-LL'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_HADGEM3_GC31_LL_all_clt.mat';                                
+            case 'UKESM1-AerChemMIP_control'
+                %UKESM1 3 member ensemble that corresponds to the
+                %AerChemMIP runs.                
+                model_str = 'AerChemMIP-all-emissions'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_' MIP '_all_' var_ukesm '.mat'];                   
+        end
+        
+        PI_seasonal=0;
+        
+        
+        
+        
+    case 'rsut'   %AMIP run from ESGF
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                model_str = 'UKESM1-AMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_rsut.mat';
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                model_str = 'UKESM1'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_rsut.mat';
+            case 'UKESM1-AerChemMIP_control'   
+                %UKESM1 3 member ensemble that corresponds to the
+                %AerChemMIP runs.                
+                model_str = 'AerChemMIP-all-emissions'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_' MIP '_all_' var_ukesm '.mat'];   
+            case 'DAMIP'
+                %model_str = 'UKESM1-DAMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_DAMIP_ensemble_timeseries_HADGEM_all_rsut.mat';
+                model_str = 'DAMIP-HistAer'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_DAMIP_hist-aer_all_' var_ukesm '.mat'];
+            case 'NUDGED'
+                nudged_run_str='u-bw784'; model_str = 'NUDGED'; load_file = '/home/disk/eos15/d.grosvenor/UM/ACSIS_Nd_trends/ensemble_timeseries_ukesm_nudged_CONTROL_all_SW_up_TOA.mat';
+                nudged_run_str='u-by844'; model_str = 'NUDGED'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_Nudged_u-by844_all_SW_up_TOA.mat';
+            case 'HADGEM-LL'
+                model_str = 'HADGEM-GC31-LL'; load_file = '/home/disk/eos15/d.grosvenor/UM/ACSIS_Nd_trends/EGSF_HADGEM-LL_ensemble_timeseries_all_rsut.mat';                
+                
+        end
+        
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+
+ case 'rsds'   
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                %model_str = 'UKESM1-AMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_rsut.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                model_str = 'UKESM1'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_rsds.mat';
+                %error(['Need to set a file for ' MIP '!']);
+            case 'DAMIP'
+                %model_str = 'UKESM1-DAMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_DAMIP_ensemble_timeseries_HADGEM_all_rsut.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'NUDGED'
+                %nudged_run_str='u-bw784'; model_str = 'NUDGED'; load_file = '/home/disk/eos15/d.grosvenor/UM/ACSIS_Nd_trends/ensemble_timeseries_ukesm_nudged_CONTROL_all_SW_up_TOA.mat';
+                %nudged_run_str='u-by844'; model_str = 'NUDGED'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_Nudged_u-by844_all_SW_up_TOA.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'HADGEM-LL'
+                %model_str = 'HADGEM-GC31-LL'; load_file = '/home/disk/eos15/d.grosvenor/UM/ACSIS_Nd_trends/EGSF_HADGEM-LL_ensemble_timeseries_all_rsut.mat';
+                error(['Need to set a file for ' MIP '!']);
+        end
+        
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        no_PI=1;
+     
+        
+    case 'ts'   %
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                model_str = 'UKESM1-AMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_ts.mat';
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                model_str = 'UKESM1'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_ts.mat';
+                
+            case 'UKESM1-AerChemMIP_control'
+                %UKESM1 3 member ensemble that corresponds to the
+                %AerChemMIP runs.                
+                model_str = 'AerChemMIP-all-emissions'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_' MIP '_all_' var_ukesm '.mat'];   
+                
+            case 'HADGEM-LL'
+                model_str = 'HADGEM-GC31-LL'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_HADGEM3_GC31_LL_all_' var_ukesm '.mat'];                
+                
+            case 'DAMIP-Hist-Aer'
+                %model_str = 'DAMIP'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_HADGEM3_GC31_LL_all_' var_ukesm '.mat'];                                
+                model_str = 'DAMIP-Hist-Aer'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_DAMIP_hist-aer_all_' var_ukesm '.mat'];
+                
+            otherwise
+                error(['Need to set a file for ' MIP '!']);
+        end
+        
+        
+        
+        %load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        load_file_PI = load_file;
+        
+    case 'dust_od550'   %CMIP6 16 member ens from ESGF (July 2020)
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_od550dust.mat';
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);
+        end
+        
+        %load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        load_file_PI = load_file;
+        model_str = 'UKESM1-ESGF';
+        
+    case 'scldncl'   %CMIP6 16 member ens from ESGF (July 2020)
+        
+        model_str = 'UKESM1';
+        
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_scldncl.mat';
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_scldncl.mat';
+                
+            case 'HADGEM-LL' %using Nd_clw_weighted_ESGF for HADGEM and DAMIP
+                 load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_HADGEM3_GC31_LL_all_Nd_clw_weighted_ESGF.mat';
+                 model_str = 'HADGEM-GC31-LL';
+                 fscale=1e-6;
+                 
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);
+                
+            otherwise
+                error(['Need to set a file for ' MIP '!']);
+                            
+        end
+        
+        %load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        %load_file_PI = load_file;
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_Nd_cf_weighted_UKESM.mat';
+        
+        
+    case {'lwpic'}
+        model_str = 'UKESM1';
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                %load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_scldncl.mat';
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_lwpic.mat';
+                % N.B. clwvi includes IWP.
+                %load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_clwvi_ic.mat';
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'HADGEM-LL'
+                model_str = 'HADGEM-GC31-LL'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_HADGEM3_GC31_LL_all_lwpic.mat';
+                
+            case 'UKESM1-AerChemMIP_control'
+                %UKESM1 3 member ensemble that corresponds to the
+                %AerChemMIP runs.                
+                model_str = 'AerChemMIP-all-emissions'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_' MIP '_all_' var_ukesm '.mat'];   
+                
+        end
+        
+        %load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        %load_file_PI = load_file;
+        %load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_Nd_cf_weighted_UKESM.mat';
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm__PI_control_lwpic.mat';
+        
+        
+        no_PI=0;
+        PI_seasonal=0;
+        
+    case {'lwp'}
+        model_str = 'UKESM1';
+        no_PI = 0;
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                %load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_scldncl.mat';
+                error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_lwp.mat';
+                % N.B. clwvi includes IWP.
+                %load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_clwvc.mat';
+                
+            case 'DAMIP'
+                error(['Need to set a file for ' MIP '!']); %Although not necessarily needed here if doing the DAMIP plot since loads in the timeseries scripts..
+                
+            case 'HADGEM-LL'
+                model_str = 'HADGEM-GC31-LL'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_HADGEM3_GC31_LL_all_lwp.mat';
+                
+            case 'NUDGED'
+                model_str = 'u-bz785, wind nudging, abv. BL'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_Nudged_u-bz785_all_LWP_2-391.mat';
+                no_PI = 1;
+        end
+        
+        
+        %load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        %load_file_PI = load_file;
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm__PI_control_lwp.mat';
+        
+        
+        PI_seasonal=0;
+        
+    case 'prw' %Column water vapour
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                %model_str = 'UKESM1-AMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_rsut.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                model_str = 'UKESM1'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_prw.mat';
+                %error(['Need to set a file for ' MIP '!']);
+            case 'DAMIP'
+                %These are generally loaded separately in the generic
+                %script
+                %model_str = 'UKESM1-DAMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_DAMIP_ensemble_timeseries_HADGEM_all_rsut.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'NUDGED'
+                %nudged_run_str='u-bw784'; model_str = 'NUDGED'; load_file = '/home/disk/eos15/d.grosvenor/UM/ACSIS_Nd_trends/ensemble_timeseries_ukesm_nudged_CONTROL_all_SW_up_TOA.mat';
+                %nudged_run_str='u-by844'; model_str = 'NUDGED'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_Nudged_u-by844_all_SW_up_TOA.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'HADGEM-LL'
+                model_str = 'HADGEM-GC31-LL'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_HADGEM3_GC31_LL_all_prw.mat';
+                %error(['Need to set a file for ' MIP '!']);
+        end
+        
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        no_PI=1;  
+        
+  case 'rsutcs' %Clear sky TOA upwelling SW
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                %model_str = 'UKESM1-AMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_rsut.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                model_str = 'UKESM1'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_' var_ukesm '.mat'];
+                %error(['Need to set a file for ' MIP '!']);
+            case 'DAMIP'
+                %These are generally loaded separately in the generic
+                %script
+                model_str = 'DAMIP-HistAer'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_DAMIP_hist-aer_all_' var_ukesm '.mat'];
+                %error(['Need to set a file for ' MIP '!']);
+            case 'NUDGED'
+                %nudged_run_str='u-bw784'; model_str = 'NUDGED'; load_file = '/home/disk/eos15/d.grosvenor/UM/ACSIS_Nd_trends/ensemble_timeseries_ukesm_nudged_CONTROL_all_SW_up_TOA.mat';
+                %nudged_run_str='u-by844'; model_str = 'NUDGED'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_Nudged_u-by844_all_SW_up_TOA.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'HADGEM-LL'
+                model_str = 'HADGEM-GC31-LL'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_HADGEM3_GC31_LL_all_' var_ukesm '.mat'];
+                %error(['Need to set a file for ' MIP '!']);
+            case 'UKESM1-AerChemMIP_control'
+                %UKESM1 3 member ensemble that corresponds to the
+                %AerChemMIP runs.                
+                model_str = 'AerChemMIP-all-emissions'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_' MIP '_all_' var_ukesm '.mat'];                   
+        end
+        
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        no_PI=1;          
+  
+    case {'od550aer','od550tot'} %
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                %model_str = 'UKESM1-AMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_rsut.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                model_str = 'UKESM1'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_' var_ukesm '.mat'];
+                %error(['Need to set a file for ' MIP '!']);
+            case 'DAMIP'
+                %These are generally loaded separately in the generic
+                %script
+                %model_str = 'UKESM1-DAMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_DAMIP_ensemble_timeseries_HADGEM_all_rsut.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'NUDGED'
+                %nudged_run_str='u-bw784'; model_str = 'NUDGED'; load_file = '/home/disk/eos15/d.grosvenor/UM/ACSIS_Nd_trends/ensemble_timeseries_ukesm_nudged_CONTROL_all_SW_up_TOA.mat';
+                %nudged_run_str='u-by844'; model_str = 'NUDGED'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_Nudged_u-by844_all_SW_up_TOA.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'HADGEM-LL'
+                model_str = 'HADGEM-GC31-LL'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_HADGEM3_GC31_LL_all_' var_ukesm '.mat'];
+                %error(['Need to set a file for ' MIP '!']);
+            case 'UKESM1-AerChemMIP_control'
+                %UKESM1 3 member ensemble that corresponds to the
+                %AerChemMIP runs.                
+                model_str = 'AerChemMIP-all-emissions'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_' MIP '_all_' var_ukesm '.mat'];                   
+        end
+        
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        no_PI=1;          
+  
+  
+    case 'od550aer+dust' %
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                %model_str = 'UKESM1-AMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_rsut.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                model_str = 'UKESM1'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_' var_ukesm '.mat'];
+                %error(['Need to set a file for ' MIP '!']);
+            case 'DAMIP'
+                %These are generally loaded separately in the generic
+                %script
+                %model_str = 'UKESM1-DAMIP'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_DAMIP_ensemble_timeseries_HADGEM_all_rsut.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'NUDGED'
+                %nudged_run_str='u-bw784'; model_str = 'NUDGED'; load_file = '/home/disk/eos15/d.grosvenor/UM/ACSIS_Nd_trends/ensemble_timeseries_ukesm_nudged_CONTROL_all_SW_up_TOA.mat';
+                %nudged_run_str='u-by844'; model_str = 'NUDGED'; load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_Nudged_u-by844_all_SW_up_TOA.mat';
+                error(['Need to set a file for ' MIP '!']);
+            case 'HADGEM-LL'
+                model_str = 'HADGEM-GC31-LL'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_HADGEM3_GC31_LL_all_' var_ukesm '.mat'];
+                %error(['Need to set a file for ' MIP '!']);
+                 case 'UKESM1-AerChemMIP_control'
+                %UKESM1 3 member ensemble that corresponds to the
+                %AerChemMIP runs.                
+                model_str = 'AerChemMIP-all-emissions'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_' MIP '_all_' var_ukesm '.mat'];                   
+        end
+        
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        no_PI=1;          
+          
+        
+        
+    otherwise
+        fprintf(1,'\n*** WARNING - using default files for var %s ***',var_ukesm); 
+        model_str = 'UKESM1';
+        %load_file_PI = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_' var_ukesm '.mat'];
+        load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        PI_seasonal = 0;        
+        no_PI=1; 
+        
+        switch MIP
+            case 'AMIP'
+                %AMIP
+                load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_' var_ukesm '.mat'];
+                %error(['Need to set a file for ' MIP '!']);
+                
+            case 'CMIP'
+                %UKESM1 16 member ensemble
+                load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_' var_ukesm '.mat'];
+                % N.B. clwvi includes IWP.
+                %load_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_ukesm_all_clwvc.mat';
+                
+            case 'DAMIP'
+                %error(['Need to set a file for ' MIP '!']);                
+                
+            case 'HADGEM-LL'                
+                model_str = 'HADGEM-GC31-LL'; load_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_HADGEM3_GC31_LL_all_' var_ukesm '.mat'];
+        end                  
+
+        %load_file_PI = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_all_PI_PI_control_SW_up_TOA.mat';
+        %load_file_PI = load_file;
+ 
+        
+end
+        
+
+%Using thie function to load the data inc the seasonal data
+[dat_PI,dat_ukesm,dat_ukesm_DJF,dat_ukesm_JJA,dat_ukesm_MAM,dat_ukesm_SON]= ACSIS_Robson_paper_load_data_generic_FUNC(load_file,load_file_PI,var_ukesm,fscale);
+
+        
+%         
+% 
+% dat_PI = load(load_file_PI,'dat_annual_ens','years_ukesm_1d','dat_annual','gcm_Plon2D_UM','gcm_Plat2D_UM','gcm_Plon2D_edges_UM','gcm_Plat2D_edges_UM');
+% dat_PI.dat_annual_ens = fscale*dat_PI.dat_annual_ens;
+% dat_PI.dat_annual = fscale*dat_PI.dat_annual;
+% 
+% dat_ukesm=load(load_file,'dat_annual_ens','years_ukesm_1d','dat_annual','gcm_Plon2D_UM','gcm_Plat2D_UM','gcm_Plon2D_edges_UM','gcm_Plat2D_edges_UM');
+% dat_ukesm.dat_annual_ens = fscale*dat_ukesm.dat_annual_ens;
+% dat_ukesm.dat_annual = fscale*dat_ukesm.dat_annual;
+% dat_ukesm.fscale = fscale;
+% 
+% dat_ukesm_DJF=load(load_file,'dat_annual_ens_DJF','years_ukesm_1d','dat_annual_DJF','gcm_Plon2D_UM','gcm_Plat2D_UM','gcm_Plon2D_edges_UM','gcm_Plat2D_edges_UM');
+% dat_ukesm_DJF.dat_annual_ens = fscale*dat_ukesm_DJF.dat_annual_ens_DJF;
+% dat_ukesm_DJF.dat_annual = fscale*dat_ukesm_DJF.dat_annual_DJF;
+% 
+% dat_ukesm_MAM=load(load_file,'dat_annual_ens_MAM','years_ukesm_1d','dat_annual_MAM','gcm_Plon2D_UM','gcm_Plat2D_UM','gcm_Plon2D_edges_UM','gcm_Plat2D_edges_UM');
+% dat_ukesm_MAM.dat_annual_ens = fscale*dat_ukesm_MAM.dat_annual_ens_MAM;
+% dat_ukesm_MAM.dat_annual = fscale*dat_ukesm_MAM.dat_annual_MAM;
+% 
+% dat_ukesm_JJA=load(load_file,'dat_annual_ens_JJA','years_ukesm_1d','dat_annual_JJA','gcm_Plon2D_UM','gcm_Plat2D_UM','gcm_Plon2D_edges_UM','gcm_Plat2D_edges_UM');
+% dat_ukesm_JJA.dat_annual_ens = fscale*dat_ukesm_JJA.dat_annual_ens_JJA;
+% dat_ukesm_JJA.dat_annual = fscale*dat_ukesm_JJA.dat_annual_JJA;
+% 
+% dat_ukesm_SON=load(load_file,'dat_annual_ens_SON','years_ukesm_1d','dat_annual_SON','gcm_Plon2D_UM','gcm_Plat2D_UM','gcm_Plon2D_edges_UM','gcm_Plat2D_edges_UM');
+% dat_ukesm_SON.dat_annual_ens = fscale*dat_ukesm_SON.dat_annual_ens_SON;
+% dat_ukesm_SON.dat_annual = fscale*dat_ukesm_SON.dat_annual_SON;
+
+if PI_seasonal==1
+    %PI seasonal
+%     dat_PI_DJF=load(load_file_PI,'dat_annual_ens_DJF','years_ukesm_1d','dat_annual_DJF','gcm_Plon2D_UM','gcm_Plat2D_UM','gcm_Plon2D_edges_UM','gcm_Plat2D_edges_UM');
+%     dat_PI_DJF.dat_annual_ens = dat_PI_DJF.dat_annual_ens_DJF;
+%     dat_PI_DJF.dat_annual = dat_PI_DJF.dat_annual_DJF;
+%     
+%     dat_PI_MAM=load(load_file_PI,'dat_annual_ens_MAM','years_ukesm_1d','dat_annual_MAM','gcm_Plon2D_UM','gcm_Plat2D_UM','gcm_Plon2D_edges_UM','gcm_Plat2D_edges_UM');
+%     dat_PI_MAM.dat_annual_ens = dat_PI_MAM.dat_annual_ens_MAM;
+%     dat_PI_MAM.dat_annual = dat_PI_MAM.dat_annual_MAM;
+%     
+%     dat_PI_JJA=load(load_file_PI,'dat_annual_ens_JJA','years_ukesm_1d','dat_annual_JJA','gcm_Plon2D_UM','gcm_Plat2D_UM','gcm_Plon2D_edges_UM','gcm_Plat2D_edges_UM');
+%     dat_PI_JJA.dat_annual_ens = dat_PI_JJA.dat_annual_ens_JJA;
+%     dat_PI_JJA.dat_annual = dat_PI_JJA.dat_annual_JJA;
+%     
+%     dat_PI_SON=load(load_file_PI,'dat_annual_ens_SON','years_ukesm_1d','dat_annual_SON','gcm_Plon2D_UM','gcm_Plat2D_UM','gcm_Plon2D_edges_UM','gcm_Plat2D_edges_UM');
+%     dat_PI_SON.dat_annual_ens = dat_PI_SON.dat_annual_ens_SON;
+%     dat_PI_SON.dat_annual = dat_PI_SON.dat_annual_SON;
+    
+    [dat_PI_dummy,dat_ukesm_PI,dat_PI_DJF,dat_PI_JJA,dat_PI_MAM,dat_PI_SON]= ACSIS_Robson_paper_load_data_generic_FUNC(load_file_PI,load_file_PI,var_ukesm,fscale);
+    
+end
+
+ioverride_LAT_plots=1;
+
+gcm_Plon2D_UM = dat_ukesm.gcm_Plon2D_UM;
+gcm_Plat2D_UM = dat_ukesm.gcm_Plat2D_UM;
+%gcm_Plon2D_edges_UM = dat_ukesm.gcm_Plon2D_edges_UM;
+%gcm_Plat2D_edges_UM = dat_ukesm.gcm_Plat2D_edges_UM;
+[gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM] = get_edges_lat_lon(gcm_Plat2D_UM,gcm_Plon2D_UM);
+[gcm_area_UM] = calc_area_lat_lon2d(gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM);
+dat_ukesm.gcm_area_UM = gcm_area_UM;
+
+
+%% Load obs data
+obs_str=''; %default
+switch var_ukesm
+    case {'ts'}
+        
+        obs_str='AMIP';
+        %obs_str='HadCRUTv5';
+        switch obs_str
+            case 'AMIP'
+                
+                
+                %
+                ts_dat = load('/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/ensemble_timeseries_ukesm_AMIP_all_ts.mat');
+                
+                gcm_Plat2D_ts = gcm_Plat2D_UM;
+                gcm_Plon2D_ts = gcm_Plon2D_UM;
+                gcm_Plat2D_edges_ts = gcm_Plat2D_edges_UM;
+                gcm_Plon2D_edges_ts = gcm_Plon2D_edges_UM;
+                
+                [gcm_area_ts] = calc_area_lat_lon2d(gcm_Plat2D_edges_ts,gcm_Plon2D_edges_ts);
+                
+                years_obs = ts_dat.years_ukesm_1d;
+                years_obs_ts = years_obs;
+                
+                obs_annual_map_ts = ts_dat.dat_annual;
+                
+            case 'HadCRUTv5'
+                
+                ts_dat = load('/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/HadCRUT_surface_temps/HadCRUT.5.0.1.0.analysis.anomalies.ensemble_mean_regridded_UKESM1.mat');
+                gcm_Plat2D_ts = ts_dat.gcm_Plat2D_UM;
+                gcm_Plon2D_ts = isccp_dat.gcm_Plon2D_UM;
+                [gcm_Plat2D_edges_ts,gcm_Plon2D_edges_ts] = get_edges_lat_lon(gcm_Plat2D_ts,gcm_Plon2D_ts);
+                [gcm_area_ts] = calc_area_lat_lon2d(gcm_Plat2D_edges_ts,gcm_Plon2D_edges_ts);
+                
+                years_obs_ts = ts_dat.years; season='Annual';
+                [obs_monthly_box_ts,obs_annual_box_ts,obs_annual_map_ts] = ACSIS_Robson_paper_process_obs(permute(ts_dat.tot_tas_anom_HadCRUT,[3 1 2]),gcm_Plat2D_UM,gcm_Plon2D_UM,[-1e9 1e9],[-1e9 1e9],years_obs_ts,gcm_area_UM,season);
+                
+        end
+        
+        
+        
+    case {'SW_up_TOA','rsut'}
+        
+        %         %ceres_file = '/home/disk/eos15/d.grosvenor/eos8/CERES/ACSIS/CERES_EBAF-TOA_Ed4.0_Subset_200903-201004.nc';
+        %         ceres_file = '/home/disk/eos15/d.grosvenor/eos8/CERES/ACSIS/CERES_EBAF_Ed4.1_Subset_200003-201905.nc';
+        %         nc_ceres = netcdf(ceres_file);
+        %         lon_ceres = nc_ceres{'lon'}(:);
+        %         lat_ceres = nc_ceres{'lat'}(:);
+        %         time_ceres = nc_ceres{'time'}(:); %days since 2000-03-01
+        %         SW_TOA_ceres = nc_ceres{'toa_sw_all_mon'}(:);
+        %         %solar_mon:long_name = "Incoming Solar Flux, Monthly Means" ;
+        %         %SW_TOA_in_ceres = nc_ceres{'solar_mon'}(:);
+        %         %cf_ceres = nc_ceres{'cldarea_total_daynight_mon'}(:);
+        %         %tau_ceres = nc_ceres{'cldtau_total_day_mon'}(:);
+        %
+        %         time_matlab_CERES = datenum('01-Mar-2000') + time_ceres;
+        %         %[out, time_out_CERES, time_inds_CERES, dtime_match] = get_time_range_of_array(array_in,time_matlab_CERES,time_choice,dim);
+        %
+        %         i180=find(lon_ceres>180);
+        %         lon_ceres(i180) = lon_ceres(i180)-360;
+        %         [gcm_Plon2D_CERES, gcm_Plat2D_CERES] = meshgrid(lon_ceres,lat_ceres);
+        %         [gcm_Plat2D_edges_CERES,gcm_Plon2D_edges_CERES] = get_edges_lat_lon(gcm_Plat2D_CERES,gcm_Plon2D_CERES);
+        %
+        %         [gcm_area_CERES] = calc_area_lat_lon2d(gcm_Plat2D_edges_CERES,gcm_Plon2D_edges_CERES);
+        %
+        %         %years_obs=2003;
+        %         %[obs_monthly_box,obs_annual_box,obs_annual_map] = ACSIS_Robson_paper_process_obs(SW_TOA_ceres,gcm_Plat2D_CERES,gcm_Plon2D_CERES,LAT_val,LON_val,years_obs,gcm_area_CERES);
+        %
+        %%
+        %ceres_file = '/home/disk/eos15/d.grosvenor/eos8/CERES/ACSIS/CERES_EBAF-TOA_Ed4.0_Subset_200903-201004.nc';
+        ceres_file = '/home/disk/eos15/d.grosvenor/eos8/CERES/ACSIS/CERES_EBAF_Ed4.1_Subset_200003-201905.nc';
+        nc_ceres = netcdf(ceres_file);
+        lon_ceres = nc_ceres{'lon'}(:);
+        lat_ceres = nc_ceres{'lat'}(:);
+        time_ceres = nc_ceres{'time'}(:); %days since 2000-03-01
+        %Runs from 15th March 2000 to 15th May 2009
+        SW_TOA_ceres_in = nc_ceres{'toa_sw_all_mon'}(:);
+        %solar_mon:long_name = "Incoming Solar Flux, Monthly Means" ;
+        %SW_TOA_in_ceres = nc_ceres{'solar_mon'}(:);
+        %cf_ceres = nc_ceres{'cldarea_total_daynight_mon'}(:);
+        %tau_ceres = nc_ceres{'cldtau_total_day_mon'}(:);
+        
+        time_matlab_CERES = datenum('01-Mar-2000') + time_ceres;
+        %[out, time_out_CERES, time_inds_CERES, dtime_match] = get_time_range_of_array(array_in,time_matlab_CERES,time_choice,dim);
+        
+        i180=find(lon_ceres>180);
+        lon_ceres(i180) = lon_ceres(i180)-360;
+        [gcm_Plon2D_CERES, gcm_Plat2D_CERES] = meshgrid(lon_ceres,lat_ceres);
+        [gcm_Plat2D_edges_CERES,gcm_Plon2D_edges_CERES] = get_edges_lat_lon(gcm_Plat2D_CERES,gcm_Plon2D_CERES);
+        [gcm_area_CERES] = calc_area_lat_lon2d(gcm_Plat2D_edges_CERES,gcm_Plon2D_edges_CERES);
+        
+        
+        %Ceres data here runs from 15th March 2000 to 15th May 2019
+        %- so select 2001 to 2018
+        years_obs_CERES=[2001:2018];
+        [Y,M,D] = datevec(time_matlab_CERES);
+        istart = find(Y==years_obs_CERES(1));
+        iend = find(Y==years_obs_CERES(end));
+        SW_TOA_ceres = SW_TOA_ceres_in(istart(1):iend(end),:,:);
+        season='Annual';
+        [obs_monthly_box,obs_annual_box,obs_annual_map] = ACSIS_Robson_paper_process_obs(SW_TOA_ceres,gcm_Plat2D_CERES,gcm_Plon2D_CERES,[-1e9 1e9],[-1e9 1e9],years_obs_CERES,gcm_area_CERES,season);
+        
+        
+        
+        
+        dat_file = ['/home/disk/eos15/d.grosvenor/eos8/DEEPC_CERES/sw_up_TOA_calculated.mat'];
+        dat_file = ['/home/disk/eos15/d.grosvenor/eos8/DEEPC_CERES/sw_up_TOA_calculated_non_coarse_grained.mat'];
+        %dat_file = ['/home/disk/eos15/d.grosvenor/eos8/DEEPC_CERES/sw_up_TOA_calculated_non_coarse_grained_non_GEOD.mat'];
+        %%
+        % Deep-C data file created using SW_DEEPC_data_read_FUNC.
+        dat_deepc = load(dat_file,'time_matlab','sw_up_toa');
+        
+        years_obs_DeepC=[1985:2014]; season='Annual';
+        [obs_monthly_box_DeepC,obs_annual_box_DeepC,obs_annual_map_DeepC] = ACSIS_Robson_paper_process_obs(dat_deepc.sw_up_toa,gcm_Plat2D_UM,gcm_Plon2D_UM,[-1e9 1e9],[-1e9 1e9],years_obs_DeepC,gcm_area_UM,season);
+        
+        obs_str='Deep-C';
+        
+        %     case 'DEEPC_fluxes'
+        %          %ceres_file = '/home/disk/eos15/d.grosvenor/eos8/CERES/ACSIS/CERES_EBAF-TOA_Ed4.0_Subset_200903-201004.nc';
+        %         deepc_file = '/home/disk/eos15/d.grosvenor/eos8/DEEPC_CERES/DEEPC_TOA_ASR_v03.0_198501-201601_GEOD.nc';
+        %         nc_deepc = netcdf(deepc_file);
+        %         lon_deepc = nc_deepc{'lon'}(:);
+        %         lat_deepc = nc_deepc{'lat'}(:);
+        %         time_deepc = nc_deepc{'time'}(:); %days since 2000-03-01
+        %         SW_TOA_deepc = nc_deepc{'ASR'}(:);
+        %
+        %         time_matlab_deepc = datenum('01-Jan-1985') + time_deepc;
+        %         %[out, time_out_CERES, time_inds_CERES, dtime_match] = get_time_range_of_array(array_in,time_matlab_CERES,time_choice,dim);
+        %
+        %         i180=find(lon_deepc>180);
+        %         lon_deepc(i180) = lon_deepc(i180)-360;
+        %         [gcm_Plon2D_deepc, gcm_Plat2D_deepc] = meshgrid(lon_deepc,lat_deepc);
+        %         [gcm_Plat2D_edges_deepc,gcm_Plon2D_edges_deepc] = get_edges_lat_lon(gcm_Plat2D_deepc,gcm_Plon2D_deepc);
+        %
+        %         [gcm_area_deepc] = calc_area_lat_lon2d(gcm_Plat2D_edges_deepc,gcm_Plon2D_edges_deepc);
+        %
+        
+    case {'calipso_low_cloud_amount','calipso_total_cloud_amount','clt'};
+        cf_obs = 'CALIPSO';
+        cf_obs = 'ESA CCI';
+        %switch cf_obs
+        %    case 'CALIPSO'
+        obs_str='CALIPSO';
+        
+        %Load Calipso data - currently 2007-2017
+        % Load CF data using :-
+        read_calipso_monthly_IPSL_2007_2017
+        years_obs = years_requested;  %from read_calipso_monthly_IPSL_2007_2017 script above
+        
+        %re-do this due to recent changes in the code to properly deal with
+        %the longitudes
+        [gcm_Plat2D_edges_CALIPSO_monthly,gcm_Plon2D_edges_CALIPSO_monthly] = get_edges_lat_lon(gcm_Plat2D_CALIPSO_monthly,gcm_Plon2D_CALIPSO_monthly);
+        [gcm_area_CALIPSO_monthly] = calc_area_lat_lon2d(gcm_Plat2D_edges_CALIPSO_monthly,gcm_Plon2D_edges_CALIPSO_monthly);
+        
+        
+        %[obs_monthly_box,obs_annual_box,obs_annual_map] = ACSIS_Robson_paper_process_obs(0.01*cllcalipso_monthly_AVERAGE,gcm_Plat2D_CALIPSO_monthly,gcm_Plon2D_CALIPSO_monthly,LAT_val,LON_val,years_obs,gcm_area_CALIPSO_monthly);
+        %  case 'ESA CCI'
+        obs_str='ESA_CCI';
+        cci_dat = load('/home/disk/eos8/d.grosvenor/ESA_Cloud_CCI/AVHRR_PMv3_L3C_Monthly/ESA_Cloud_CCI_Monthly_Cloud_Fraction.mat');
+        years_obs = unique(cci_dat.Y_out);
+        
+        gcm_Plat2D_CCI = cci_dat.gcm_Plat2D_CCI;
+        gcm_Plon2D_CCI = cci_dat.gcm_Plon2D_CCI;
+        [gcm_Plat2D_edges_CCI,gcm_Plon2D_edges_CCI] = get_edges_lat_lon(gcm_Plat2D_CCI,gcm_Plon2D_CCI);
+        [gcm_area_CCI] = calc_area_lat_lon2d(gcm_Plat2D_edges_CCI,gcm_Plon2D_edges_CCI);
+        
+        years_obs_CCI=unique(cci_dat.Y_out); season='Annual';
+        [obs_monthly_box_CCI,obs_annual_box_CCI,obs_annual_map_CCI] = ACSIS_Robson_paper_process_obs(cci_dat.cfc,gcm_Plat2D_UM,gcm_Plon2D_UM,[-1e9 1e9],[-1e9 1e9],years_obs_CCI,gcm_area_UM,season);
+        
+        
+        %Norris data
+        obs_str='PATMOSx';
+        %patmos_dat = load('/home/disk/eos10/d.grosvenor/Norris_Nature_2016_dat/Norris_cf_anom_dat.mat');
+        patmos_dat = load('/home/disk/eos5/d.grosvenor/modis_work/ACSIS_Nd_trends/Norris_CF_data/Norris_cf_anom_dat.mat');
+        
+        
+        gcm_Plat2D_PATMOS = patmos_dat.gcm_Plat2D_PATMOS;
+        gcm_Plon2D_PATMOS = patmos_dat.gcm_Plon2D_PATMOS;
+        [gcm_Plat2D_edges_PATMOS,gcm_Plon2D_edges_PATMOS] = get_edges_lat_lon(gcm_Plat2D_PATMOS,gcm_Plon2D_PATMOS);
+        [gcm_area_PATMOS] = calc_area_lat_lon2d(gcm_Plat2D_edges_PATMOS,gcm_Plon2D_edges_PATMOS);
+        
+        years_obs_PATMOS = patmos_dat.years; season='Annual';
+        [obs_monthly_box_PATMOS,obs_annual_box_PATMOS,obs_annual_map_PATMOS] = ACSIS_Robson_paper_process_obs(patmos_dat.totcf_anom_PATMOS,gcm_Plat2D_UM,gcm_Plon2D_UM,[-1e9 1e9],[-1e9 1e9],years_obs_PATMOS,gcm_area_UM,season);
+        
+        % ISCCP
+        obs_str='ISCCP';
+        %isccp_dat = load('/home/disk/eos10/d.grosvenor/Norris_Nature_2016_dat/Norris_cf_anom_dat.mat');
+        isccp_dat = load('/home/disk/eos5/d.grosvenor/modis_work/ACSIS_Nd_trends/Norris_CF_data/Norris_cf_anom_dat.mat');
+        
+        gcm_Plat2D_ISCCP = isccp_dat.gcm_Plat2D_ISCCP;
+        gcm_Plon2D_ISCCP = isccp_dat.gcm_Plon2D_ISCCP;
+        [gcm_Plat2D_edges_ISCCP,gcm_Plon2D_edges_ISCCP] = get_edges_lat_lon(gcm_Plat2D_ISCCP,gcm_Plon2D_ISCCP);
+        [gcm_area_ISCCP] = calc_area_lat_lon2d(gcm_Plat2D_edges_ISCCP,gcm_Plon2D_edges_ISCCP);
+        
+        years_obs_ISCCP = isccp_dat.years; season='Annual';
+        [obs_monthly_box_ISCCP,obs_annual_box_ISCCP,obs_annual_map_ISCCP] = ACSIS_Robson_paper_process_obs(isccp_dat.totcf_anom_ISCCP,gcm_Plat2D_UM,gcm_Plon2D_UM,[-1e9 1e9],[-1e9 1e9],years_obs_ISCCP,gcm_area_UM,season);
+        
+        obs_str = 'ISCCP PATMOSx'; %both obs sets as a default for plotting
+        
+        % end
+        
+    case {'lwp'}
+        %MAC monthly LWP data
+        obs_str='MAC';
+        MAC_dat = load('/home/disk/eos5/d.grosvenor/MAC_LWP/monthly_MAC/MAC_monthly_LWP.mat');
+        %MAC_dat = load('/home/disk/eos5/d.grosvenor/MAC_LWP/monthly_MAC/MAC_monthly_TLWP.mat');
+        
+        gcm_Plat2D_MAC = gcm_Plat2D_UM;
+        gcm_Plon2D_MAC = gcm_Plon2D_UM;
+        [gcm_Plat2D_edges_MAC,gcm_Plon2D_edges_MAC] = get_edges_lat_lon(gcm_Plat2D_MAC,gcm_Plon2D_MAC);
+        %[gcm_area_MAC] = calc_area_lat_lon2d(gcm_Plat2D_edges_MAC,gcm_Plon2D_edges_MAC);
+        gcm_area_MAC = gcm_area_UM;
+        
+        years_obs_MAC = MAC_dat.years; season='Annual';
+        MAC_monthly = MAC_dat.lwp_UM_monthly;
+        %         sdat=size(MAC_monthly);
+        %         it=0;
+        %         for iy=1:sdat(1)
+        %             for im=1:sdat(2)
+        %                 it=it+1;
+        %                 dat(it,:,:) = MAC_monthly(iy,im,:,:);
+        %             end
+        %         end
+        MAC_monthly = permute(MAC_monthly,[3 4 2 1]);
+        MAC_monthly = permute(MAC_monthly(:,:,:),[3 1 2]);
+        
+        [obs_monthly_box_MAC,obs_annual_box_MAC,obs_annual_map_MAC] = ACSIS_Robson_paper_process_obs(MAC_monthly,gcm_Plat2D_UM,gcm_Plon2D_UM,[-1e9 1e9],[-1e9 1e9],years_obs_MAC,gcm_area_UM,season);
+        
+        
+    case {'Nd_cf_weighted_UKESM','scldncl','Nd_clw_weighted_ESGF','Nd_clw_weighted_ESGF_no_dz'};
+        switch Nd_obs
+            case {'MODIS','both'}
+                
+                obs_str='MODIS';
+                
+                
+                % MODIS data
+                % Using the data given to Jane - screened for sea-ice etc.
+                cf_screen_str = 'CF>80';
+                cf_screen_str = 'CF>0';
+                
+                str_2137='21';
+                str_2137='37';
+                
+                res_str='1deg';
+                res_str='1km';
+                
+                iuse_re_file = 0;
+                
+                
+                switch cf_screen_str
+                    case 'CF>80'
+                        file_dir='/home/disk/eos1/d.grosvenor/mock_L3/CF_0.8_meanCTT_173_meanCTH_3.2km_SZA_65/';
+                        dataset_str = 'SZA_LT_65_CF_GT_80_CTH_LT_3.2km_screened_for_seaice__2week_max';
+                        dataset_str = 'SZA_LT_65_CF_GT_80_CTH_LT_3.2km';
+                        
+                    case 'CF>0'
+                        file_dir='/home/disk/eos1/d.grosvenor/mock_L3/CF_0.0_meanCTT_173_meanCTH_3.2km_SZA_65/';
+                        dataset_str = 'SZA_LT_65_CF_GT_0_CTH_LT_3.2km';
+                        %dataset_str = 'SZA_LT_65_CF_GT_0_CTH_LT_3.2km_screened_for_seaice__2week_max';
+                        %Nd_re_tau_cf_37_2006_SZA_LT_65_CF_GT_0_CTH_LT_3.2km_screened_for_seaice__2week_max.mat
+                        iuse_re_file = 0;
+                end
+                
+                
+                
+                
+                switch str_2137
+                    case '21'
+                        str_label_2137='2.1 um';
+                    case '37'
+                        str_label_2137='3.7 um';
+                end
+                
+                years_MODIS2=[2003:2014];
+                clear mon_me_MODIS2 mon_me_MODIS2_Ndatap
+                for iy=1:length(years_MODIS2)
+                    year_str = num2str(years_MODIS2(iy));
+                    if iuse_re_file==1
+                        %Nd_re_tau_cf_37_2006_SZA_LT_65_CF_GT_0_CTH_LT_3.2km_screened_for_seaice__2week_max.mat
+                        filename = [file_dir 'Nd_monthly_' str_2137 '_' res_str '_' year_str '_' dataset_str '.mat.nc'];
+                    else
+                        filename = [file_dir 'Nd_monthly_' str_2137 '_' res_str '_' year_str '_' dataset_str '.mat.nc'];
+                    end
+                    nc=netcdf(filename);
+                    if iy==1
+                        lat=nc{'lat'}(:);
+                        lon=nc{'lon'}(:);
+                        [gcm_Plon2D_AMSRE,gcm_Plat2D_AMSRE]=meshgrid(lon,lat);
+                        [gcm_Plat2D_edges_AMSRE,gcm_Plon2D_edges_AMSRE] = get_edges_lat_lon(gcm_Plat2D_AMSRE,gcm_Plon2D_AMSRE);
+                        [gcm_area_AMSRE] = calc_area_lat_lon2d(gcm_Plat2D_edges_AMSRE,gcm_Plon2D_edges_AMSRE);
+                    end
+                    
+                    mon_me_MODIS2{iy} = nc{['Nd_' res_str '_mean']}(:);
+                    mon_me_MODIS2_Ndatap{iy} = nc{['Nd_' res_str '_Ndatap']}(:);
+                    inan = find(mon_me_MODIS2_Ndatap{iy} < nthresh_days);
+                    mon_me_MODIS2{iy}(inan)=NaN;
+                    %mon_me_filter{iy}(inan)=NaN;
+                end
+                
+                if iscreen_land==1
+                    land_mask_MODIS=load('/home/disk/eos1/d.grosvenor/amsre_land_mask.mat');
+                    lmask_MODIS = flipdim(land_mask_MODIS.amsre_land_mask,1);
+                    lmask_MODIS = lmask_MODIS + 1; %Make it ones where have ocean
+                end
+                
+                [mon_me_region_MODIS2] = monthly_means_restrict_lat_lon(years_MODIS2,mon_me_MODIS2,gcm_Plat2D_AMSRE,gcm_Plon2D_AMSRE,LAT_val,LON_val,iscreen_land,lmask_MODIS,1,gcm_area_AMSRE);
+                [mon_me_region_MODIS2_Ndatap] = monthly_means_restrict_lat_lon(years_MODIS2,mon_me_MODIS2_Ndatap,gcm_Plat2D_AMSRE,gcm_Plon2D_AMSRE,LAT_val,LON_val,iscreen_land,lmask_MODIS,1,gcm_area_AMSRE);
+                %[mon_me_filter_SO] = monthly_means_restrict_lat_lon(years_MODIS2,mon_me_filter,gcm_Plat2D_AMSRE,gcm_Plon2D_AMSRE,thresh_LAT,thresh_LON);
+                
+                for iy=1:length(years_MODIS2)
+                    Nd_MODIS(iy,:) = mon_me_region_MODIS2{iy}(:); %order is [year month]
+                end
+                
+                
+                
+                
+                clear Nd_annual_box_MODIS Nd_annual_MODIS obs_annual_box Nd_monthly_MODIS
+                for iy=1:size(Nd_MODIS,1)
+                    %Nd_annual_box_MODIS(iy) = meanNoNan(Nd_MODIS(iy,:),2);
+                    obs_annual_box(iy) = meanNoNan(Nd_MODIS(iy,:),2);
+                    Nd_annual_MODIS(iy,:,:) = meanNoNan(mon_me_MODIS2{iy},3);
+                    istart = (iy-1)*12+1;
+                    inds = istart:istart+11;
+                    Nd_monthly_MODIS(:,:,inds) = mon_me_MODIS2{iy}(:,:,:);
+                end
+                Nd_monthly_MODIS = permute(Nd_monthly_MODIS,[3 1 2]);
+                
+                years_obs = years_MODIS2;
+                years_obs_modis = years_MODIS2;
+                
+                season='Annual';
+                LAT_val=[-1e9 1e9]; LON_val=LAT_val;
+                %[obs_monthly_box_modis,obs_annual_box_modis,obs_annual_map_modis] = ACSIS_Robson_paper_process_obs(dat_tmp,gcm_Plat2D_AMSRE,gcm_Plon2D_AMSRE,LAT_val,LON_val,years_obs_modis,gcm_area_AMSRE,season);
+                obs_annual_map_modis = Nd_annual_MODIS;
+                
+        end
+        
+        switch Nd_obs
+            case {'CCI','both'}
+                % CCI data file created using SW_paper_ESA_CCI_monthly_data_read_FUNC.
+                dat_dir = '/home/disk/eos8/d.grosvenor/ESA_Cloud_CCI/AVHRR_PMv3_L3C_Monthly/';
+                dat_file = [dat_dir 'ESA_Cloud_CCI_Monthly_vars_for_Nd.mat'];
+                dat_Nd_CCI = load(dat_file,'time_matlab','N_T268_cf20_cot5_re3','Y_out','gcm_Plat2D_CCI','gcm_Plon2D_CCI');
+                
+                years_obs2 = unique(dat_Nd_CCI.Y_out);
+                
+                gcm_Plat2D_CCI = dat_Nd_CCI.gcm_Plat2D_CCI;
+                gcm_Plon2D_CCI = dat_Nd_CCI.gcm_Plon2D_CCI;
+                [gcm_Plat2D_edges_CCI,gcm_Plon2D_edges_CCI] = get_edges_lat_lon(gcm_Plat2D_CCI,gcm_Plon2D_CCI);
+                [gcm_area_CCI] = calc_area_lat_lon2d(gcm_Plat2D_edges_CCI,gcm_Plon2D_edges_CCI);
+        end
+        
+        
+    case {'od550aer','od550tot'}
+        %AOD monthly data
+        obs_str='MODIS_AOD';
+        filedir = '~/modis_work/saved_data_L3/';
+        
+        %cat all of the annual files (of monthly data) into one array.
+        clear modis_aod
+        modis_aod.aod=[];
+        years=[2003:2021];
+        for iy=years
+            filename = [filedir 'timeseries3_data_y' num2str(iy) '_AQUA_C61_Monthly_AOD_*.mat'];
+            files=dir(filename);
+            filename = [filedir files(1).name];
+            mod = load(filename);
+            dat = permute(mod.AOD_550_Dark_Target_Deep_Blue_Combined_Mean_Mean.timeseries3,[3 1 2]);
+            modis_aod.aod = cat(1,modis_aod.aod,dat);
+        end
+        
+        [gcm_Plon2D_MODIS,gcm_Plat2D_MODIS]=meshgrid(mod.MLON,mod.MLAT);
+        [gcm_Plat2D_edges_MODIS,gcm_Plon2D_edges_MODIS] = get_edges_lat_lon(gcm_Plat2D_MODIS,gcm_Plon2D_MODIS);
+        [gcm_area_MODIS] = calc_area_lat_lon2d(gcm_Plat2D_edges_MODIS,gcm_Plon2D_edges_MODIS);
+        
+        years_obs_MODIS = years; season='Annual';
+        %         MAC_monthly = MAC_dat.lwp_UM_monthly;
+        %         MAC_monthly = permute(MAC_monthly,[3 4 2 1]);
+        %         MAC_monthly = permute(MAC_monthly(:,:,:),[3 1 2]);
+        %
+        %         %Need to do this here?
+        %         [obs_monthly_box_MAC,obs_annual_box_MAC,obs_annual_map_MAC] = ACSIS_Robson_paper_process_obs(MAC_monthly,gcm_Plat2D_UM,gcm_Plon2D_UM,[-1e9 1e9],[-1e9 1e9],years_obs_MAC,gcm_area_UM,season);
+        %
+        
+        
+end
+
+
+
+%clear the override and also clear if there is an error in the code
+clear ioverride_vals
+
+catch script_error
+    clear ioverride_vals
+    rethrow(script_error);
+end

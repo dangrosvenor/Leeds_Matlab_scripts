@@ -1,0 +1,193 @@
+%the directory for the nc file
+nc_dir = '/home/disk/eos8/d.grosvenor/CPT/AM3/';
+%nc_dir = '/home/disk/eos8/d.grosvenor/CPT/AM3/untar_again_test/';
+%nc_dir = '/home/disk/eos8/d.grosvenor/CPT/AM3/re-downloaded_file/';
+savedir = '/home/disk/eos1/d.grosvenor/modis_work/plots/';
+
+% %2 degree (no heights)
+% % 2007_01
+% load_file{iload_file}=['/home/disk/eos8/d.grosvenor/CPT/saved_processed_gcm_data/y20070101_timechunks_new_2deg_20120626T161638.mat'];
+% iload_file=iload_file+1;
+% % 2007_07
+% load_file{iload_file}=['/home/disk/eos8/d.grosvenor/CPT/saved_processed_gcm_data/y20070701_timechunks_new_2deg_20120627T162226.mat'];
+% iload_file=iload_file+1;
+
+
+nc_dir =
+
+
+%NOTE - AM3 fields say they are (grid_yt, grid_xt) orientated.
+%However, it looks like (at least for tile 5) that grid_yt is actually
+%latitude (or at least this is how Matlab reads it).
+
+comp='UWchallenger';
+%all have same lat range +44.2 to -44.2
+%except two polar sterographic plots
+%1= 305.6-34.2 (centred on lon=0)
+%2= 35.8 - 124.2
+%3 = north pole spherical 90 to 36 in lat approx 
+%4 =  125.8-214.2 in lon
+%5 is the best for the CAPT region, 215.8-304.2 (or -144.2 to -55.8)
+%6 = South pole -36 to -90 in lat
+tile_no = '5';
+gcm_idays=[1:324];
+
+gcm_str='AM3';
+
+nc_grid_file = ['19900101.grid_spec.tile' tile_no '.nc'];
+nc_inst_file = ['19900101.atmos_inst.tile' tile_no '.nc'];
+
+
+nc_grid=netcdf([nc_dir nc_grid_file],'nowrite');
+nc_inst=netcdf([nc_dir nc_inst_file],'nowrite');
+
+
+gcm_phalf_ref=nc_grid{'phalf'}(:);
+
+gcm_lat = load_am3('grid_latt','(:,:)',nc_grid,gcm_idays);
+gcm_lon = load_am3('grid_lont','(:,:)',nc_grid,gcm_idays);
+
+gcm_lat2 = load_am3('grid_lat','(:,:)',nc_grid,gcm_idays);
+gcm_lon2 = load_am3('grid_lon','(:,:)',nc_grid,gcm_idays);
+
+
+
+%have output every 27 hours (324 in total).
+
+gcm_time_read = nc_inst{'time'}(gcm_idays); %days since 1st Jan 1980
+gcm_time_matlab = gcm_time_read + datenum('01-Jan-1980'); %convert to Matlab time
+[Y,MO,D,H,MI,S] = datevec(gcm_time_matlab); %this outputs numbers for the date components
+
+gcm_time_days = D;
+
+%will be consistent with the actual calendar day rather than nearest day
+
+%the hour of the day
+gcm_time_UTC = H;
+%the month
+gcm_month = MO;
+
+gcm_decimal_days = gcm_time_read - gcm_time_read(1);
+%days of year since beginning of the year
+daynum_timeseries3 = floor(gcm_time_matlab - datenum(Y(1),1,1) + 1);
+%zero difference means day 1
+
+
+% -----------------------------------
+%  now for the pressure & density
+% -----------------------------------
+%pfull(i,j,k) = (phalf(i,j,k+1)-phalf(i,j,k))) / ln(phalf(i,j,k+1)/phalf(i,j,k))  ;
+gcm_pfull_ref = (gcm_phalf_ref(2:end)-gcm_phalf_ref(1:end-1)) ./ log(gcm_phalf_ref(2:end)./gcm_phalf_ref(1:end-1));
+
+gcm_ps = load_am3('ps','(gcm_idays,:,:)',nc_inst,gcm_idays); %surface pressure (time,lat,lon)
+gcm_bk = nc_inst{'bk'}(:); % bk and pk are constant with time and location
+gcm_pk = nc_inst{'pk'}(:); % just vary vertically
+
+gcm_phalf = am3_make_pressure(gcm_ps,gcm_pk,gcm_bk);
+gcm_pfull = (gcm_phalf(:,2:end,:,:)-gcm_phalf(:,1:end-1,:,:)) ./ log(gcm_phalf(:,2:end,:,:)./gcm_phalf(:,1:end-1,:,:));
+%this is the proper pressure in Pa
+
+%gcm_temp = nc_inst{'temp'}(gcm_idays,:,:,:); %in K
+gcm_temp = load_am3('temp','(gcm_idays,:,:,:)',nc_inst,gcm_idays);
+%gcm_rho = density(gcm_pfull,gcm_temp); %now load this for speed
+gcm_tsurf = load_am3('t_surf','(gcm_idays,:,:)',nc_inst,gcm_idays); %surface temperature in K
+gcm_zsurf = load_am3('zsurf','(:,:)',nc_inst,gcm_idays); %surface height in m
+
+gcm_landmask = load_am3('land_mask','(:,:)',nc_inst,gcm_idays); %land fraction
+
+% ---------------------------------------------
+%  Calculate the height, assuming hydrostatic
+% ---------------------------------------------
+%the calculation below takes a long time - have saved the resulting .mat
+%variables in the file below.
+%[h_full,h_half]=am3_calc_height(gcm_pfull,gcm_temp,gcm_phalf);
+%mat_file='AM3_height_grid_19900101.mat';
+mat_file='AM3_height_grid_19900101_transpose.mat';
+%save([nc_dir mat_file],'h_full','h_half','gcm_rho','-V7.3');
+load([nc_dir mat_file],'h_full','h_half','gcm_rho');
+%load([nc_dir mat_file],'h_full','h_half');
+h_half(:,end,:,:)=0; %first level of hhalf is the surface
+
+% -----------------------------------
+%  droplet conc, LWP and cloud fraction
+% -----------------------------------
+gcm_cf = load_am3('cld_amt','(gcm_idays,:,:,:)',nc_inst,gcm_idays); %cloud fraction between 0 and 1
+
+%divide by cloud fractions to get in-cloud averages - beware values when
+%have low CF, as will be inflated by zero cloud-fractions
+gcm_drop_read=load_am3('liq_drp','(gcm_idays,:,:,:)',nc_inst,gcm_idays) ./ gcm_cf .*gcm_rho; %multiply by density to convert to per m3 (from per kg)
+gcm_drop_read2=load_am3('liq_drp','(gcm_idays,:,:,:)',nc_inst,gcm_idays).*gcm_rho; % #/kg
+%gcm_drop = nc_inst{'strat_droplet_number'}(gcm_idays,:,:,:) ./ gcm_cf;
+gcm_liq=load_am3('liq_wat','(gcm_idays,:,:,:)',nc_inst,gcm_idays) ./ gcm_cf; 
+gcm_liq_av=load_am3('liq_wat','(gcm_idays,:,:,:)',nc_inst,gcm_idays);
+gcm_lwc=gcm_liq .* gcm_rho; %convert to kg/m3
+gcm_lwc_av = gcm_liq_av.* gcm_rho; %convert to kg/m3;
+
+gcm_iwc_av=load_am3('ice_wat','(gcm_idays,:,:,:)',nc_inst,gcm_idays);
+
+
+gcm_lwp_all_clouds=load_am3('LWP_all_clouds','(gcm_idays,:,:)',nc_inst,gcm_idays); %is this cloud averaged?
+gcm_lwp=load_am3('LWP','(gcm_idays,:,:)',nc_inst,gcm_idays); %how to deal with CF?
+
+gcm_iwp_all_clouds=load_am3('IWP_all_clouds','(gcm_idays,:,:)',nc_inst,gcm_idays); %is this cloud averaged?
+gcm_iwp=load_am3('IWP','(gcm_idays,:,:)',nc_inst,gcm_idays); %how to deal with CF?
+
+%convert precip to m/s to be consistent with CAM5 use h (m) = precip
+%in (kg/m2) / rho_w
+gcm_precT=load_am3('precip','(gcm_idays,:,:)',nc_inst,gcm_idays); %total precip rate kg/m2/s
+gcm_precL=load_am3('prec_ls','(gcm_idays,:,:)',nc_inst,gcm_idays); %precip rate from stratiform cloud kg/m2/s
+gcm_precT = gcm_precT /1e3; %convert to m/s
+gcm_precL = gcm_precL /1e3;
+
+% -----------------------------------
+%  lat lon and time indices
+% -----------------------------------
+Plat=gcm_lat;
+Plon=gcm_lon;
+
+i180=find(Plon>180);
+Plon(i180)=Plon(i180)-360;
+
+% a = 0.5*(gcm_lat(:,2:end) + gcm_lat(:,1:end-1));
+% b = 0.5*(a(2:end,:) + a(1:end-1,:));
+% dlat_x = diff(gcm_lat(:,1:2));
+% gcm_Plat2D_edges 
+
+gcm_Plon2D=Plon;
+gcm_Plat2D=Plat;
+
+%not taking the last index as Matlab decides to ignore the last strip of
+%data and so needs grid arrays of the same size as the data....
+%In the doc for surfc (on which pcolor is based) it says that can have data
+%that is one dimension less than the X,Y data, but I can't get it to work?
+%Have made a wrapper script called dpcolor or m_dpcolor that adds a row and
+%column of NaNs to the C data to make it the same size as X and Y edges.
+%Could start to use this if necessary
+Plat=gcm_lat2(1:end-1,1:end-1);
+Plon=gcm_lon2(1:end-1,1:end-1);
+
+%Plat=gcm_lat2(1:end,1:end);
+%Plon=gcm_lon2(1:end,1:end);
+
+
+i180=find(Plon>180);
+Plon(i180)=Plon(i180)-360;
+
+gcm_Plon2D_edges=Plon;
+gcm_Plat2D_edges=Plat;
+
+%when plotting using m_pcolor it uses a plot-field that is the same size as
+%the Plon,Plat grid - these are the cell edges in the plot so it only uses
+%the field P(1:end-1,1:end-1) in the plot (ignores last row and column).
+%So I don't include the end rows of gcm_lat2 for the edge arrays.
+
+%dlon = 1.87, dlat = 2.5. Both constant throughout the grid for AM3
+
+
+
+
+
+
+
+
+

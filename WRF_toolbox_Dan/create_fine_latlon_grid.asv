@@ -1,0 +1,21 @@
+nx=8; %multiplication factor for each dimension
+ny=8;
+
+x_fine=x_grid(1):DX/nx:x_grid(end);
+y_fine=y_grid(1):DY/ny:y_grid(end);
+
+[X,Y]=meshgrid(x_fine,y_fine); %makes 
+
+%X=XY(:); %convert it into a row vector with all the x values repeated N at a time
+
+%Y=XY';
+%Y=Y(:); %make Y repeat all the different values and then repeat all that that N time
+
+lat2d_fine=interp2(x_grid,y_grid,squeeze(lat2d.var),...
+    X,Y);
+lat2d_fine=reshape(lat2d_fine,[length(x_fine) length(y_fine)]);
+
+lon2d_fine=interp2(x_grid,y_grid,squeeze(lon2d.var),...
+    X,Y);
+lon2d_fine=reshape(lon2d_fine,[length(x_fine) length(y_fine)]);
+    

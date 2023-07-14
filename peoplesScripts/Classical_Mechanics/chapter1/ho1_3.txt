@@ -1,0 +1,26 @@
+ho1_3.txt
+
+>> ho1
+ Enter the title name TTL:Damped Harmonic Oscillator
+ Enter the number calculation steps desired NPTS: 200
+ Enter the run time TMAX: 20
+ Enter the Spring contant K: 1
+ Enter the bob mass M: 1
+ Enter the damping coefficient C: 0.5
+ Enter the magnitude of the driving force E: 0
+ Enter the driving force frequency W: 0
+ Enter the initial position x0: 1
+ Enter the initial velocity v0: 0
+ Time step used dt=TMAX/NPTS= 0.1000
+    t       x       v       a
+ 0.0000  1.0000  0.0000 -1.0000
+ 2.0000 -0.1114 -0.5806  0.4017
+ 4.0000 -0.3078  0.2642  0.1757
+ 6.0000  0.1800  0.0879 -0.2240
+ 8.0000  0.0284 -0.1347  0.0389
+10.0000 -0.0775  0.0298  0.0626
+12.0000  0.0251  0.0347 -0.0424
+14.0000  0.0164 -0.0265 -0.0031
+16.0000 -0.0164 -0.0004  0.0166
+18.0000  0.0016  0.0097 -0.0064
+20.0000  0.0052 -0.0043 -0.0030

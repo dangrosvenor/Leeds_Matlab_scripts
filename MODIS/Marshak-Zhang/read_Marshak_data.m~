@@ -1,0 +1,16 @@
+%read Marshak data for 2006 paper (JGR - Impact of 3D radiative effects..)
+
+filedir = '/home/disk/eos1/d.grosvenor/modis_work/Zhibo_Marshak_work/';
+
+file_read = 'seg_A.txt';
+filename = [filedir file_read];
+fid = fopen(filename,'rt');
+
+%headers = fgetl(fid);
+headers = textscan(fid,'%s',14);
+N = length(headers{1});
+segA = fscanf(fid,'%f',[N Inf]);
+%segA = textread(filename);
+
+
+

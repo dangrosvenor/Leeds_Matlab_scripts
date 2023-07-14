@@ -1,0 +1,115 @@
+function [std_out, me_out]=std_combine2(stds,means,Ns)
+%function [me_out, std_out]=std_combine(stds,means,Ns)
+%Combine the stds (and means) from several different samples
+% stds, means and Ns are vectors of length N of the std devs, means and sample sizes
+% for the N populations.
+%Uses the formulae from Wikipedia - http://en.wikipedia.org/wiki/Standard_deviation#Combining_standard_deviations
+
+%Can deal with NaNs by just setting all the numbers to zero, which will
+%mean they won't be counted. Also need to set the means and stds to zero to
+%avoid totals of NaN. If they are all NaN then we get a NaN in the end due
+%to divide by zero with Ntot
+inan = isnan(stds);
+Ns(inan)=0;
+means(inan)=0;
+stds(inan)=0;
+
+%Ntot = sum(Ns);
+Ntot = sum(Ns,2);
+
+%Mean
+%me_out = sum(Ns.*means) ./ Ntot;
+me_out = sum(Ns.*means,2) ./ Ntot;
+
+%Std dev
+%std_out = sqrt(  sum(Ns.*(stds.^2 + means.^2 - me_out.^2) ) / Ntot  );
+me_rep = repmat(me_out,[1 size(stds,2)]);
+std_out = sqrt(  sum(Ns.*(stds.^2 + means.^2 - me_rep.^2) ,2) ./ Ntot  );
+
+%check - gives the same answer, so just use the simpler formuation above
+% A = sum(Ns.*stds.^2)/Ntot;
+%
+% B=0;
+% for i=2:length(Ns)
+%     for j=1:i
+%         B = B + Ns(i)*Ns(j)*(means(i) - means(j)).^2;
+%     end
+% end
+%
+% std_out2 = sqrt( A + B/Ntot.^2 );
+
+%Another check using actual data samples - gives slightly different stds to the true answer (stdA) -
+% s1 = 27.86, stdA = 27.83. But probably close enough!
+run_test=0;
+if run_test==1
+    
+    test_case=2;
+
+    switch test_case
+        case 1
+
+            clear a means stds Ns
+            a{1}=magic(5);
+            a{2}=magic(10)
+            a{3}=magic(7);
+
+            A=[];
+            for i=1:3
+                means(i) = mean(a{i}(:));
+                stds(i) = std(a{i}(:));
+                Ns(i) = length(a{i}(:));
+                A = cat(1,A,a{i}(:));
+            end
+
+            [me,s1] = std_combine(stds,means,Ns)
+            meA = mean(A)
+            stdA = std(A)
+
+        case 2
+            %Simulate a set of daily data for one location over 3 months (wi
+            %and 15 years. Will end up with a seasonal average.
+            d3 = rand([31,3,15]);            
+            %Overall mean and std based on whole array - this is what we
+            %should end up with at the end (for the seasonal average).
+            [me3,N3,std3] = meanNoNan(d3(:),1);
+            
+            %Now go through dimension-by-dimension, combining the stds on the way
+            %2D means, N and stds
+            [me2,N2,std2] = meanNoNan(d3,1); 
+            %Combine the std dev from all of the 1st dimension vectors to
+            %see if it is the same as for the overall
+            temp_combined = std_combine2(std2(:),me2(:),N2(:));
+            std_combined2 = reshape(temp_combined,[3 15]);
+
+            
+            %1D means, N and stds
+            [me1] = meanNoNan(me2,2);
+            std_combined1 = std_combine2(std_combined2,me2,N2);
+            %Test by calculating full std from d3
+            %Roll out to a [3 465] array
+            test = permute(d3,[2 1 3]);
+            test2=test(:,:);
+            [me_test1,N_test1,std_test1] = meanNoNan(test2,2);
+            
+            rerror1 = std_test1 ./ std_combined1
+
+            %Total numbers making up the data so far (will be used for
+            %std_combined0)
+            N1 = sum(N2,2);
+            
+            %Single number meaans, N and stds
+            [me0] = meanNoNan(me1,1);
+            std_combined0 = std_combine2(std_combined1',me1',N1');  %Have to flip arrays sicne are wrong way around for std_combine2
+            %This shoudl match the overall std of std3
+            
+            rerror0 = std_tests0 ./
+
+
+    end
+
+end
+
+
+
+
+

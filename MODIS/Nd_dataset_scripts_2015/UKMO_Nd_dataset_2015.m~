@@ -1,0 +1,721 @@
+% 15th June, 2015 -- Script to produce the Nd dataset for UKMO using
+% Level-3 data as used for the Iceland data for Florent and Jim Haywood.
+% N.B. - data that comes in here is already a monthly mean from daily data,
+% although have the no. days and std devs that go to make up those.
+% Have run case multi_plot_many_years_for_one_season_Nd in DRIVER_plot_global_maps
+% Then ran save_vars_for_Florent to save into the file
+% /home/disk/eos1/d.grosvenor/saved_misc_mat_files/MODIS_TERRA_Nd_QA_from_L3_daily_UKESM_Jane_2000_2014_20150416T063530.mat'
+% This is TERRA data for 2000-2014 (although 2000 is only a partial year -
+% Terra data starts on 24th Feb ),
+% so perhaps best to start with March 2000. This works out ok since this
+% allows the full MAM season - download Jan and Feb of 2015 too to allow
+% DJF 2014-2015?
+% In this script want to put the arrays into 360*180*12*15 arrays and
+% make separate files for different screenings - or just use CF>80 and
+% CTT>273.15 K
+%
+% ALso, looks like the weighting is in pixels here (Ndays is pixels, not
+% days)
+
+%Max SZA datset"-
+			% /home/disk/eos1/d.grosvenor/saved_misc_mat_files/max_SZA_vs_lat_from_mockL3_TERRA.mat
+            
+%Cause of lack of data in SO further south than 60S is prob the restriction to CTT>273K.
+%Could relax this? Depends on how conservative we want to be. The aim here
+%was to produce an ultra conservative dataset for trusted Sc regions only.
+%Besides, the max SZA restrictions would probably rule out below 60S
+%anyway? Yes, it does - see the max_SZA_vs_lat array. 60S is about the
+%limit there.
+
+% If want to restrict the number of years to use (from original 2000-2015).
+chosen_years='all'; %set to this for all the years (or any string).
+%chosen_years=[2000:2008]; %Include the very last year used, even if is just for Jan and Feb
+
+if ~isstr(chosen_years) 
+    choose_years='yes';
+end
+
+iplot_monthly=1;
+isave=1;
+
+
+iscreen_seaice=0; %Can't do for this dataset at the mo as don't have the full sea-ice record
+iscreen_land=1;
+iscreen_region=1; %Whether to apply the regional screening (same for all years, but different for each month - i.e. all Jans use the same one)
+iscreen_sza=1;
+    max_sza_thresh = 65;
+
+iscreen_ndays=1;
+ %Exclude points below a threshold number of days with data on a
+ %month-by-month basis - different to the threshold for the regional
+ %screening since this could be applied ot the all CF data, whereas the
+ %regional screening is based on the CF>80% data.
+    thresh_ndays=5;
+    
+    switch choose_years
+        case 'yes'
+            thresh_nyears=7; %changed to this for the 2000-2008 dataset
+        otherwise
+            thresh_nyears=10; %number of years with ndays>thresh_ndays required - max of 14
+    end
+    
+    %for regional screening.Procedure is to pick out regions that have
+    %consistent stratocumulus on a climatological basis (2000-2015), but
+    %done on a month-by-month basis. Consistent Sc is based on the number of
+    %days per month having CF>80%. Then it is required that this number of
+    %days is reached for a given number of years. This helps to ensure that
+    %the regions are mainly stratocumulus and so will be the most like the
+    %clouds in the Painemal study.
+    %Also, if we decided to use only CF>80 retrievals (could still apply the regional mask, but  use all CF retrievals)
+    %then restricting to the reginos where CF>80 is most often the staus
+    %quo would make the choice of CF>80 more representative. Otherwise data
+    %might only be representative of CF>80 scenes and model datapoints
+    %might also need to be selected based on this criteria.
+thresh_ndays_regional = 5; %Number of days needed per month for a year to count towards the stats for deciding how many years
+% a location has persistent stratocumulus. 
+
+    switch choose_years
+        case 'yes'
+            thresh_nyears_regional = 7; %changed to this for the 2000-2008 dataset
+        otherwise
+            thresh_nyears_regional = 10; %Number of years (out of 15) of Ndays>=thresh_ndays_regional that are needed to count a location as having frequent Sc and thus
+            %including it in the Nd dataset.
+    end
+    
+    
+savedir01 = '/home/disk/eos1/d.grosvenor/saved_misc_mat_files/';    
+savedir_plots = '/home/disk/eos1/d.grosvenor/modis_work/plots/';
+
+%N.B. - the files below are not the final datasets - they are just used to
+%create the final version.
+
+% File01 is for the all CF data, file02 is for CF>80
+
+%all CF, CTT>268K
+file01 = '/home/disk/eos1/d.grosvenor/saved_misc_mat_files/MODIS_TERRA_Nd_QA_from_L3_daily_UKESM_Jane_2000_2014_20150416T063530.mat';
+
+% allCF, CTT>273.15 - will based the Nd calcs on this
+file01 = '/home/disk/eos1/d.grosvenor/saved_misc_mat_files/MODIS_TERRA_Nd_QA_from_L3_daily_UKESM_Jane_2000_2014_20150619T063935';
+
+%CF>80, CTT>273.15
+file02 = '/home/disk/eos1/d.grosvenor/saved_misc_mat_files/MODIS_TERRA_Nd_QA_from_L3_daily_UKESM_Jane_2000_2014_20150617T125612.mat';
+
+
+
+% - Will use the above CF>80 data for creating a regional mask - a different one for each
+% month - to define "regions of frequenct stratocumulus". This will be
+% based on them consistently having many days per month with CF>80 over the
+% course of many years. Could make it so that all years need to meet the
+% criteria, or over a certain number to allow for freak years when the met
+% is inconsistent with the climatology. Also need to be aware that there is
+% no Jan and limited Feb data for y2000.Would be good to add Jan and Feb
+% 2015 to compensate.
+% Also, should exclude regions where the SZA can get above 65-70 degrees
+% for any retrieval - could base this on the mockL3 data.
+
+
+
+Date_text = 'For March-December :- 2000 to 2013. For Jan and Feb :- 2001 - 2014.';
+Notes =[...
+    'Global droplet concentrations from MODIS using technique described in Grosvenor & Wood, ACP,2014, doi:10.5194/acp-14-7291-2014. '...
+    'Data is given for the 2.1um MODIS near_infrared band. '...
+    'Daily data was aggregated from MODIS Terra Collection 5.1 L3 data at 1x1 degree regions. Latitudes where SZAs could be >65 degrees are excluded. ' ...
+    'A landmask has also been applied to give ocean only regions. '...
+    'The daily 1x1 degree datapoints were averaged into monthly values. '...
+    'To be included in a given monthly average there must have been at least '  num2str(thresh_ndays) ' days of data. '...
+    'For the climatology values (averages of the monthly means over all years) data must be present for at least '  num2str(thresh_nyears) ' years. '...    
+    'A spatial mask has also been applied based on the 1x1 degree liquid cloud fraction. In order for a location to be included it must have CF>80% for at least '  num2str(thresh_ndays_regional) ...      
+    ' days for every month AND meet that criteria for at least '  num2str(thresh_nyears_regional) ' years for each month. '...          
+    'This is to try to pick out regions that have regular stratocumulus for a given month, since the retrievals are most reliable in such clouds. '...      
+    'Fill values are set to NaN. Standard deviations of the annual and seasonal values are also given based on the inital daily data. '...
+    'The total number of days of data going into each average are also given. '...    
+    'The seasonal averages are based on the monthly climatological values and so have the same restrictions. Also, all 3 months of the '...     
+    'season must have data present in the climatology. Annual averages are similar - all 12 months must be present. Thus there are few regions covered. '...         
+    'Consider using seasonal data for larger coverage. '...             
+    ];
+
+halo=10; %size of halo to add to landmask and seaice for smoothing
+mask_size = 3; %NxN filter for averaging
+
+choose_filtering = 'all CF';
+choose_filtering = 'CTT_gt_268';
+%choose_filtering = 'CF_gt_80';
+choose_filtering = 'CTT_gt_273 CF>80';
+%choose_filtering = 'CTT_gt_273 allCF';
+
+switch choose_filtering
+    case 'CTT_gt_273 CF>80'
+
+        % CTT > 273 K 
+
+        switch choose_years
+            case 'yes'
+
+            otherwise
+                savefile01 = [savedir01 'MODIS_TERRA_Nd_QA_from_L3_daily_UKESM_Jane_2001_2014_CF80_CTT273_20150416T063530.mat'];
+                %        savefile01 = [savedir01 'MODIS_TERRA_Nd_QA_from_L3_daily_UKESM_Jane_2000_2008_CF80_CTT273_20150416T063530.mat'];
+
+        end
+        
+%        var_tag = '_CTT_gt_273_CF_gt_80';
+        var_tag = '_SZA_lt_70_CF_gt_80_AND_CTT_gt_273';
+        
+        Notes = [Notes ' Only 1x1 degree daily datapoints with a mean liquid cloud fraction greater than 80% have been included in this data. '...
+            'This is due to concerns about the retrieval of effective radius and optical depth in regions of heterogeneous clouds (e.g. 3D radiative effects). '...
+            'Also, this tends to restrict the retrievals to stratocumulus regions where many of the assumptions have been well validated. '...
+            'E.g. the adibaticity of the LWC profiles are likely to be close to those assumed by the Nd retrieval technique. '...
+            ];
+        
+        Notes2 = [' Cloud top temperatures are restricted to warm clouds (>273K). '...
+            ];         
+        
+        file01 = file02; %file01 is the main dataset used. File02 is just used for the regional screening (if used).
+        
+
+    case 'CTT_gt_273 allCF'
+        % all CF
+        switch choose_years
+            case 'yes'
+                savefile01 = [savedir01 'MODIS_TERRA_Nd_QA_from_L3_daily_UKESM_Jane_2001_2014_allCF_CTT273_region_mask_20150416T063530.mat'];
+                savefile01 = [savedir01 'MODIS_TERRA_Nd_QA_from_L3_daily_UKESM_Jane_2000_2008_allCF_CTT273_region_mask_20150416T063530.mat'];
+        end
+        Notes2 = [' Cloud top temperatures are restricted to warm clouds (>273K). No filtering based on liquid cloud fraction has been performed on this data, except to make the spatial mask. '...
+            'There are concerns about the retrieval of effective radius and optical depth in regions of heterogeneous clouds (e.g. 3D radiative effects). '...
+            'Could consider using the CF>80% data. Also, this tends to restrict the retrievals to stratocumulus regions where many of the assumptions have been well validated. '...
+            'E.g. the adibaticity of the LWC profiles are likely to be close to those assumed by the Nd retrieval technique. '...
+            'However, the global coverage is much less expansive as a result than for the no CF filtering dataset. '...
+            ];     
+        
+        var_tag = '_SZA_lt_70_allCF_AND_CTT_gt_273';
+        
+        %% Add case for all CTTs?
+        % Also examine the effect of using CF>80 data
+end
+
+
+
+months={'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'};
+
+
+
+load(file01,'MLAT','MLON','YEARS');
+MLAT=flipdim(MLAT,2);
+%Flip MLAT and the Nd arrays for consistency with the Stefan Kinne dataset
+
+clear vars_load
+iv=1;
+%eval_str = ['Nd_load = load(file01,'];
+for im=1:length(months)
+    
+   
+    %Loading one variable at a time here
+    vars_load{iv} = [months{im} var_tag '_Nd']; iv=iv+1;        
+    eval_str = ['Nd_load = load(file01,''' vars_load{iv-1} ''');']; eval(eval_str);
+    
+    %Make the blank arrays for the first month
+    if im==1
+        siz=eval(['size(Nd_load.' months{1} var_tag '_Nd);']);
+
+        eval_str = ['Nd' var_tag ' = NaN*ones([siz(1) siz(2) siz(3) 12]);']; eval(eval_str);
+        eval_str = ['Nd_Ndays' var_tag ' = NaN*ones([siz(1) siz(2) siz(3) 12]);']; eval(eval_str);
+        eval_str = ['Nd_std_dev' var_tag ' = NaN*ones([siz(1) siz(2) siz(3) 12]);']; eval(eval_str);
+        %Special case for Ndays for CF>80 (just used for regional
+        %screening)
+        eval_str = ['Nd_Ndays_CF80 = NaN*ones([siz(1) siz(2) siz(3) 12]);']; eval(eval_str);        
+    end
+
+    %Put the Nd data in the big array - am flipping for consistency with
+    %landmask and the Stefan Kinne dataset.
+    eval_str = ['Nd' var_tag '(:,:,:,im) = flipdim(Nd_load.' vars_load{iv-1} ',1);']; eval(eval_str);        
+    
+    
+        
+%    eval_str = [eval_str '''' vars_load{iv} ''','];
+%    Nd_load = load(file01,['''' vars_load{iv} '''']
+    vars_load{iv} = [months{im} var_tag '_Nd_Ndays']; iv=iv+1; 
+%    eval_str = ['Nd_load = load(file01,''' vars_load{iv-1} ''');']; eval(eval_str);    
+
+    %Load the allCF data
+    eval_str = ['Nd_load = load(file01,''' vars_load{iv-1} ''');']; eval(eval_str);
+    eval_str = ['Nd_Ndays' var_tag '(:,:,:,im) = flipdim(Nd_load.' vars_load{iv-1} ',1);']; eval(eval_str);
+    
+    vars_load_CF80 = [months{im} '_CTT_gt_273_CF_gt_80_Nd_Ndays'];
+    
+    %Also load Ndays for the CF>80 data for region masking - N.B. using
+    %file02 here !!
+    eval_str = ['Nd_load = load(file02,''' vars_load_CF80 ''');']; eval(eval_str);        
+    eval_str = ['Nd_Ndays_CF80(:,:,:,im) = flipdim(Nd_load.' vars_load_CF80 ',1);']; eval(eval_str);    
+    
+    vars_load{iv} = [months{im} var_tag '_Nd_std_dev']; iv=iv+1; 
+%    eval_str = ['Nd_load = load(file01,''' vars_load{iv-1} ''');']; eval(eval_str);    
+
+    eval_str = ['Nd_load = load(file01,''' vars_load{iv-1} ''');']; eval(eval_str);
+    eval_str = ['Nd_std_dev' var_tag '(:,:,:,im) = flipdim(Nd_load.' vars_load{iv-1} ',1);']; eval(eval_str);    
+    
+
+end
+
+%Permute to have order as lat, lon, month, year.
+eval_str = ['Nd' var_tag ' = permute(Nd' var_tag ',[1 2 4 3]);']; eval(eval_str);
+eval_str = ['Nd_Ndays' var_tag ' = permute(Nd_Ndays' var_tag ',[1 2 4 3]);']; eval(eval_str);
+eval_str = ['Nd_std_dev' var_tag ' = permute(Nd_std_dev' var_tag ',[1 2 4 3]);']; eval(eval_str);
+eval_str = ['Nd_Ndays_CF80 = permute(Nd_Ndays_CF80,[1 2 4 3]);']; eval(eval_str);
+
+%% Now create the regional mask for selecting only certain trusted regions
+%% (different one for each month, but same for all years)
+
+%the following are set at the top of the script
+%thresh_ndays_regional = 5; %Number of days needed per month for a year to count towards the stats for deciding how many years
+% a location has frequenct stratocumulus. 
+%thresh_nyears_regional = 10; %Number of years of Ndays>=thresh_ndays_regional that are needed to count a location as having frequent Sc and thus
+%including it in the Nd dataset.
+
+siz = size(Nd_Ndays_CF80);
+region_mask = NaN*ones([siz(1) siz(2) siz(4) siz(3)]); %of size [lat lon month years]
+
+switch choose_years
+    case 'yes'
+        for iyear=1:length(chosen_years)
+            ichosen_years(iyear) = find(YEARS==chosen_years(iyear));
+        end                
+end
+
+%% Rest of code
+for im=1:12
+   Ndays = zeros([siz(1) siz(2) 1 siz(4)]);
+   region_mask2 = NaN*ones([siz(1) siz(2)]);
+   
+   ii = find(Nd_Ndays_CF80(:,:,im,:)>=thresh_ndays_regional);
+   Ndays(ii)=1;
+   %sum over all years
+   Nyears = squeeze(sum(Ndays,4));
+   
+   ii2 = find(Nyears>=thresh_nyears_regional);
+   region_mask2(ii2) = 0; %These will be points to include - otherwise they will be NaN   
+   %Store in a big array
+   region_mask3 = repmat(region_mask2,[1 1 siz(4)]);
+   region_mask(:,:,:,im) = region_mask3;
+   
+%   figure; pcolor(MLON,MLAT,region_mask2); shading flat 
+end
+
+region_mask = permute(region_mask,[1 2 4 3]);
+
+% for iv=1:length(vars_load)
+%     eval_str = [eval_str '''' vars_load{iv} ''','];
+% 
+% %    Nd_load = load(file01,[,'MLAT','MLON','modisyear_timeseries3','daynum_timeseries3','seaice_max_time3','seaice_time3');
+% 
+% end
+% 
+% eval_str(end)=[]; %remove the last comma
+% eval_str = [eval_str ');'];
+% eval(eval_str);
+
+% --- Not worrying about seaice for this dataset yet, as will restrict to warm
+% temperatures ---
+% *** Have combined the NH seaice here and saved the results in the file01
+% above - the steps follwed are below:-
+% %% Combine NH and SH seaice (is only SH in the file)
+% seaice_fileload_1deg_NH = '/home/disk/eos8/d.grosvenor/sea_ice_data/north/saved_seaice_1deg_2007_all_NHemisphere_20150529T103046.mat';
+% load(seaice_fileload_1deg_NH);
+% %Load these to do the time matching
+% load(file01,'modisyear_timeseries3','daynum_timeseries3');
+% seaice_match_times
+% %So will now have NaN values in both SH and NH files. Will set the NaNs to zero for
+% %now and then make the places where both were NaN.
+% % -- Actually the seaice_time3 files don't seem to contain any NaNs...
+% seaice_time3_NH = seaice_time3;
+% seaice_max_time3_NH = seaice_max_time3;
+% %inanNH = isnan(seaice_time3_NH); seaice_time3_NH(inanNH)=0;
+% %inanSH = isnan(Nd_load.seaice_time3); Nd_load.seaice_time3(inanSH) = 0;
+% %inanNH_max = isnan(seaice_max_time3_NH); seaice_max_time3_NH(inanNH_max)=0;
+% %inanSH_max = isnan(Nd_load.seaice_max_time3); Nd_load.seaice_max_time3(inanSH_max)=0;
+% 
+% %iboth = inanNH & inanSH; %When both are NaN - need to use the logical since they are not just integers
+% %iboth_max = inanNH_max & inanSH_max; %When both are NaN - need to use the logical since they are not just integers
+% 
+% seaice_time3 = seaice_time3_NH + Nd_load.seaice_time3;
+% %seaice_time3(iboth) = NaN;
+% 
+% seaice_max_time3 = seaice_max_time3_NH + Nd_load.seaice_max_time3;
+% %seaice_max_time3(iboth_max) = NaN;
+% 
+% save(file01,'-APPEND','-V7.3','seaice_time3','seaice_max_time3');
+
+%days of month funciton will be useful to give days required for each month
+%- e.g. 32:60 for Feb.
+% [days_required_for_mean,time_mean_str] = days_of_month(month_no)
+
+
+landmask_load= load('/home/disk/eos1/d.grosvenor/amsre_land_mask.mat');
+landmask = repmat(flipdim(landmask_load.amsre_land_mask,1),[1 1 12]);
+%Smooth out the land mask to make it more aggressive - seemed to be
+%allowing some small bits of land otherwise.
+%Also need to do this for the sea ice
+
+fs=fspecial('average',mask_size); %Make the averaging filter
+landmask_tmp = add_halo(landmask_load.amsre_land_mask,halo); 
+landmask_smooth = filter2(fs,landmask_tmp,'same');
+landmask_smooth = remove_halo(landmask_smooth,halo);
+landmask2 = repmat(flipdim(landmask_smooth,1),[1 1 12 15]);
+
+
+%Land mask is zero where there is land and NaN where not - so can just add to the
+%array to make the non-land regions NaN
+
+%Doing for months 1:12, but bear in mind that the data actually runs from
+%Dec2006 to Nov2007
+
+clear idays Nd_16 Nd_21 Nd_37 sea_ice_max_tmp sea_ice_tmp
+
+% siz=eval(['size(Nd_load.' months{1} var_tag '_Nd);']);
+% 
+% eval_str = ['Nd' var_tag ' = NaN*ones([siz(1) siz(2) 12 siz(3)]);']; eval(eval_str);
+% eval_str = ['Nd_Ndays' var_tag ' = NaN*ones([siz(1) siz(2) 12 siz(3)]);']; eval(eval_str);
+% 
+% for im=1:12
+%     eval_str = ['Nd' var_tag '(:,:,im,:) = ;']; eval(eval_str);
+% 
+%     
+% 
+%    
+% end
+
+if iscreen_seaice==1
+
+ %find points where there is any sea-ice using the threshold below
+    sea_ice_thresh = 1e-5;
+%    sea_ice_thresh = 1e9;
+    isea_high = find(sea_ice>sea_ice_thresh);
+%    isea_high = find(sea_ice_max>sea_ice_thresh);    
+    Nd_16(isea_high)=NaN;
+    Nd_21(isea_high)=NaN;
+    Nd_37(isea_high)=NaN;
+    
+end
+
+if iscreen_ndays==1
+    
+    
+%    iNdays = find(ndays_16<thresh_ndays); Nd_16(iNdays)=NaN;
+%    iNdays = find(ndays_21<thresh_ndays); Nd_21(iNdays)=NaN;
+%    iNdays = find(ndays_37<thresh_ndays); Nd_37(iNdays)=NaN;  
+    
+    eval_str=['iNdays = find(Nd_Ndays' var_tag '<thresh_ndays); Nd' var_tag '(iNdays)=NaN;']; eval(eval_str);    
+    eval_str=['iNdays = find(Nd_Ndays' var_tag '<thresh_ndays); Nd_std_dev' var_tag '(iNdays)=NaN;']; eval(eval_str);   
+    
+end
+
+if iscreen_land==1
+    
+    
+ %Make the land regions NaN
+%    Nd_16_ocean = Nd_16 + landmask2;
+%    Nd_21_ocean= Nd_21 + landmask2;    
+%    Nd_37_ocean = Nd_37 + landmask2;
+%    std_Nd_16_ocean = std_Nd_16 + landmask2;
+%    std_Nd_21_ocean= std_Nd_21 + landmask2;    
+%    std_Nd_37_ocean = std_Nd_37 + landmask2;  
+    
+    eval_str = ['Nd' var_tag ' = Nd' var_tag ' + landmask2;']; eval(eval_str);
+    eval_str = ['Nd_Ndays' var_tag ' = Nd_Ndays' var_tag ' + landmask2;']; eval(eval_str);
+    eval_str = ['Nd_std_dev' var_tag ' = Nd_std_dev' var_tag ' + landmask2;']; eval(eval_str);    
+    
+end
+
+if iscreen_region==1
+    
+    eval_str = ['Nd' var_tag ' = Nd' var_tag ' + region_mask;']; eval(eval_str);
+    eval_str = ['Nd_Ndays' var_tag ' = Nd_Ndays' var_tag ' + region_mask;']; eval(eval_str);
+    eval_str = ['Nd_std_dev' var_tag ' = Nd_std_dev' var_tag ' + region_mask;']; eval(eval_str);
+
+    
+end
+
+if iscreen_sza == 1
+   
+    load('/home/disk/eos1/d.grosvenor/saved_misc_mat_files/max_SZA_vs_lat_from_mockL3_TERRA.mat','max_SZA_vs_lat');
+    %check MLATs are the same - checked, yes they are
+    
+    max_sza = repmat(max_SZA_vs_lat,[1 1 siz(2) siz(4)]);
+    max_sza=permute(max_sza,[1 3 2 4]);
+    
+    sza_mask = zeros(size(max_sza));
+    sza_mask(max_sza > max_sza_thresh)=NaN;
+    
+    eval_str = ['Nd' var_tag ' = Nd' var_tag ' + sza_mask;']; eval(eval_str);
+    eval_str = ['Nd_Ndays' var_tag ' = Nd_Ndays' var_tag ' + sza_mask;']; eval(eval_str);
+    eval_str = ['Nd_std_dev' var_tag ' = Nd_std_dev' var_tag ' + sza_mask;']; eval(eval_str);
+    
+end
+    
+
+%% Make an overall multi-year mean too for each month  
+% For std devs will want to use the monthly std devs (which come from the
+% daily data) and combine them into an overall std dev for the climatology
+
+    eval_str = ['Nd' var_tag '_clim = NaN*ones([siz(1) siz(2) siz(3)]);']; eval(eval_str);
+    eval_str = ['Nd' var_tag '_clim_Ndays = NaN*ones([siz(1) siz(2) siz(3)]);']; eval(eval_str);
+    eval_str = ['Nd' var_tag '_clim_Nyears = NaN*ones([siz(1) siz(2) siz(3)]);']; eval(eval_str);
+    eval_str = ['Nd' var_tag '_clim_std_dev = NaN*ones([siz(1) siz(2) siz(3)]);']; eval(eval_str);         
+    
+    for imonth=[1:12]
+        %Want to use the same number of years for each season and month.
+        %Have Jan and Feb 2000 missing, so will run from Mar 2000 to Feb
+        %2014, giving 14 years for each. I.e. for Jan and Feb use 2001-2014
+        %and for the rest use 2000-2013.
+        if imonth==1 | imonth==2
+%            iyears=[2:siz(4)];  %Changed this to allow a smaller year
+%            range to be chosen.
+            iyears=ichosen_years([2:end]);            
+        else
+%            iyears=[1:siz(4)-1];
+            iyears=ichosen_years([1:end-1]);           
+        end
+        
+        dat = eval(['Nd' var_tag '(:,:,imonth,iyears);']);
+        dat_N = eval(['Nd_Ndays' var_tag '(:,:,imonth,iyears);']);
+        dat_std = eval(['Nd_std_dev' var_tag '(:,:,imonth,iyears);']);
+        
+        [temp,temp_Nyears,temp_std_dev] = meanNoNan(dat,4);
+        %Exclude data where there are fewer than thresh_nyears in the
+        %climatology
+        inan = find(temp_Nyears<thresh_nyears);
+        temp(inan) = NaN;
+        temp_std_dev(inan) = NaN;
+        
+        % Combine the std devs from the monthly data for all the years       
+        
+        %But first create an array ready to be used by std_combine - needs
+        %a 2d array of N M where N is the number of stds that wil be
+        %returned and M is the number of subsets going into each (15 in
+        %this case)
+        dat2=permute(dat,[4 1 2 3]); dat3=dat2(:,:); dat4 = permute(dat3,[2 1]);
+        dat2=permute(dat_N,[4 1 2 3]); dat3=dat2(:,:); dat4_N = permute(dat3,[2 1]);        
+        dat2=permute(dat_std,[4 1 2 3]); dat3=dat2(:,:); dat4_std = permute(dat3,[2 1]);                
+        
+        std_dev_combined = std_combine2(dat4_std,dat4,dat4_N);
+        std_dev_combined = reshape(std_dev_combined,[siz(1) siz(2)]);
+        
+
+        
+        eval_str = ['Nd' var_tag '_clim(:,:,imonth) = temp;']; eval(eval_str);
+        eval_str = ['Nd' var_tag '_clim_Nyears(:,:,imonth) = temp_Nyears;']; eval(eval_str);
+        eval_str = ['Nd' var_tag '_clim_std_dev(:,:,imonth) = std_dev_combined;']; eval(eval_str);
+        
+%        temp2 = eval(['meanNoNan(Nd_Ndays' var_tag '(:,:,imonth,:),4);']);
+%        temp2(inan) = NaN;
+%        eval_str = ['Nd' var_tag '_clim_Ndays_mean(:,:,imonth) = temp2;']; eval(eval_str);        
+        
+        %Total number of days going into each monthly clim mean (from all
+        %years) - can use this to calculate the combined std for the
+        %seasonal means.
+        eval_str = ['Nd' var_tag '_clim_Ndays(:,:,imonth) = sum(dat_N,4);']; eval(eval_str);        
+        
+
+        if iplot_monthly==1
+            
+            
+            
+%            figure
+%            pcolor(MLON,MLAT,squeeze(Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim(:,:,imonth))); shading flat; caxis([0 200]); colorbar                        
+            
+
+            titlename = [months{imonth} '_iscreen_sza_eq_' num2str(iscreen_sza) '_iscreen_region_eq_' num2str(iscreen_region) '_thresh_nyears_eq_' num2str(thresh_nyears) '_iscreen_land_eq_' num2str(iscreen_land) '_thresh_ndays_eq_' num2str(thresh_ndays) ...
+                '_iscreen_region_eq' num2str(iscreen_region)  '_thresh_ndays_regional_eq' num2str(thresh_ndays_regional) '_thresh_nyears_regional_eq' num2str(thresh_nyears_regional)];
+            titlenamew=textwrap({ remove_character(titlename,'_',' ') },70);
+            title(titlenamew,'fontsize',10);
+            savename = [savedir_plots '/Nd_UKMO_' num2str(imonth,'%02g') '_' titlename]; 
+        
+%            saveas_ps_fig_emf(gcf,savename,'');
+        end
+
+    end
+    
+    
+%% Seasonal means
+
+
+    
+    imonths_seasonal = [12 1:11];
+    season_str={'DJF','MAM','JJA','SON'};
+    i1=1;
+    i2=3;
+    for iseason=1:4        
+       imonths = imonths_seasonal(i1:i1+2);
+       
+        dat = eval(['Nd' var_tag '_clim(:,:,imonths)']);
+        dat_N = eval(['Nd' var_tag '_clim_Ndays(:,:,imonths)']);
+        dat_std = eval(['Nd' var_tag '_clim_std_dev(:,:,imonths)']);
+        
+       
+        [temp,temp_N,temp_std_dev] = meanNoNan(dat,3);
+        %Exclude data that doesn't have all 3 months available
+        inan = find(temp_N<3);
+        temp(inan) = NaN;
+%        temp_std_dev(inan) = NaN;
+
+
+ % Combine the std devs from the monthly data for all the years       
+        
+        %But first create an array ready to be used by std_combine - needs
+        %a 2d array of N M where N is the number of stds that wil be
+        %returned and M is the number of subsets going into each (15 in
+        %this case)
+        dat2=permute(dat,[3 1 2]); dat3=dat2(:,:); dat4 = permute(dat3,[2 1]);
+        dat2=permute(dat_N,[3 1 2]); dat3=dat2(:,:); dat4_N = permute(dat3,[2 1]);        
+        dat2=permute(dat_std,[3 1 2]); dat3=dat2(:,:); dat4_std = permute(dat3,[2 1]);                
+        
+        std_dev_combined = std_combine2(dat4_std,dat4,dat4_N);
+        std_dev_combined = reshape(std_dev_combined,[siz(1) siz(2)]);        
+        std_dev_combined(inan)=NaN; %Remove the poitns where don't have all 3 seasons
+        
+        N_combined = sum(dat_N,3);
+        N_combined(inan)=NaN; 
+        
+        eval_str = ['Nd' var_tag '_clim_' season_str{iseason} '(:,:) = temp;']; eval(eval_str);
+        eval_str = ['Nd' var_tag '_clim_std_dev_' season_str{iseason} '(:,:) = std_dev_combined;']; eval(eval_str);
+        eval_str = ['Nd' var_tag '_clim_Ndays_' season_str{iseason} '(:,:) = N_combined;']; eval(eval_str);
+        
+%        eval_str = ['Nd' var_tag '_clim_Nyears(:,:,imonth) = temp_Nyears;']; eval(eval_str);
+%        eval_str = ['Nd' var_tag '_clim_std_dev(:,:,imonth) = temp_std_dev;']; eval(eval_str);
+
+%        eval_str = ['Nd' var_tag '_clim_std_dev_' season_str{iseason} '(:,:) = std_combine(;']; eval(eval_str);
+
+
+
+        
+        
+
+
+
+        figure    
+        pcolor(MLON,MLAT,squeeze(temp)); shading flat; caxis([0 200]); colorbar
+        
+        titlename = [season_str{iseason} '_iscreen_sza_eq_' num2str(iscreen_sza) '_iscreen_region_eq_' num2str(iscreen_region) '_thresh_nyears_eq_' num2str(thresh_nyears) '_iscreen_land_eq_' num2str(iscreen_land) '_thresh_ndays_eq_' num2str(thresh_ndays) ...
+            '_iscreen_region_eq' num2str(iscreen_region)  '_thresh_ndays_regional_eq' num2str(thresh_ndays_regional) '_thresh_nyears_regional_eq' num2str(thresh_nyears_regional)];
+        titlenamew=textwrap({ remove_character(titlename,'_',' ') },70);
+        title(titlenamew,'fontsize',10);
+        savename = [savedir_plots '/Nd_UKMO_' num2str(imonth,'%02g') '_' titlename];
+
+        saveas_ps_fig_emf(gcf,savename,'');
+
+       
+       
+       
+       i1=i1+3;              
+    end
+    
+    
+    
+    
+%% Annual means - climatology (i.e. taking the clim data from all years and
+%% averaging the months together)
+
+        %hack some of the things used for seasonal plots
+        imonths=1:12;
+        iseason=1;
+        season_str{iseason}='ANNUAL';
+        season_str{iseason}
+        
+        dat = eval(['Nd' var_tag '_clim(:,:,imonths)']);
+        dat_N = eval(['Nd' var_tag '_clim_Ndays(:,:,imonths)']);
+        dat_std = eval(['Nd' var_tag '_clim_std_dev(:,:,imonths)']);
+        
+       
+        [temp,temp_N,temp_std_dev] = meanNoNan(dat,3);
+        %Exclude data that doesn't have all 12 months available
+        inan = find(temp_N<12);
+        temp(inan) = NaN;
+%        temp_std_dev(inan) = NaN;
+
+
+ % Combine the std devs from the monthly data for all the years       
+        
+        %But first create an array ready to be used by std_combine - needs
+        %a 2d array of N M where N is the number of stds that wil be
+        %returned and M is the number of subsets going into each (15 in
+        %this case)
+        dat2=permute(dat,[3 1 2]); dat3=dat2(:,:); dat4 = permute(dat3,[2 1]);
+        dat2=permute(dat_N,[3 1 2]); dat3=dat2(:,:); dat4_N = permute(dat3,[2 1]);        
+        dat2=permute(dat_std,[3 1 2]); dat3=dat2(:,:); dat4_std = permute(dat3,[2 1]);                
+        
+        std_dev_combined = std_combine2(dat4_std,dat4,dat4_N);
+        std_dev_combined = reshape(std_dev_combined,[siz(1) siz(2)]);        
+        std_dev_combined(inan)=NaN; %Remove the poitns where don't have all 3 seasons
+        
+        N_combined = sum(dat_N,3);
+        N_combined(inan)=NaN; 
+        
+        eval_str = ['Nd' var_tag '_clim_' season_str{iseason} '(:,:) = temp;']; eval(eval_str);
+        eval_str = ['Nd' var_tag '_clim_std_dev_' season_str{iseason} '(:,:) = std_dev_combined;']; eval(eval_str);
+        eval_str = ['Nd' var_tag '_clim_Ndays_' season_str{iseason} '(:,:) = N_combined;']; eval(eval_str);
+
+        figure    
+        pcolor(MLON,MLAT,squeeze(temp)); shading flat; caxis([0 200]); colorbar
+        
+        titlename = [season_str{iseason} '_iscreen_sza_eq_' num2str(iscreen_sza) '_iscreen_region_eq_' num2str(iscreen_region) '_thresh_nyears_eq_' num2str(thresh_nyears) '_iscreen_land_eq_' num2str(iscreen_land) '_thresh_ndays_eq_' num2str(thresh_ndays) ...
+            '_iscreen_region_eq' num2str(iscreen_region)  '_thresh_ndays_regional_eq' num2str(thresh_ndays_regional) '_thresh_nyears_regional_eq' num2str(thresh_nyears_regional)];
+        titlenamew=textwrap({ remove_character(titlename,'_',' ') },70);
+        title(titlenamew,'fontsize',10);
+        savename = [savedir_plots '/Nd_UKMO_' num2str(imonth,'%02g') '_' titlename];
+
+        saveas_ps_fig_emf(gcf,savename,'');
+
+       
+       
+
+    
+    
+    
+    
+    
+    
+        clear vars_to_save
+        i=1;
+        vars_to_save{i}='Date_text'; i=i+1;   
+        vars_to_save{i}='Notes'; i=i+1;           
+        vars_to_save{i}='Notes2'; i=i+1;              
+        vars_to_save{i}='MLAT'; i=i+1;
+        vars_to_save{i}='MLON'; i=i+1;
+%         vars_to_save{i}='Nd_16_ocean'; i=i+1;
+%         vars_to_save{i}='Nd_21_ocean'; i=i+1;
+%         vars_to_save{i}='Nd_37_ocean'; i=i+1;
+%         vars_to_save{i}='std_Nd_16_ocean'; i=i+1;
+%         vars_to_save{i}='std_Nd_21_ocean'; i=i+1;
+%         vars_to_save{i}='std_Nd_37_ocean'; i=i+1;
+%         vars_to_save{i}='Nd_16'; i=i+1;
+%         vars_to_save{i}='Nd_21'; i=i+1;
+%         vars_to_save{i}='Nd_37'; i=i+1;
+%         vars_to_save{i}='std_Nd_16'; i=i+1;
+%         vars_to_save{i}='std_Nd_21'; i=i+1;
+%         vars_to_save{i}='std_Nd_37'; i=i+1;        
+%         vars_to_save{i}='ndays_16'; i=i+1;        
+%         vars_to_save{i}='ndays_21'; i=i+1;        
+%         vars_to_save{i}='ndays_37'; i=i+1;          
+          vars_to_save{i}=['Nd' var_tag '_clim_ANNUAL']; i=i+1;
+          vars_to_save{i}=['Nd' var_tag '_clim_DJF']; i=i+1;
+          vars_to_save{i}=['Nd' var_tag '_clim_MAM']; i=i+1;
+          vars_to_save{i}=['Nd' var_tag '_clim_JJA']; i=i+1;          
+          vars_to_save{i}=['Nd' var_tag '_clim_SON']; i=i+1; 
+          
+          vars_to_save{i}=['Nd' var_tag '_clim_std_dev_ANNUAL']; i=i+1;
+          vars_to_save{i}=['Nd' var_tag '_clim_std_dev_DJF']; i=i+1;
+          vars_to_save{i}=['Nd' var_tag '_clim_std_dev_MAM']; i=i+1;
+          vars_to_save{i}=['Nd' var_tag '_clim_std_dev_JJA']; i=i+1;          
+          vars_to_save{i}=['Nd' var_tag '_clim_std_dev_SON']; i=i+1; 
+          
+          vars_to_save{i}=['Nd' var_tag '_clim_Ndays_ANNUAL']; i=i+1;
+          vars_to_save{i}=['Nd' var_tag '_clim_Ndays_DJF']; i=i+1;
+          vars_to_save{i}=['Nd' var_tag '_clim_Ndays_MAM']; i=i+1;
+          vars_to_save{i}=['Nd' var_tag '_clim_Ndays_JJA']; i=i+1;          
+          vars_to_save{i}=['Nd' var_tag '_clim_Ndays_SON']; i=i+1;           
+        
+ %Save here
+    if isave==1
+        filename_savevars = savefile01;
+        tag='';
+        save_vars_mat
+        mat2nc_Dan(filename_savevars,[filename_savevars '.nc']);
+    end

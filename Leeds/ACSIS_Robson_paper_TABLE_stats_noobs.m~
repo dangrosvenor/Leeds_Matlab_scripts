@@ -1,0 +1,112 @@
+
+%% Gather all the trend values and put into .tex file for table in the paper
+clear table vals
+
+tr_file = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_20200325T024432/Annual_mean_SW_TOA_up_for_region_4_ensemble_mean_ocean_only_UKESM1_no_obs.mat';
+trends = load(tr_file);
+
+fscale=1e2;
+%Ensemble mean trends over the 2 periods (1850-1970; 1971-2014)
+table_vals.SWtrendPA = fscale*trends.trend_dat_box{1,1}.coeffs(2);
+table_vals.SWtrendPB = fscale*trends.trend_dat_box{1,2}.coeffs(2);
+table_vals.SWtrendPBexp = -log10(fscale); %the exponent for the data when quoting. E.g. Y x 10^{exp}
+
+% -- Period 1
+itr=1;
+
+% -- fc --
+var_str_tab='totCF'; fscale=1e5;
+tr_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_20200325T024432/Annual_mean_' var_str_tab '_for_region_4_ensemble_mean_ocean_only_UKESM1_no_obs.mat'];
+trends = load(tr_file);
+table_vals.CFtrendPA = fscale*trends.trend_dat_box{1,itr}.coeffs(2); %N.B. - latex newcommand names can't have numbers in...
+    %So, using A and B instead.
+table_vals.CFtrendPAexp = -log10(fscale); %the exponent for the data when quoting. E.g. Y x 10^{exp}
+table_vals.CFtrendPAun = fscale*trends.trend_dat_box{1,itr}.uncer_max; %N.B. - latex newcommand names can't have numbers in...
+%ens min and max trends
+for iens=1:Nens   
+    dat(iens) = fscale * trends.trend_dat_box_ens{1,itr,iens}.coeffs(2); %trend values    
+end
+[minval imin]=min(dat);
+table_vals.CFtrendPAmin = minval;
+table_vals.CFtrendPAminUN = fscale * trends.trend_dat_box_ens{1,itr,imin}.uncer_max;
+[maxval imax]=max(dat);
+table_vals.CFtrendPAmax = maxval
+table_vals.CFtrendPAmaxUN = fscale * trends.trend_dat_box_ens{1,itr,imax}.uncer_max;
+
+
+% -- Nd --
+var_str_tab='N_d'; fscale=1e1;
+tr_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_20200325T024432/Annual_mean_' var_str_tab '_for_region_4_ensemble_mean_ocean_only_UKESM1_no_obs.mat'];
+trends = load(tr_file);
+table_vals.NdtrendPA = fscale*trends.trend_dat_box{1,itr}.coeffs(2); %N.B. - latex newcommand names can't have numbers in...
+    %So, using A and B instead.
+table_vals.NdtrendPAexp = -log10(fscale); %the exponent for the data when quoting. E.g. Y x 10^{exp}
+table_vals.NdtrendPAun = fscale*trends.trend_dat_box{1,itr}.uncer_max; %N.B. - latex newcommand names can't have numbers in...
+%ens min and max trends
+for iens=1:Nens   
+    dat(iens) = fscale * trends.trend_dat_box_ens{1,itr,iens}.coeffs(2); %trend values    
+end
+[minval imin]=min(dat);
+table_vals.NdtrendPAmin = minval;
+table_vals.NdtrendPAminUN = fscale * trends.trend_dat_box_ens{1,itr,imin}.uncer_max;
+[maxval imax]=max(dat);
+table_vals.NdtrendPAmax = maxval
+table_vals.NdtrendPAmaxUN = fscale * trends.trend_dat_box_ens{1,itr,imax}.uncer_max;
+
+% -- LWP --
+var_str_tab='LWP'; fscale=1e2;
+tr_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_20200325T024432/Annual_mean_' var_str_tab '_for_region_4_ensemble_mean_ocean_only_UKESM1_no_obs.mat'];
+trends = load(tr_file);
+table_vals.LWPtrendPA = fscale*trends.trend_dat_box{1,itr}.coeffs(2); %N.B. - latex newcommand names can't have numbers in...
+    %So, using A and B instead.
+table_vals.LWPtrendPAexp = -log10(fscale); %the exponent for the data when quoting. E.g. Y x 10^{exp}
+
+% -- LWPic --
+var_str_tab='LWPic'; fscale=1e2;
+tr_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_20200325T024432/Annual_mean_' var_str_tab '_for_region_4_ensemble_mean_ocean_only_UKESM1_no_obs.mat'];
+trends = load(tr_file);
+table_vals.LWPictrendPA = fscale*trends.trend_dat_box{1,itr}.coeffs(2); %N.B. - latex newcommand names can't have numbers in...
+    %So, using A and B instead.
+table_vals.LWPictrendPAexp = -log10(fscale); %the exponent for the data when quoting. E.g. Y x 10^{exp}
+
+
+% -- Period 2 --
+
+period_str='P2'; itr=2;
+
+var_str_tab='totCF';
+tr_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_20200325T024432/Annual_mean_' var_str_tab '_for_region_4_ensemble_mean_ocean_only_UKESM1_no_obs.mat'];
+trends = load(tr_file);
+table_vals.CFtrendPB = fscale*trends.trend_dat_box{1,itr}.coeffs(2); %N.B. - latex newcommand names can't have numbers in...
+    %So, using A and B instead.
+table_vals.CFtrendPBexp = -log10(fscale); %the exponent for the data when quoting. E.g. Y x 10^{exp}
+
+
+%Holding Nd constant
+tr_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_20200325T024432/Annual_mean_SW_TOA_up_calc_for_region_4__ocean_only_N_d_constant_' period_str '.mat'];
+trends = load(tr_file);
+%Full SW trend values from the model
+table_vals.NdconstPB = fscale*trends.trend_dat_box{1,itr}.coeffs(2);
+
+%Holding CF constant
+tr_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_20200325T024432/Annual_mean_SW_TOA_up_calc_for_region_4__ocean_only_CF_constant_' period_str '.mat'];
+trends = load(tr_file);
+%Full SW trend values from the model
+table_vals.CFconstPB = fscale*trends.trend_dat_box{1,itr}.coeffs(2);
+
+%Holding LWP constant
+tr_file = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_20200325T024432/Annual_mean_SW_TOA_up_calc_for_region_4__ocean_only_LWP_constant_' period_str '.mat'];
+trends = load(tr_file);
+%Full SW trend values from the model
+table_vals.LWPconstPB = fscale*trends.trend_dat_box{1,itr}.coeffs(2);
+
+
+
+
+
+
+iappend=0;
+save_sw_table_vals = '/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/plots_20200325T024432/Annual_mean_SW_TOA_up_calc_for_region_4__ocean_only_TABLE';
+var_str = '';
+latex_newcommand_from_structure(table_vals,var_str,save_sw_table_vals,iappend);
+

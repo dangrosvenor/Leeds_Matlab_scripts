@@ -1,0 +1,20 @@
+function [S]=Scrit(T,rd)
+%Calculates critical supersaturation in % as
+%function of dry radius in metres
+%T in K and rd=dry radius in m.
+% Using Eqn. (2) of Ghan (2011). N.B. - is a mistake in that formula -
+% should be diameter instead of radius as stated in the paper.
+
+
+
+%Ammonium sulphate
+k=0.7; %as used in Ghan - N.B. replaces most of the B term in Eqn. (17.32) of Seinfeld and Pandis
+    % B = k*D^3
+Mw=18.02e-3; %molecular weight of water
+zetasa = 0.8e-1;  % Surface tension at solution-air interface (Newtons/metre)
+rhow=997.0;     % water density (kg/m3)
+A=4.*Mw.*zetasa./(8.31.*rhow.*T);
+
+%Eqn. (2) of Ghan (2011). :-
+S = sqrt ( 4.*A.^3 ./ (27.*k.*(rd.*2).^3)) .*100;
+

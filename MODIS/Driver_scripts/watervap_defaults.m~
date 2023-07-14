@@ -1,0 +1,68 @@
+
+% --- default flags for watervap
+    time_highlight_path=[];
+    
+    iytick_relabel_log=0; %flag to say whether to relabel the y-axis ticks (e.g. for log plot)
+    y_axis_type=''; %default
+    x_axis_type='';
+    i_set_dateticks=0;
+    iadd_nums_above=0;
+    
+    xlims=0;
+    fsize=22;
+    
+    idatetick=0; %flag to put times as HH:MM instead of decimal time
+    
+    noplot=0;
+    
+    iwrite_text_dat=0; %
+    
+    ichoose_styles=0; %flag to say whether we want to specifiy the specific line patterns and colours
+    line_pattern(1).p=NaN;
+    line_colour(1).c=NaN;
+    marker_style(1).m=NaN;
+    line_widths(1).l = NaN;
+    
+    iovr_leg_line=0; %flag which plots a '-' line in the legend even if linestyle has been set to 'none'
+    
+    logflag=0;
+    idate_ticks_fix=0;
+    
+    isave_plot=0;
+    
+    iaxis_square=1; %switch to make axis square
+                            
+                            
+    graph = 0;
+    
+    
+    
+     iytick_relabel_log=0; %flag to say whether to relabel the y-axis ticks (e.g. for log plot)
+    y_axis_type=''; %default
+    x_axis_type='';
+    i_set_dateticks=0;
+    iadd_nums_above=0;
+    
+    xlims=0;
+    fsize=22;
+    
+    idatetick=0; %flag to put times as HH:MM instead of decimal time
+    
+    noplot=0;
+    
+    iwrite_text_dat=0; %
+    
+    
+    
+                                
+                                
+                                
+                                
+                                
+
+                            
+
+                            
+                            
+                            
+

@@ -1,0 +1,52 @@
+
+
+if exist('i3D')
+    axis([xlims ylims]);
+    clear i3D
+else
+    set(gca,'xlim',times);
+    datetickzoom('x',datetick_type,'keeplimits'); %redraws the ticks
+end
+
+switch highlight_type
+
+    case 'rectangle'
+        x=time_highlight_path(1);
+
+        y=ylims(1);
+        h=ylims(2)-ylims(1);
+        w=time_highlight_path(2)-time_highlight_path(1);
+
+        X=[x x+w x+w x];
+        Y=[y y y+h y+h];
+
+        %        rectangle('Position',[x/24,y,w/24,h],'LineWidth',2,'LineStyle','--');
+        line(X([1 4])/24,Y([1 4]),'LineWidth',2,'LineStyle','--','color','k');
+        line(X([2 3])/24,Y([2 3]),'LineWidth',2,'LineStyle','--','color','k');
+end
+    hold on
+
+if isave_highlight==1    
+    iremove=strfind(savename,':');
+    savename(iremove)='_';
+    
+    iremove=strfind(savename,'\');
+    savename(iremove)='';    
+    
+    iremove=strfind(savename,'/');
+    savename(iremove)='';
+    
+    iremove=strfind(savename,'>');
+    savename(iremove)='';
+    
+    iremove=strfind(savename,'<');
+    savename(iremove)='';
+    
+    print(gcf,[savedir savename '.emf'],'-dmeta');    
+%    print(gcf,[savedir savename '.eps'],'-depsc');    
+    print(gcf,[savedir savename '.tiff'],'-dtiff');
+    saveas(gcf,[savedir savename],'fig');
+end
+
+close(gcf);
+

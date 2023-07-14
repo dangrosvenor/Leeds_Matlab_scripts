@@ -1,0 +1,458 @@
+%function []=ACSIS_dat_trends_load_ensemble_esgf()
+%Run from ACSIS_dat_trends_load_ESGF_ensemble_multi_vars.m
+
+%output_period = 'all';
+%output_period = 'recent';
+%output_period = 'SW_down_TOA_partial';
+
+%i_annual_data=0; %(setting default). Flag to say that the data is already annual averages (not monthly).
+
+%Saved workspace of ACSIS nugdged Nice, etc. here :- save([dir_data 'GLACIES_ACSIS_instantaneous_saved_workspace.mat'],'-V7.3')
+% E.g., the temperature slices and interpolation to the regular z grid.
+
+
+
+%Loading and scaling options
+opts.isort_time=1;
+iuse_mat_file=0;
+fscale_fac = 1;
+opts.lat_var = 'Latitude';
+opts.lon_var = 'Longitude';
+    
+i_single_ens=1;
+
+%Directory to process :-
+dir_data = ['/home/disk/eos15/d.grosvenor/UM/UKESM/CMIP6_historical/'];
+dir_data = ['/home/disk/eos15/d.grosvenor/UM/UKESM/CMIP6_historical/r1i1p1f2/'];
+dir_data = ['/home/disk/eos10/d.grosvenor/UM/12Nov2008_Boutle/u-bl508/'];
+
+%Directory to save to
+%savefile_pre_str = ['/home/disk/eos1/d.grosvenor/modis_work/ACSIS_Nd_trends/EGSF_ensemble_timeseries_' MIP '_' expt '_' output_period ens_str];
+
+%load_type = 'mat';
+%load_type = 'merged netCDF';
+%load_type = 'individual netCDF files'; opts.cat_dim=1;
+load_type =  'named netCDF';       
+
+%var_UM = 'cli'; 
+var_UM = 'Ice_number_3d_ESGF';
+var_UM = 'Ice_number_3d_ACSIS';
+
+
+%savefile = [savefile_pre_str '_' var_UM '.mat'];
+
+%dirUM = [dir_data var_UM '_all_ens/'];
+dirUM = [dir_data var_UM '/'];
+%error('Need to set something here!')
+
+
+opts.named_file = ['cli_Amon_UKESM1-0-LL_historical_r1i1p1f2_gn_200001-201412.nc_197605291500_Ice_number_3d_ESGF_saved.nc3'];
+opts.named_file = ['merged.nc3']; %For instantaneous ACSIS data
+opts.named_dir = [dirUM];
+
+var_UM_load = var_UM;
+
+opts.time_var='time';
+opts.time_ref = datenum('01-Jan-1970'); %settings for Python UM files
+opts.time_fconv = 1/24; %conversion multiplier to get to days
+pole_lat=45.0; pole_lon=145.0; run_type = 'umglaa'; icoarse=0; ivar_dir=1; %
+dat_global = UM_load_merged_netCDF(dirUM,var_UM_load,run_type,load_type,[],[],var_UM_load,opts); %data is ordered [time lat lon]. 180 times (monthly over 15 years)
+
+Ni_dat = dat_global.dat;
+
+itemperature=1;
+if itemperature==1
+    load_type =  'named netCDF'; 
+    var_UM_load = 'temperature_3d'; dirUM = [dir_data var_UM_load '/']; opts.named_dir = [dirUM];
+    opts.time_var='time';
+    opts.time_ref = datenum('01-Jan-1850');
+    opts.time_fconv = 1; %conversion multiplier to get to days
+    pole_lat=45.0; pole_lon=145.0; run_type = 'umglaa'; icoarse=0; ivar_dir=1; %
+    temp = UM_load_merged_netCDF(dirUM,var_UM_load,run_type,load_type,[],[],var_UM_load,opts); %data is ordered [time lat lon]. 180 times (monthly over 15 years)        
+    temp_3d_timeav = meanNoNan(temp.dat,1);
+end
+
+i_acsis=1;
+if i_acsis==1
+    load_type =  'named netCDF'; 
+    var_UM_load = 'IWC_3d_ACSIS'; dirUM = [dir_data var_UM_load '/']; opts.named_dir = [dirUM];
+        %N.B. - this is the in-cloud IWC since the Python code divides by
+        %the ice CF.
+    opts.time_var='time';
+    opts.time_ref = datenum('01-Jan-1850');
+    opts.time_fconv = 1; %conversion multiplier to get to days
+    pole_lat=45.0; pole_lon=145.0; run_type = 'umglaa'; icoarse=0; ivar_dir=1; %
+    iwc = UM_load_merged_netCDF(dirUM,var_UM_load,run_type,load_type,[],[],var_UM_load,opts); %data is ordered [time lat lon]. 180 times (monthly over 15 years)
+    
+    load_type =  'named netCDF'; 
+    var_UM_load = 'air_density_3d_from_P_th'; dirUM = [dir_data var_UM_load '/']; opts.named_dir = [dirUM];
+    opts.time_var='time';
+    opts.time_ref = datenum('01-Jan-1850');
+    opts.time_fconv = 1; %conversion multiplier to get to days
+    pole_lat=45.0; pole_lon=145.0; run_type = 'umglaa'; icoarse=0; ivar_dir=1; %
+    rhoa = UM_load_merged_netCDF(dirUM,var_UM_load,run_type,load_type,[],[],var_UM_load,opts); %data is ordered [time lat lon]. 180 times (monthly over 15 years)
+         
+    %Don't forget to use time_inds (set later). The 405th time index of the
+    %data above has very high values (1e36) for some reason??
+end
+
+
+
+%Load the height data for ESGF data
+dir_data_alt = ['/home/disk/eos15/d.grosvenor/UM/UKESM/CMIP6_historical/'];
+var_UM_alt = 'cli'; 
+dirUM_alt = [dir_data_alt var_UM_alt '_all_ens/'];
+nc = netcdf([dirUM_alt var_UM_alt '_ens_mean.nc3']);
+lev = nc{'lev'}(:);
+b = nc{'b'}(:);
+orog = nc{'orog'}(:);
+lev_bnds = nc{'lev_bnds'}(:);
+b_bnds = nc{'b_bnds'}(:);
+
+nc=close(nc);
+
+b3d = repmat(b,[1 size(orog,1) size(orog,2)]);
+b3d = permute(b3d,[2 3 1]);
+lev3d = repmat(lev,[1 size(orog,1) size(orog,2)]);
+lev3d = permute(lev3d,[2 3 1]);
+orog3d = repmat(orog,[1 1 size(b,1)]);
+altitude = lev3d + b3d.*orog3d; %according to the NetCDF "z = lev + b*orog" 
+
+b_edges = [b_bnds(:,1); b_bnds(end,2)];
+lev_edges = [lev_bnds(:,1); lev_bnds(end,2)];
+
+b3d_edges = repmat(b_edges,[1 size(orog,1) size(orog,2)]);
+b3d_edges = permute(b3d_edges,[2 3 1]);
+lev3d_edges = repmat(lev_edges,[1 size(orog,1) size(orog,2)]);
+lev3d_edges = permute(lev3d_edges,[2 3 1]);
+%orog_edges = griddata(
+orog3d_edges = repmat(orog,[1 1 size(b_edges,1)]);
+altitude_edges= lev3d_edges + b3d_edges.*orog3d_edges; %according to the NetCDF "z = lev + b*orog" 
+
+
+% nc = netcdf([dir_data 'ta_all_ens/ta_ens_mean.nc3']);
+% ta = nc{'ta'}(:);
+% nc=close(nc);
+% ta(ta>1e19)=NaN;
+% 
+% nc = netcdf([dir_data 'pfull_all_ens/pfull_ens_mean.nc3']);
+% pfull = nc{'pfull'}(:);
+% nc=close(nc);
+% pfull(pfull>1e19)=NaN;
+%  
+% theta = potemp(ta,pfull); %Can't do this at the moment because the air temp is only available over lower numbers of levels.
+    %Could get the airmass variable, which is the air mass for each model
+    %level. Then can calculate the mean air density given the layer depths.
+    %Then with the pressure and rho can calculate the temperature.
+ 
+    
+%% Calculate lats and times, etc.
+gcm_Plat2D_UM = dat_global.gcm_Plat2D_UM;
+gcm_Plon2D_UM = dat_global.gcm_Plon2D_UM;
+%Had this the wrong way around :-
+%[gcm_Plon2D_edges_UM,gcm_Plat2D_edges_UM] = get_edges_lat_lon(gcm_Plon2D_UM,gcm_Plat2D_UM);
+[gcm_Plat2D_edges_UM,gcm_Plon2D_edges_UM] = get_edges_lat_lon(gcm_Plat2D_UM,gcm_Plon2D_UM);
+
+% start_year=2006; end_year=2006;
+% years_ukesm_1d = [start_year:end_year];
+% years_ukesm = repmat(years_ukesm_1d,[12 1]);
+% years_ukesm = years_ukesm(:);
+    
+%% Calculate zonal mean ice MMRs
+%years_to_plot = [2006 2006];
+%iy=find(years_ukesm>=years_to_plot(1) & years_ukesm<=years_to_plot(2));
+iy=[1:12]; %get the annual average from monthly values
+iy=[1:186]; %get the annual average from monthly values
+
+clear time_choice; time_choice.time_range = [datenum('28-Mar-2009') datenum('29-Mar-2010 12:30')]; %orignal range for paper
+
+array_in=[]; %just test to get the indices for now.
+dim=NaN; %don't need dim if just getting the indices
+[out, time_out, time_inds, dtime_match] = get_time_range_of_array(array_in,dat_global.time_ALL,time_choice,dim);
+iy = time_inds;
+
+
+
+if i_acsis==1
+    qice = iwc.dat./rhoa.dat; % in-cloud ice MMR (kg/kg) - (was divided by the ice CF in the Python code).
+    qice_thresh = 1e-6;
+    inan=find(qice<qice_thresh);    
+    Ni_dat(inan)=NaN;     
+    qice_thresh_str=num2str(qice_thresh);
+else
+    qice_thresh_str=num2str(2.2e-14);
+end
+
+
+cli_time_av = meanNoNan(Ni_dat(iy,:,:,:),1)/1e3; %[85 144 192] %convert from per m3 to per L
+cli_time_av = permute(cli_time_av,[2 3 1]);
+lat_3d = repmat(gcm_Plat2D_UM,[1 1 size(altitude,3)]);
+lon_3d = repmat(gcm_Plon2D_UM,[1 1 size(altitude,3)]);
+%interpolate to a regular height abv msl grid.
+dz=200;
+z_new_edges=[0:dz:20e3];
+z_new = 0.5 * (z_new_edges(1:end-1) + z_new_edges(2:end));
+lat_3d_new = repmat(gcm_Plat2D_UM,[1 1 length(z_new)]); %[144 192 z]
+lon_3d_new = repmat(gcm_Plon2D_UM,[1 1 length(z_new)]);
+z_3d_new = repmat(z_new',[1 size(gcm_Plat2D_UM)]); %[z 144 192]
+z_3d_new = permute(z_3d_new,[2 3 1]);
+
+%cli = griddata(altitude,lat_3d,lon_3d,cli_time_av,z_3d_new,lat_3d_new,lon_3d_new);
+
+cli_zonal = meanNoNan(dat_global.dat,4);
+alt_zonal = meanNoNan(altitude_edges,2);   alt_zonal = alt_zonal';  
+%add an extra profile of alt_zonal to make it the same size as lat_edges
+alt_zonal(:,end+1) = alt_zonal(:,end);
+lat_zonal = repmat(gcm_Plat2D_edges_UM(:,1),[1 size(alt_zonal,1)]); lat_zonal = lat_zonal';
+cli_zonal_timeav = meanNoNan(cli_zonal(iy,:,:),1);
+
+
+% cli_zonal_timeav2 = meanNoNan(cli,2); %[144 z]
+% alt_zonal2 = squeeze(z_3d_new(:,1,:)); alt_zonal2(:,end+1) = alt_zonal2(:,end)+dz; alt_zonal2(end+1,:) = alt_zonal2(end,:);
+% lat_zonal2 = repmat(gcm_Plat2D_edges_UM(:,1),[1 size(alt_zonal2,2)]); 
+
+
+
+%altidue = [144 192 85] cli_time_av=[144   192    85]
+cli_int = NaN*ones([size(cli_time_av,1) size(cli_time_av,2) size(z_new,2)]);
+%Interpolate each column onto the regular height grid (for the
+%time-averaged data).
+for ilat=1:size(cli_time_av,1)
+    for ilon=1:size(cli_time_av,2)
+        cli_int(ilat,ilon,:) = interp1(squeeze(altitude(ilat,ilon,:)),squeeze(cli_time_av(ilat,ilon,:)),z_new);        
+    end
+end
+
+cli_zonal_timeav3 = meanNoNan(cli_int,2); %[144 z]
+%alt_zonal3 = alt_zonal2;
+%lat_zonal3 = lat_zonal2;
+lat_zonal3 = repmat(gcm_Plat2D_edges_UM(:,1),[1 size(z_new_edges,2)]); %lat_zonal3 = lat_zonal3';
+alt_zonal3 = repmat(z_new_edges,[size(gcm_Plat2D_edges_UM,1) 1]); %alt_zonal3 = alt_zonal3';
+
+%% Values for temperature ranges
+% dat_Tm70m60 = NaN*ones([size(cli_time_av,1) size(cli_time_av,2)]);
+% dat_Tm60m50 = NaN*ones([size(cli_time_av,1) size(cli_time_av,2)]);
+% dat_Tm50m40 = NaN*ones([size(cli_time_av,1) size(cli_time_av,2)]);
+% dat_Tm40m30 = NaN*ones([size(cli_time_av,1) size(cli_time_av,2)]);
+% dat_Tm30m20 = NaN*ones([size(cli_time_av,1) size(cli_time_av,2)]);
+% for ilat=1:size(cli_time_av,1)
+%     for ilon=1:size(cli_time_av,2)
+%         Tcol = temp_3d_timeav(ilat,ilon,:);
+%         
+%         inds = find(Tcol>-70 & Tcol<=-60);
+%         dat_Tm70m60(ilat,ilon) = squeeze( meanNoNan(cli_time_av(ilat,ilon,inds),3) );
+%         %Do for other temp ranges after checkign it works.        
+%     end
+% end
+%Coudl do it for each time individually and avoiding for loops like this :-
+% dat_temp = NaN*ones([size(temp.dat)]);
+% inds = find(temp.dat>-70 & temp.dat<=-60);
+% dat_temp(inds) = Ni_dat(inds);
+% dat_Tm70m60 = meanNoNan(dat_temp,2); %average over 2nd dimension (height).
+% dat_Tm70m60 = meanNoNan(dat_Tm70m60,1); %average over time
+
+%important to use iy for the time_inds here since there are some >1e36
+%values in the 405th time index for some reason - could remove the last
+%file?
+[dat_Tm70m60] = GLACIES_temp_range_FUNC(Ni_dat(iy,:,:,:),temp.dat(iy,:,:,:)-273.15,-70,-60); %per m3 at this stage
+[dat_Tm60m50] = GLACIES_temp_range_FUNC(Ni_dat(iy,:,:,:),temp.dat(iy,:,:,:)-273.15,-60,-50);
+[dat_Tm50m40] = GLACIES_temp_range_FUNC(Ni_dat(iy,:,:,:),temp.dat(iy,:,:,:)-273.15,-50,-40);
+[dat_Tm40m30] = GLACIES_temp_range_FUNC(Ni_dat(iy,:,:,:),temp.dat(iy,:,:,:)-273.15,-40,-30);
+[dat_Tm30m20] = GLACIES_temp_range_FUNC(Ni_dat(iy,:,:,:),temp.dat(iy,:,:,:)-273.15,-30,-20);
+
+
+
+%% Do plots - zonal first
+
+
+plot_str = ['Ice Number Conc. (L^{-1}) for UKESM Instantanous run March 2009 to March 2010 time average using qice thesh of ' qice_thresh_str ' kg kg^{-1}'];
+
+figure; set(gcf,'color','w'); %set background colour of the figure to white for better plots when screen grabbing.
+%set(gca,'position',[0.1300    0.100    0.7750    0.9150]);
+set(gcf,'position',[3         297        1256         600]);
+%dpcolor(lat_zonal,alt_zonal/1e3,cli_zonal_timeav); shading flat;
+%dpcolor(lat_zonal2,alt_zonal2/1e3,cli_zonal_timeav2); shading flat;
+[hzonal,hback] = dpcolor(lat_zonal3,alt_zonal3/1e3,cli_zonal_timeav3); shading flat;
+%[hzonal,hback] = dpcolor(lat_zonal3,z_new/1e3,cli_zonal_timeav3); shading flat;
+set(hback,'facecolor',[0 0 0]);
+%increase_font_size_map_figures
+colorbar
+set(gca,'ylim',[0 20]);
+set(gca,'fontsize',18);
+%title({'UKESM1 ensemble mean Nice ','2006 time-average (L^{-1})'},'fontsize',18);
+title({'Zonal mean ' plot_str},'fontsize',18);
+ylabel('Altitude abv. msl (km)','fontsize',18);
+xlabel('Latitude (degrees)','fontsize',18);
+%title('UKESM1 ensemble mean ice MMR 2006-2014 time-mean (kg/kg)');
+
+
+
+
+%% Do some maps for different height ranges
+iz=find(z_new>17e3);
+cli_17 = meanNoNan(cli_int(:,:,iz),3);
+
+dat_modis = cli_17;
+   
+%run plotting script
+figure; set(gcf,'color','w'); %set background colour of the figure to white for better plots when screen grabbing.
+UM_ACSIS_SW_vs_cloud_properties_global_DEFAULTS
+icoarse_grain=0; M_coarse_grain=3; N_coarse_grain=3;
+time_round=''; time_format_str='';
+iplot_mgrid_lines_DRIVER=0;
+ioverride_ticks_DRIVER=0;
+irestrict_domain_DRIVER=0;
+isave_plot=0;
+iplot_wind_arrows=0;
+subtitle_str = '17-20km mean ice number conc. (L^{-1})';
+UM_ACSIS_LWP_global_vs_nest_quick_plot_commands_global
+
+
+iz=find(z_new>14e3 & z_new<=17e3);
+cli_14_17 = meanNoNan(cli_int(:,:,iz),3);
+subtitle_str = '14-17km mean ice number conc. (L^{-1})';
+dat_modis = cli_14_17;
+figure; set(gcf,'color','w'); %set background colour of the figure to white for better plots when screen grabbing.
+UM_ACSIS_LWP_global_vs_nest_quick_plot_commands_global
+
+
+iz=find(z_new>11e3 & z_new<=14e3);
+cli_11_14 = meanNoNan(cli_int(:,:,iz),3);
+subtitle_str = '11-14km mean ice number conc. (L^{-1})';
+dat_modis = cli_11_14;
+figure; set(gcf,'color','w'); %set background colour of the figure to white for better plots when screen grabbing.
+UM_ACSIS_LWP_global_vs_nest_quick_plot_commands_global
+
+iz=find(z_new>8e3 & z_new<=11e3);
+cli_8_11 = meanNoNan(cli_int(:,:,iz),3);
+subtitle_str = '8-11km mean ice number conc. (L^{-1})';
+dat_modis = cli_8_11;
+figure; set(gcf,'color','w'); %set background colour of the figure to white for better plots when screen grabbing.
+UM_ACSIS_LWP_global_vs_nest_quick_plot_commands_global
+
+iz=find(z_new>5e3 & z_new<=8e3);
+cli_5_8 = meanNoNan(cli_int(:,:,iz),3);
+subtitle_str = '5-8km mean ice number conc. (L^{-1})';
+dat_modis = cli_5_8;
+figure; set(gcf,'color','w'); %set background colour of the figure to white for better plots when screen grabbing.
+UM_ACSIS_LWP_global_vs_nest_quick_plot_commands_global
+
+iz=find(z_new>0.2e3 & z_new<=5e3);
+cli_0_5 = meanNoNan(cli_int(:,:,iz),3);
+subtitle_str = '0.2-5km mean ice number conc. (L^{-1})';
+dat_modis = cli_0_5;
+figure; set(gcf,'color','w'); %set background colour of the figure to white for better plots when screen grabbing.
+UM_ACSIS_LWP_global_vs_nest_quick_plot_commands_global
+
+%%
+LAT_val_DRIVER_override = [-1e9 1e9]; LON_val_DRIVER_override = [-1e9 1e9];
+
+half_jet_temp =[
+
+         0         0    0.7500
+         0         0    1.0000
+         0    0.2500    1.0000
+         0    0.5000    1.0000
+         0    0.7500    1.0000
+         0    1.0000    1.0000
+    1.0000    1.0000    1.0000];
+
+dx=6/
+half_jet = interp1([1:7],half_jet_temp,[1:8])
+
+%% Temperature map plots
+
+dat_modis = dat_Tm70m60/1e3; %convert from per m3 to per L
+
+%run plotting script
+figure; set(gcf,'color','w'); %set background colour of the figure to white for better plots when screen grabbing.
+UM_ACSIS_SW_vs_cloud_properties_global_DEFAULTS
+icoarse_grain=0; M_coarse_grain=3; N_coarse_grain=3;
+time_round=''; time_format_str='';
+iplot_mgrid_lines_DRIVER=0;
+ioverride_ticks_DRIVER=0;
+irestrict_domain_DRIVER=0;
+isave_plot=0;
+iplot_wind_arrows=0;
+subtitle_str = '-70 to -60 ^{o}C mean ice number conc. (L^{-1})';
+UM_ACSIS_LWP_global_vs_nest_quick_plot_commands_global
+caxis([0 20]);
+
+colormap(flipdim(half_jet,1))
+
+%% -------------------------------------------------------------------
+dat_modis = dat_Tm60m50/1e3;
+
+%run plotting script
+figure; set(gcf,'color','w'); %set background colour of the figure to white for better plots when screen grabbing.
+UM_ACSIS_SW_vs_cloud_properties_global_DEFAULTS
+icoarse_grain=0; M_coarse_grain=3; N_coarse_grain=3;
+time_round=''; time_format_str='';
+iplot_mgrid_lines_DRIVER=0;
+ioverride_ticks_DRIVER=0;
+irestrict_domain_DRIVER=0;
+isave_plot=0;
+iplot_wind_arrows=0;
+subtitle_str = '-60 to -50 ^{o}C mean ice number conc. (L^{-1})';
+UM_ACSIS_LWP_global_vs_nest_quick_plot_commands_global
+caxis([0 20]);
+
+colormap(flipdim(half_jet,1))
+
+%% -------------------------------------------------------------------
+dat_modis = dat_Tm50m40/1e3;
+
+%run plotting script
+figure; set(gcf,'color','w'); %set background colour of the figure to white for better plots when screen grabbing.
+UM_ACSIS_SW_vs_cloud_properties_global_DEFAULTS
+icoarse_grain=0; M_coarse_grain=3; N_coarse_grain=3;
+time_round=''; time_format_str='';
+iplot_mgrid_lines_DRIVER=0;
+ioverride_ticks_DRIVER=0;
+irestrict_domain_DRIVER=0;
+isave_plot=0;
+iplot_wind_arrows=0;
+subtitle_str = '-50 to -40 ^{o}C mean ice number conc. (L^{-1})';
+UM_ACSIS_LWP_global_vs_nest_quick_plot_commands_global
+caxis([0 20]);
+
+colormap(flipdim(half_jet,1))
+
+%% -------------------------------------------------------------------
+dat_modis = dat_Tm40m30/1e3;
+
+%run plotting script
+figure; set(gcf,'color','w'); %set background colour of the figure to white for better plots when screen grabbing.
+UM_ACSIS_SW_vs_cloud_properties_global_DEFAULTS
+icoarse_grain=0; M_coarse_grain=3; N_coarse_grain=3;
+time_round=''; time_format_str='';
+iplot_mgrid_lines_DRIVER=0;
+ioverride_ticks_DRIVER=0;
+irestrict_domain_DRIVER=0;
+isave_plot=0;
+iplot_wind_arrows=0;
+subtitle_str = '-40 to -30 ^{o}C mean ice number conc. (L^{-1})';
+UM_ACSIS_LWP_global_vs_nest_quick_plot_commands_global
+caxis([0 20]);
+
+colormap(flipdim(half_jet,1))
+
+%% -------------------------------------------------------------------
+dat_modis = dat_Tm30m20/1e3;
+
+%run plotting script
+figure; set(gcf,'color','w'); %set background colour of the figure to white for better plots when screen grabbing.
+UM_ACSIS_SW_vs_cloud_properties_global_DEFAULTS
+icoarse_grain=0; M_coarse_grain=3; N_coarse_grain=3;
+time_round=''; time_format_str='';
+iplot_mgrid_lines_DRIVER=0;
+ioverride_ticks_DRIVER=0;
+irestrict_domain_DRIVER=0;
+isave_plot=0;
+iplot_wind_arrows=0;
+subtitle_str = '-30 to -20 ^{o}C mean ice number conc. (L^{-1})';
+UM_ACSIS_LWP_global_vs_nest_quick_plot_commands_global
+caxis([0 20]);
+
+colormap(flipdim(half_jet,1))
+

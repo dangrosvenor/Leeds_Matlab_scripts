@@ -1,0 +1,123 @@
+% Compare the UM Nd data to MODIS data
+
+clear UKESM  %will use this to save the outputs.
+
+% UKESM data
+UKESM_dir = '/home/disk/eos8/d.grosvenor/UM/UKESM/';
+UKESM.Nd_UKESM_savefile = [UKESM_dir 'Nd_UKESM_seasonal_clim_2000-2007.mat'];
+UM=load(UKESM.Nd_UKESM_savefile);
+%N.B. info on UM jobs, etc. in UM_map
+% Lat and lon are in UM_grid    
+
+UKESM.UM_map =  UM.UM_map;
+UKESM.UM_grid = UM.UM_grid;
+
+% MODIS data files to crunch through
+MOD_dir = ['/home/disk/eos1/d.grosvenor/saved_misc_mat_files/'];
+i=0; clear multi_Nd_file_MODIS
+i=i+1; multi_Nd_file_MODIS{i} = 'MODIS_TERRA_Nd_QA_from_L3_daily_UKESM_Jane_2000_2008_allCF_CTT273_region_mask_20150416T063530.mat';
+UKESM.multi_MOD_str{i} = 'Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_';
+i=i+1; multi_Nd_file_MODIS{i} = 'MODIS_TERRA_Nd_QA_from_L3_daily_UKESM_Jane_2000_2014_allCF_CTT273_region_mask_20150416T063530.mat';
+UKESM.multi_MOD_str{i} = 'Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_';
+i=i+1; multi_Nd_file_MODIS{i} = 'MODIS_TERRA_Nd_QA_from_L3_daily_UKESM_Jane_2000_2008_CF80_CTT273_20150416T063530.mat';
+UKESM.multi_MOD_str{i} = 'Nd_SZA_lt_70_CF_gt_80_AND_CTT_gt_273_clim_';
+i=i+1; multi_Nd_file_MODIS{i} = 'MODIS_TERRA_Nd_QA_from_L3_daily_UKESM_Jane_2000_2014_CF80_CTT273_20150416T063530.mat';
+UKESM.multi_MOD_str{i} = 'Nd_SZA_lt_70_CF_gt_80_AND_CTT_gt_273_clim_';
+
+for ifile_MODIS=1:length(multi_Nd_file_MODIS)
+
+    savefile_gridded_UKESM{ifile_MODIS} = [UKESM_dir 'UKESM_vs_' multi_Nd_file_MODIS{ifile_MODIS}];
+
+    UKESM.Nd_file_MODIS = multi_Nd_file_MODIS{ifile_MODIS};
+
+
+
+    MOD=load([MOD_dir UKESM.Nd_file_MODIS]);
+
+    %MODIS names are e.g. Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_DJF
+
+    UKESM.MOD_str = UKESM.multi_MOD_str{ifile_MODIS};
+
+    is=1;
+    season_str{is}='DJF'; is=is+1;
+    season_str{is}='MAM'; is=is+1;
+    season_str{is}='JJA'; is=is+1;
+    season_str{is}='SON'; is=is+1;
+
+    for iseason=1:4
+
+        %Interpolate the UM data onto the MODIS grid
+        for imodel=1:3
+            UKESM.Nd_UKESM_grid{imodel,iseason} = griddata(UM.UM_grid.gcm_Plon2D_UM, UM.UM_grid.gcm_Plat2D_UM, UM.Nd_UKESM{imodel,iseason}, MOD.MLON',MOD.MLAT );
+            mod_dat = eval(['MOD.' UKESM.MOD_str season_str{iseason}]);
+            UKESM.Nd_UKESM_bias_abs{imodel,iseason} = UKESM.Nd_UKESM_grid{imodel,iseason} - mod_dat;
+            UKESM.Nd_UKESM_bias_prc{imodel,iseason} = 100*(UKESM.Nd_UKESM_grid{imodel,iseason} - mod_dat) ./ mod_dat;
+
+            UKESM.Nd_UKESM_bias_abs_mean{imodel,iseason} = meanNoNan(UKESM.Nd_UKESM_bias_abs{imodel,iseason}(:),1);
+            UKESM.Nd_UKESM_bias_abs_mean_prc{imodel,iseason} = 100*UKESM.Nd_UKESM_bias_abs_mean{imodel,iseason} ./ meanNoNan(mod_dat(:),1);
+            UKESM.Nd_UKESM_bias_prc_mean{imodel,iseason} = meanNoNan(UKESM.Nd_UKESM_bias_prc{imodel,iseason}(:),1);
+
+            % Overall spatial RMS value from the absolute values
+            UKESM.Nd_UKESM_bias_abs_RMS{imodel,iseason} = sqrt( meanNoNan(UKESM.Nd_UKESM_bias_abs{imodel,iseason}(:) .^2,1) );
+            % Overall spatial RMS values from the percentage biases
+            UKESM.Nd_UKESM_bias_prc_RMS{imodel,iseason} = sqrt( meanNoNan(UKESM.Nd_UKESM_bias_prc{imodel,iseason}(:) .^2,1) );
+            
+            %Correlation coefficient
+            UM_dat =  UKESM.Nd_UKESM_grid{imodel,iseason};
+            UM_dat=UM_dat(:);
+            inan=find(isnan(UM_dat)==1);
+            inan2=find(isnan(mod_dat)==1);
+            UM_dat(inan2)=NaN; UM_dat(isnan(UM_dat))=[];
+            mod_dat2 = mod_dat(:);
+            mod_dat2(inan)=NaN; mod_dat2(isnan(mod_dat2))=[];
+            UKESM.Nd_UKESM_corr{imodel,iseason} = corr(UM_dat, mod_dat2 );
+        end
+
+
+    end
+
+
+    save(savefile_gridded_UKESM{ifile_MODIS} ,'UKESM');
+
+
+end
+
+
+
+
+  
+%% UKESM .mat file contents :-
+%
+% whos('-file',Nd_UKESM_savefile)
+%   Name              Size              Bytes  Class     Attributes
+%   Nd_UKESM          3x4             2655552  cell                
+%   Ndatap_UKESM      3x4             2655552  cell                
+%   UM_grid           1x1              890832  struct  
+%   UM_map            1x1                5346  struct              
+
+    
+    
+%% MODIS data file contents :-
+% 
+% whos('-file',Nd_file_MODIS)
+%   Name                                                         Size               Bytes  Class     Attributes
+%   Date_text                                                    1x67                 134  char                
+%   MLAT                                                         1x180               1440  double              
+%   MLON                                                         1x360               2880  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_ANNUAL              180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_DJF                 180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_JJA                 180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_MAM                 180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_Ndays_ANNUAL        180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_Ndays_DJF           180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_Ndays_JJA           180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_Ndays_MAM           180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_Ndays_SON           180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_SON                 180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_std_dev_ANNUAL      180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_std_dev_DJF         180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_std_dev_JJA         180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_std_dev_MAM         180x360             518400  double              
+%   Nd_SZA_lt_70_allCF_AND_CTT_gt_273_clim_std_dev_SON         180x360             518400  double              
+%   Notes                                                        1x1571              3142  char                
+%   Notes2                                                       1x691               1382  char                
